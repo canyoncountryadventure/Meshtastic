@@ -24,12 +24,12 @@ export default async function handler(req, res) {
         received_at,
         node_num,
         station_name,
+        telemetry_type,
         temperature_c,
         metrics,
         radio
       FROM telemetry_readings
       WHERE observed_at >= NOW() - (${hours} * INTERVAL '1 hour')
-        AND temperature_c IS NOT NULL
       ORDER BY observed_at DESC
       LIMIT ${limit}
     `;
