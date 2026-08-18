@@ -9,9 +9,8 @@ export default async function handler(req, res) {
   try {
     const sql = getSql();
     const rows = await sql`
-      SELECT observed_at, station_name, temperature_c
+      SELECT observed_at, station_name, telemetry_type, temperature_c, metrics
       FROM telemetry_readings
-      WHERE temperature_c IS NOT NULL
       ORDER BY observed_at DESC
       LIMIT 1
     `;
@@ -19,10 +18,15 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       database: true,
+      ingest_key_configured: Boolean(process.env.INGEST_KEY),
       latest: rows[0] ?? null,
     });
   } catch (error) {
     console.error('Health check failed', error);
-    return res.status(500).json({ ok: false, database: false });
+    return res.status(500).json({
+      ok: false,
+      database: false,
+      ingest_key_configured: Boolean(process.env.INGEST_KEY),
+    });
   }
 }
