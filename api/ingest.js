@@ -1,5 +1,9 @@
 import { getSql } from './db.js';
 
+const MX2001_STATIONS = {
+  'F1:0D:9D:29:C3:2D': 'Mill Creek Field Test',
+};
+
 function parsePossibleJson(value) {
   if (typeof value !== 'string') return value;
   try {
@@ -37,11 +41,16 @@ function nodeHex(nodeNum) {
 }
 
 function stationNameFor(body, nodeNum, metrics) {
+  const loggerMac = typeof metrics?.logger_mac === 'string' ? metrics.logger_mac.toUpperCase() : '';
+  if (body.type === 'mx2001' && MX2001_STATIONS[loggerMac]) {
+    return MX2001_STATIONS[loggerMac];
+  }
+
   const supplied = body.station_name || body.station || body.sender_name;
   if (typeof supplied === 'string' && supplied.trim()) return supplied.trim();
 
-  if (body.type === 'mx2001' && typeof metrics?.logger_mac === 'string') {
-    return `MX2001 ${metrics.logger_mac}`;
+  if (body.type === 'mx2001' && loggerMac) {
+    return `MX2001 ${loggerMac}`;
   }
 
   const configuredName = process.env.STATION_NAME?.trim();
