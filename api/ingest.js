@@ -1,7 +1,7 @@
 import { getSql } from './db.js';
 
 const MX2001_STATIONS = {
-  'F1:0D:9D:29:C3:2D': 'Mill Creek Field Test',
+  'F1:0D:9D:29:C3:2D': 'Pack Creek',
 };
 
 function parsePossibleJson(value) {
