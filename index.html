@@ -24,38 +24,41 @@
     <div class="hero-copy">
       <div class="eyebrow">Current sandstone condition</div>
       <div class="state-line"><span id="rockState">NO DATA</span></div>
-      <p id="stateDetail">The dashboard will populate when the rock node sends its first moisture packet.</p>
-      <div class="pipeline"><strong>Rock probe + PIR</strong><span>→ Seeed field node → LoRa mesh → Heltec V4 → Neon → Vercel</span></div>
+      <p id="stateDetail">The dashboard will populate when CCS3 sends its first moisture packet.</p>
+      <div class="pipeline"><strong>Rock probe + PIR</strong><span>→ CCS3 Seeed node → LoRa mesh → Heltec V4 → Neon → Vercel</span></div>
     </div>
     <div class="hero-metrics">
       <div class="hero-metric"><span>Rock ADC</span><strong id="rockAdc">—</strong><small id="rockVoltage">raw capacitive reading</small></div>
-      <div class="hero-metric"><span>Wetness index</span><strong id="wetness">—</strong><small>relative index after calibration</small></div>
+      <div class="hero-metric"><span>Wetness index</span><strong id="wetness">—</strong><small id="wetnessDetail">temporary bench/soil scale</small></div>
       <div class="hero-metric"><span>MX2201 temp</span><strong id="temperature">—</strong><small id="tempSource">waiting for logger</small></div>
     </div>
   </section>
 
   <section class="quick-grid">
-    <article class="metric-card"><span>Dry baseline</span><strong id="dryBaseline">—</strong><small id="baselineDetail">not established</small></article>
-    <article class="metric-card"><span>Delta from dry</span><strong id="rockDelta">—</strong><small>ADC counts below dry baseline</small></article>
-    <article class="metric-card"><span>Motion</span><strong id="motionState">—</strong><small id="motionDetail">PIR on D6</small></article>
-    <article class="metric-card"><span>Battery</span><strong id="battery">—</strong><small id="batteryDetail">field node</small></article>
+    <article class="metric-card"><span>Temporary dry reference</span><strong id="dryBaseline">2303</strong><small id="baselineDetail">bench/soil reference</small></article>
+    <article class="metric-card"><span>Delta from dry</span><strong id="rockDelta">—</strong><small>ADC counts below 2303</small></article>
+    <article class="metric-card"><span>Probe output</span><strong id="probeVoltage">—</strong><small>capacitive sensor voltage</small></article>
+    <article class="metric-card"><span>Motion now</span><strong id="motionState">—</strong><small id="motionDetail">PIR on D6</small></article>
+    <article class="metric-card"><span>Last motion</span><strong id="lastMotion">—</strong><small id="lastMotionDetail">sampled PIR detection</small></article>
+    <article class="metric-card"><span>Last clear</span><strong id="lastClear">—</strong><small id="lastClearDetail">sampled PIR clear</small></article>
+    <article class="metric-card"><span>Node battery</span><strong id="battery">—</strong><small id="batteryDetail">validated 2.5–5.0 V only</small></article>
     <article class="metric-card"><span>Last packet</span><strong id="lastPacket">—</strong><small id="packetTime">no telemetry yet</small></article>
     <article class="metric-card"><span>LoRa link</span><strong id="lora">—</strong><small id="loraDetail">RSSI / SNR</small></article>
   </section>
 
   <section class="test-grid">
     <article class="panel summary-panel">
-      <div class="panel-head"><div><h2>Drying-test summary</h2><p>Values are based only on readings received during this experiment.</p></div></div>
+      <div class="panel-head"><div><h2>Drying-test summary</h2><p>Values are based only on CCS3 readings received during this experiment.</p></div></div>
       <div class="summary-grid">
         <div><span>Highest ADC</span><strong id="highestAdc">—</strong><small>driest observed</small></div>
         <div><span>Lowest ADC</span><strong id="lowestAdc">—</strong><small>wettest observed</small></div>
         <div><span>Observed span</span><strong id="adcSpan">—</strong><small>ADC counts</small></div>
-        <div><span>Motion events</span><strong id="motionCount">—</strong><small>reported total / detections</small></div>
+        <div><span>Motion events</span><strong id="motionCount">—</strong><small>rock-node rising edges since boot</small></div>
       </div>
     </article>
     <article class="panel notes-panel">
-      <div class="panel-head"><div><h2>Calibration target</h2><p>This is an experiment, not a climb/no-climb rule yet.</p></div></div>
-      <div class="note-copy">Establish the dry baseline, wet the exterior of the Navajo sandstone, then watch the ADC recover. Record the ADC when the rock visually looks climbable and compare it with the later return to the true dry baseline.</div>
+      <div class="panel-head"><div><h2>Temporary moisture scale</h2><p>Using prior bench/soil observations until sandstone calibration replaces it.</p></div></div>
+      <div class="note-copy"><strong>DRY</strong> ≥2303 · <strong>DRYING</strong> 2000–2302 · <strong>DAMP</strong> 1713–1999 · <strong>WET</strong> 1387–1712 · <strong>WATER</strong> ≤1386. Wetness is a temporary 0–100% relative index from 2303 (dry) to 1386 (water), not volumetric water content and not yet a climb/no-climb rule.</div>
     </article>
   </section>
 
@@ -71,16 +74,16 @@
   </section>
 
   <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Experiment timeline</h2><p>Newest packets first · old water-level test data has been cleared</p></div></div>
+    <div class="panel-head"><div><h2>Experiment timeline</h2><p>Newest packets first · CCS3 only · invalid/missing values remain blank</p></div></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Time</th><th>Source</th><th class="right">Rock ADC</th><th class="right">Wetness</th><th class="right">Temp °F</th><th>Motion</th><th class="right">Battery</th><th class="right">RSSI</th></tr></thead>
-        <tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody>
+        <thead><tr><th>Time</th><th>Source</th><th class="right">Rock ADC</th><th class="right">Wetness</th><th class="right">Probe V</th><th class="right">Temp °F</th><th>Motion</th><th class="right">Battery</th><th class="right">RSSI</th></tr></thead>
+        <tbody id="recent"><tr><td colspan="9">Waiting for telemetry.</td></tr></tbody>
       </table>
     </div>
   </section>
 
-  <footer><span>CCA · Navajo Sandstone Drying Experiment</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>CCA · Navajo Sandstone Drying Experiment · CCS3</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 <script src="/dashboard.js"></script>
 </body>
