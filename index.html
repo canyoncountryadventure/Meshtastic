@@ -2,21 +2,85 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta content="#07161d" name="theme-color"/>
-<title>Pack Creek Water Monitoring</title>
-<link href="/dashboard.css" rel="stylesheet"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#171511"/>
+<title>Navajo Sandstone Wetness Test</title>
+<link rel="stylesheet" href="/dashboard.css"/>
 </head>
 <body>
 <main class="shell">
-<div class="topbar"><div class="brand"><div class="logo">≈</div><div><div class="eyebrow">Meshtastic telemetry</div><div class="brand-title">Pack Creek Water Monitoring</div></div></div><div class="status" id="status"><span class="dot"></span><span id="statusText">Checking Pack Creek…</span></div></div>
-<section class="station-strip" id="stationStrip"></section>
-<section class="hero"><div class="hero-main"><div><div class="label">Monitoring station</div><h1 class="station" id="station">Pack Creek</h1><div class="meta"><span id="logger">MX2001</span><span id="node">Node —</span><span id="sequence">Packet —</span></div></div><div class="hero-readings"><div class="hero-reading"><div class="label" id="metric1Label">Water level</div><div class="hero-value" id="metric1">—</div><div class="hero-unit" id="metric1Unit">feet · MX2001</div></div><div class="hero-reading"><div class="label" id="metric2Label">Water temperature</div><div class="hero-value" id="metric2">—</div><div class="hero-unit" id="metric2Unit">°F</div></div></div></div><div class="pipeline"><strong id="pipelineModel">MX2001</strong><span>→ BLE →</span><span id="pipelineNode">Pack Creek field node</span><span>→ LoRa mesh →</span><span>Heltec Hub</span><span>→ Internet →</span><span>Neon + Vercel</span><span class="live">● Live telemetry</span></div></section>
-<section class="grid"><article class="card"><div class="card-label">Station status</div><div class="card-value" id="loggerStatus">—</div><div class="card-detail" id="loggerStatusDetail">Checking latest packet</div></article><article class="card"><div class="card-label">Last packet</div><div class="card-value" id="age">—</div><div class="card-detail" id="packetTime">Waiting for data</div></article><article class="card"><div class="card-label">Latest packet path</div><div class="card-value" id="hops">—</div><div class="card-detail" id="relay">Packet route unavailable</div></article><article class="card"><div class="card-label">LoRa signal</div><div class="card-value" id="rssi">—</div><div class="card-detail" id="snr">RSSI / SNR unavailable</div></article><article class="card"><div class="card-label">BLE sensor link</div><div class="card-value" id="ble">—</div><div class="card-detail" id="bleDetail">Logger → field node</div></article></section>
-<section class="panel trend-panel"><div class="panel-head"><div><div class="panel-title" id="trendTitle">Water level trend</div><div class="panel-sub" id="trendSub">Change from the closest stored reading at each lookback</div></div></div><div class="trend-grid"><div class="trend-item"><div class="trend-label">1 hour</div><div class="trend-value" id="trend1">—</div><div class="trend-detail" id="trend1Detail">Waiting for history</div></div><div class="trend-item"><div class="trend-label">6 hours</div><div class="trend-value" id="trend6">—</div><div class="trend-detail" id="trend6Detail">Waiting for history</div></div><div class="trend-item"><div class="trend-label">12 hours</div><div class="trend-value" id="trend12">—</div><div class="trend-detail" id="trend12Detail">Waiting for history</div></div></div></section>
-<section class="charts"><article class="panel"><div class="panel-head"><div><div class="panel-title" id="chart1Title">Water level</div><div class="panel-sub" id="chart1Count">0 readings</div></div><div class="tabs shared-tabs"><button data-hours="1">1H</button><button data-hours="6">6H</button><button data-hours="12">12H</button><button class="active" data-hours="24">24H</button><button data-hours="168">7D</button><button data-hours="720">30D</button></div></div><div class="chart-wrap" id="chart1"><div class="empty">Waiting for telemetry.</div></div></article><article class="panel"><div class="panel-head"><div><div class="panel-title" id="chart2Title">Water temperature</div><div class="panel-sub" id="chart2Count">0 readings</div></div><div class="tabs shared-tabs"><button data-hours="1">1H</button><button data-hours="6">6H</button><button data-hours="12">12H</button><button class="active" data-hours="24">24H</button><button data-hours="168">7D</button><button data-hours="720">30D</button></div></div><div class="chart-wrap" id="chart2"><div class="empty">Waiting for telemetry.</div></div></article></section>
-<section class="content"><article class="panel recent"><div class="panel-head"><div><div class="panel-title" id="recentTitle">Recent Pack Creek readings</div><div class="panel-sub">Newest cloud records from MeshtasticDB</div></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th>Type</th><th class="right">Level (ft)</th><th class="right">Temp (F)</th><th class="right">Hops</th><th class="right">RSSI</th><th class="right">SNR</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div></article><aside class="side"><section class="panel"><div class="panel-head"><div><div class="panel-title">Station status</div><div class="panel-sub">Pack Creek</div></div></div><div class="logger-list" id="loggerList"></div></section><section class="panel"><div class="panel-head"><div><div class="panel-title">Network details</div><div class="panel-sub" id="networkSub">Latest Pack Creek packet</div></div></div><div class="radio"><div class="radio-big" id="quality">—</div><div class="radio-caption">LoRa link quality</div><div style="margin-top:16px"><div class="row"><span>Node number</span><strong class="mono" id="sourceDetail">—</strong></div><div class="row"><span>Gateway</span><strong id="gatewayDetail">—</strong></div><div class="row"><span>Last relay</span><strong id="relayDetail">—</strong></div><div class="row"><span>Logging interval</span><strong id="loggingInterval">—</strong></div></div></div></section></aside></section>
-<div class="footer"><span>Meshtastic Water Monitoring · Pack Creek</span><span id="updated">Not yet refreshed</span></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">◫</div>
+      <div>
+        <div class="eyebrow">Meshtastic field experiment</div>
+        <div class="brand-title">Navajo Sandstone Wetness Test</div>
+      </div>
+    </div>
+    <div class="live-pill" id="status"><span class="dot"></span><span id="statusText">Waiting for test data</span></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">Current sandstone condition</div>
+      <div class="state-line"><span id="rockState">NO DATA</span></div>
+      <p id="stateDetail">The dashboard will populate when the rock node sends its first moisture packet.</p>
+      <div class="pipeline"><strong>Rock probe + PIR</strong><span>→ Seeed field node → LoRa mesh → Heltec V4 → Neon → Vercel</span></div>
+    </div>
+    <div class="hero-metrics">
+      <div class="hero-metric"><span>Rock ADC</span><strong id="rockAdc">—</strong><small id="rockVoltage">raw capacitive reading</small></div>
+      <div class="hero-metric"><span>Wetness index</span><strong id="wetness">—</strong><small>relative index after calibration</small></div>
+      <div class="hero-metric"><span>MX2201 temp</span><strong id="temperature">—</strong><small id="tempSource">waiting for logger</small></div>
+    </div>
+  </section>
+
+  <section class="quick-grid">
+    <article class="metric-card"><span>Dry baseline</span><strong id="dryBaseline">—</strong><small id="baselineDetail">not established</small></article>
+    <article class="metric-card"><span>Delta from dry</span><strong id="rockDelta">—</strong><small>ADC counts below dry baseline</small></article>
+    <article class="metric-card"><span>Motion</span><strong id="motionState">—</strong><small id="motionDetail">PIR on D6</small></article>
+    <article class="metric-card"><span>Battery</span><strong id="battery">—</strong><small id="batteryDetail">field node</small></article>
+    <article class="metric-card"><span>Last packet</span><strong id="lastPacket">—</strong><small id="packetTime">no telemetry yet</small></article>
+    <article class="metric-card"><span>LoRa link</span><strong id="lora">—</strong><small id="loraDetail">RSSI / SNR</small></article>
+  </section>
+
+  <section class="test-grid">
+    <article class="panel summary-panel">
+      <div class="panel-head"><div><h2>Drying-test summary</h2><p>Values are based only on readings received during this experiment.</p></div></div>
+      <div class="summary-grid">
+        <div><span>Highest ADC</span><strong id="highestAdc">—</strong><small>driest observed</small></div>
+        <div><span>Lowest ADC</span><strong id="lowestAdc">—</strong><small>wettest observed</small></div>
+        <div><span>Observed span</span><strong id="adcSpan">—</strong><small>ADC counts</small></div>
+        <div><span>Motion events</span><strong id="motionCount">—</strong><small>reported total / detections</small></div>
+      </div>
+    </article>
+    <article class="panel notes-panel">
+      <div class="panel-head"><div><h2>Calibration target</h2><p>This is an experiment, not a climb/no-climb rule yet.</p></div></div>
+      <div class="note-copy">Establish the dry baseline, wet the exterior of the Navajo sandstone, then watch the ADC recover. Record the ADC when the rock visually looks climbable and compare it with the later return to the true dry baseline.</div>
+    </article>
+  </section>
+
+  <section class="charts">
+    <article class="panel">
+      <div class="panel-head chart-head"><div><h2>Rock moisture response</h2><p id="rockChartCount">0 readings</p></div><div class="tabs" id="tabs"><button data-hours="1">1H</button><button data-hours="3">3H</button><button data-hours="6" class="active">6H</button><button data-hours="12">12H</button><button data-hours="24">24H</button><button data-hours="168">7D</button></div></div>
+      <div class="chart" id="rockChart"><div class="empty">Waiting for rock ADC telemetry.</div></div>
+    </article>
+    <article class="panel">
+      <div class="panel-head"><div><h2>MX2201 temperature</h2><p id="tempChartCount">0 readings</p></div></div>
+      <div class="chart" id="tempChart"><div class="empty">Waiting for MX2201 temperature telemetry.</div></div>
+    </article>
+  </section>
+
+  <section class="panel recent-panel">
+    <div class="panel-head"><div><h2>Experiment timeline</h2><p>Newest packets first · old water-level test data has been cleared</p></div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Time</th><th>Source</th><th class="right">Rock ADC</th><th class="right">Wetness</th><th class="right">Temp °F</th><th>Motion</th><th class="right">Battery</th><th class="right">RSSI</th></tr></thead>
+        <tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer><span>CCA · Navajo Sandstone Drying Experiment</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 <script src="/dashboard.js"></script>
 </body>
