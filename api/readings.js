@@ -15,13 +15,13 @@ export default async function handler(req, res) {
   const hours = clampInt(req.query.hours, 24, 1, 24 * 365);
   const limit = clampInt(req.query.limit, 5000, 1, 10000);
   const node = req.query.node === undefined ? null : clampInt(req.query.node, null, 1, 4294967295);
-  const bucketMinutes = clampInt(req.query.bucket_minutes, 0, 0, 24 * 60);
+  const bucketMinutes = clampInt(req.query.bucket_minutes, 5, 0, 24 * 60);
 
   try {
     const sql = getSql();
     let rows;
 
-    if (node !== null && bucketMinutes > 0) {
+    if (bucketMinutes > 0 && node !== null) {
       rows = await sql`
         SELECT id, observed_at, received_at, node_num, station_name,
                telemetry_type, temperature_c, metrics, radio
@@ -29,12 +29,32 @@ export default async function handler(req, res) {
           SELECT id, observed_at, received_at, node_num, station_name,
                  telemetry_type, temperature_c, metrics, radio,
                  ROW_NUMBER() OVER (
-                   PARTITION BY FLOOR(EXTRACT(EPOCH FROM observed_at) / (${bucketMinutes} * 60))
+                   PARTITION BY node_num, telemetry_type,
+                                FLOOR(EXTRACT(EPOCH FROM observed_at) / (${bucketMinutes} * 60))
                    ORDER BY observed_at DESC
                  ) AS bucket_rank
           FROM telemetry_readings
           WHERE observed_at >= NOW() - (${hours} * INTERVAL '1 hour')
             AND node_num = ${node}
+        ) sampled
+        WHERE bucket_rank = 1
+        ORDER BY observed_at DESC
+        LIMIT ${limit}
+      `;
+    } else if (bucketMinutes > 0) {
+      rows = await sql`
+        SELECT id, observed_at, received_at, node_num, station_name,
+               telemetry_type, temperature_c, metrics, radio
+        FROM (
+          SELECT id, observed_at, received_at, node_num, station_name,
+                 telemetry_type, temperature_c, metrics, radio,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY node_num, telemetry_type,
+                                FLOOR(EXTRACT(EPOCH FROM observed_at) / (${bucketMinutes} * 60))
+                   ORDER BY observed_at DESC
+                 ) AS bucket_rank
+          FROM telemetry_readings
+          WHERE observed_at >= NOW() - (${hours} * INTERVAL '1 hour')
         ) sampled
         WHERE bucket_rank = 1
         ORDER BY observed_at DESC
