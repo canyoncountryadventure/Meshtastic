@@ -7,8 +7,8 @@ const EXPERIMENT_TYPES = new Set(['telemetry','rock','rock_test','sandstone','mo
 const EXPERIMENT_NODE_NUM = Number(process.env.EXPERIMENT_NODE_NUM || 1527161333);
 const EXPERIMENT_STORE_INTERVAL_MINUTES = 1;
 const EXPERIMENT_STORE_INTERVAL_MS = EXPERIMENT_STORE_INTERVAL_MINUTES * 60 * 1000;
-// Temporary manual pause switch. False = normal Neon writes enabled.
-const INGEST_PAUSED = false;
+// Temporary manual pause: accept authenticated ingest requests but do not write anything to Neon.
+const INGEST_PAUSED = true;
 
 function parsePossibleJson(value){if(typeof value!=='string')return value;try{return JSON.parse(value)}catch{return value}}
 function unwrapBody(input){let body=parsePossibleJson(input);for(let i=0;i<4;i+=1){if(!body||typeof body!=='object'||Array.isArray(body))break;if(SUPPORTED.has(body.type)&&body.payload&&typeof body.payload==='object')return body;const candidates=[body.payload,body.body,body.message,body.data];const next=candidates.map(parsePossibleJson).find(v=>v&&typeof v==='object'&&!Array.isArray(v));if(!next||next===body)break;body=next}return body}
