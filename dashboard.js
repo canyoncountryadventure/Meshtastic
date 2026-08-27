@@ -1,6 +1,10 @@
 const EXPERIMENT_NODE_NUM=1527161333;
 const TEMP_DRY_ADC=2303;
 const TEMP_WATER_ADC=1386;
+const TREND_WINDOW_MS=10*60*1000;
+const TREND_MIN_SPAN_MS=9*60*1000;
+const TREND_MIN_ABS_CHANGE=8;
+const TREND_MIN_SLOPE_ADC_PER_MIN=0.8;
 const state={hours:6,readings:[]};
 const $=id=>document.getElementById(id);
 const els={status:$('status'),statusText:$('statusText'),rockState:$('rockState'),stateDetail:$('stateDetail'),rockAdc:$('rockAdc'),rockVoltage:$('rockVoltage'),wetness:$('wetness'),wetnessDetail:$('wetnessDetail'),temperature:$('temperature'),tempSource:$('tempSource'),dryBaseline:$('dryBaseline'),baselineDetail:$('baselineDetail'),rockDelta:$('rockDelta'),probeVoltage:$('probeVoltage'),motionState:$('motionState'),motionDetail:$('motionDetail'),lastMotion:$('lastMotion'),lastMotionDetail:$('lastMotionDetail'),lastClear:$('lastClear'),lastClearDetail:$('lastClearDetail'),battery:$('battery'),batteryDetail:$('batteryDetail'),lastPacket:$('lastPacket'),packetTime:$('packetTime'),lora:$('lora'),loraDetail:$('loraDetail'),highestAdc:$('highestAdc'),lowestAdc:$('lowestAdc'),adcSpan:$('adcSpan'),motionCount:$('motionCount'),rockChartCount:$('rockChartCount'),tempChartCount:$('tempChartCount'),rockChart:$('rockChart'),tempChart:$('tempChart'),recent:$('recent'),updated:$('updated'),tabs:$('tabs')};
@@ -29,14 +33,38 @@ function rockRows(){return experimentRows().filter(r=>rockAdc(r)!==null)}
 function temperatureRows(){return experimentRows().filter(r=>tempC(r)!==null&&rockAdc(r)===null)}
 function motionTransitions(rows){const mr=rows.filter(r=>motionMetric(r)!==null);let detected=null,cleared=null;for(let i=0;i<mr.length-1;i++){const newer=motionHit(mr[i]),older=motionHit(mr[i+1]);if(newer===older)continue;if(newer&&!detected)detected=mr[i];if(!newer&&!cleared)cleared=mr[i];if(detected&&cleared)break}return{latest:mr[0]||null,detected,cleared}}
 function calcWetness(r){if(!r)return null;const reported=wetnessReported(r);if(reported!==null)return Math.max(0,Math.min(100,reported));const adc=rockAdc(r);if(adc===null)return null;const dry=reportedDryBaseline(r)??TEMP_DRY_ADC,wet=wetRef(r)??TEMP_WATER_ADC;if(dry===wet)return null;return Math.max(0,Math.min(100,(dry-adc)*100/(dry-wet)))}
-function deriveState(r){if(!r)return'NO DATA';const supplied=metric(r,'rock_state','state');if(typeof supplied==='string'&&supplied.trim())return supplied.trim().toUpperCase();const adc=rockAdc(r);if(adc===null)return'NO DATA';if(adc>=2303)return'DRY';if(adc>=2000)return'DRYING';if(adc>=1713)return'DAMP';if(adc>=1600)return'WET';if(adc>=1451)return'SOAKED';return'WATER'}
+function deriveBand(r){if(!r)return'NO DATA';const adc=rockAdc(r);if(adc===null)return'NO DATA';if(adc>=2303)return'DRY';if(adc>=2000)return'TRANSITION';if(adc>=1713)return'DAMP';if(adc>=1600)return'WET';if(adc>=1451)return'SOAKED';return'WATER'}
+function rockTrend(rows){
+  const valid=rows.map(r=>({t:new Date(r.observed_at).getTime(),adc:rockAdc(r)})).filter(p=>Number.isFinite(p.t)&&Number.isFinite(p.adc)).sort((a,b)=>a.t-b.t);
+  if(valid.length<2)return null;
+  const latestT=valid[valid.length-1].t;
+  const pts=valid.filter(p=>p.t>=latestT-TREND_WINDOW_MS);
+  if(pts.length<2)return null;
+  const span=pts[pts.length-1].t-pts[0].t;
+  if(span<TREND_MIN_SPAN_MS)return null;
+  const t0=pts[0].t;
+  const xs=pts.map(p=>(p.t-t0)/60000);
+  const ys=pts.map(p=>p.adc);
+  const xMean=xs.reduce((a,b)=>a+b,0)/xs.length;
+  const yMean=ys.reduce((a,b)=>a+b,0)/ys.length;
+  let nume=0,den=0;
+  for(let i=0;i<pts.length;i++){const dx=xs[i]-xMean;nume+=dx*(ys[i]-yMean);den+=dx*dx}
+  if(den===0)return null;
+  const slope=nume/den;
+  const change=pts[pts.length-1].adc-pts[0].adc;
+  if(slope<=-TREND_MIN_SLOPE_ADC_PER_MIN&&change<=-TREND_MIN_ABS_CHANGE)return{label:'WETTING',slope,change,start:pts[0].adc,end:pts[pts.length-1].adc,minutes:span/60000};
+  if(slope>=TREND_MIN_SLOPE_ADC_PER_MIN&&change>=TREND_MIN_ABS_CHANGE)return{label:'DRYING',slope,change,start:pts[0].adc,end:pts[pts.length-1].adc,minutes:span/60000};
+  return null;
+}
+function deriveState(r,rows){const trend=rockTrend(rows||rockRows());return trend?.label||deriveBand(r)}
 function mergeMinuteRows(rows){const groups=new Map();for(const r of rows){const ms=new Date(r.observed_at).getTime();if(!Number.isFinite(ms))continue;const minute=Math.floor(ms/60000)*60000;const key=`${r.node_num??''}|${minute}`;let merged=groups.get(key);if(!merged){merged={...r,observed_at:new Date(minute).toISOString(),metrics:{...(r.metrics||{})},radio:{...(r.radio||{})}};groups.set(key,merged);continue}merged.metrics={...(r.metrics||{}),...(merged.metrics||{})};if((merged.temperature_c===null||merged.temperature_c===undefined)&&r.temperature_c!==null&&r.temperature_c!==undefined)merged.temperature_c=r.temperature_c;if(!merged.station_name&&r.station_name)merged.station_name=r.station_name;if(!merged.telemetry_type&&r.telemetry_type)merged.telemetry_type=r.telemetry_type;if((!merged.radio||Object.keys(merged.radio).length===0)&&r.radio)merged.radio={...r.radio}}return Array.from(groups.values()).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at))}
 function latestOverall(){return experimentRows()[0]||null}
-function renderSummary(){const rr=rockRows(),tr=temperatureRows(),rock=rr[0]||null,temp=tr[0]||null,latest=latestOverall();const adc=rockAdc(rock),volts=rockVoltage(rock),wet=calcWetness(rock),dry=reportedDryBaseline(rock)??TEMP_DRY_ADC,delta=adc===null?null:Math.max(0,dry-adc),stateName=deriveState(rock);
-  els.rockState.textContent=stateName;els.rockState.className=stateName==='DRY'?'good':['WET','SOAKED','WATER'].includes(stateName)?'bad':stateName==='DAMP'||stateName==='DRYING'?'warn':'sand';
-  els.stateDetail.textContent=rock?`Latest CCS3 rock packet ${ageText(rock.observed_at)} ago. Lower ADC means wetter material around the probe. Current labels use the temporary sandstone test bands.`:'Waiting for the first CCS3 rock packet.';
+function renderSummary(){const rr=rockRows(),tr=temperatureRows(),rock=rr[0]||null,temp=tr[0]||null,latest=latestOverall();const adc=rockAdc(rock),volts=rockVoltage(rock),wet=calcWetness(rock),dry=reportedDryBaseline(rock)??TEMP_DRY_ADC,delta=adc===null?null:Math.max(0,dry-adc),trend=rockTrend(rr),band=deriveBand(rock),stateName=trend?.label||band;
+  els.rockState.textContent=stateName;els.rockState.className=stateName==='DRY'?'good':['WET','SOAKED','WATER'].includes(stateName)?'bad':['DAMP','TRANSITION','WETTING','DRYING'].includes(stateName)?'warn':'sand';
+  if(rock&&trend)els.stateDetail.textContent=`${trend.label}: sustained ${trend.minutes.toFixed(0)}-minute ADC trend ${trend.slope>0?'+':''}${trend.slope.toFixed(1)}/min (${Math.round(trend.start)}→${Math.round(trend.end)}). Current moisture band: ${band}. Lower ADC means wetter rock.`;
+  else els.stateDetail.textContent=rock?`Latest CCS3 rock packet ${ageText(rock.observed_at)} ago. Current moisture band: ${band}. No sustained 10-minute wetting/drying trend yet. Lower ADC means wetter rock.`:'Waiting for the first CCS3 rock packet.';
   els.rockAdc.textContent=adc===null?'—':Math.round(adc);els.rockVoltage.textContent=volts===null?'sensor voltage unavailable':`${volts.toFixed(3)} V sensor output`;els.probeVoltage.textContent=volts===null?'—':`${volts.toFixed(3)} V`;
-  els.wetness.textContent=wet===null?'—':`${wet.toFixed(1)}%`;els.wetnessDetail.textContent='temporary relative index; state uses 6 ADC bands';
+  els.wetness.textContent=wet===null?'—':`${wet.toFixed(1)}%`;els.wetnessDetail.textContent='relative wetness; live state adds a sustained 10-minute direction trend';
   const tf=tempF(temp);els.temperature.textContent=tf===null?'—':`${tf.toFixed(1)}°`;els.tempSource.textContent=temp?`${temp.station_name||'CCS3'} · ${ageText(temp.observed_at)} ago`:'waiting for CCS3/MX2201';
   els.dryBaseline.textContent=Math.round(dry);els.baselineDetail.textContent=reportedDryBaseline(rock)!==null?'packet calibration':'temporary bench/soil reference';els.rockDelta.textContent=delta===null?'—':`${Math.round(delta)}`;
   const mt=motionTransitions(rr),motionReading=mt.latest,hit=motionReading?motionHit(motionReading):false;
@@ -50,7 +78,7 @@ function renderExperimentStats(){const rows=rockRows(),values=rows.map(rockAdc).
 function drawChart(target,rows,valueFn,unit,countEl,label){const pts=rows.map(r=>({t:new Date(r.observed_at).getTime(),v:valueFn(r)})).filter(p=>Number.isFinite(p.v)).reverse();countEl.textContent=`${pts.length} reading${pts.length===1?'':'s'} · last ${state.hours}h`;if(pts.length<2){target.innerHTML=`<div class="empty">${pts.length?'One reading received.':'Waiting for '+label+' telemetry.'}</div>`;return}const W=920,H=320,L=62,R=22,T=22,B=42,minT=Math.min(...pts.map(p=>p.t)),maxT=Math.max(...pts.map(p=>p.t));let minV=Math.min(...pts.map(p=>p.v)),maxV=Math.max(...pts.map(p=>p.v));if(maxV-minV<1){minV-=.5;maxV+=.5}const pad=(maxV-minV)*.12;minV-=pad;maxV+=pad;const x=t=>L+((t-minT)/Math.max(1,maxT-minT))*(W-L-R),y=v=>T+(1-(v-minV)/(maxV-minV))*(H-T-B);const path=pts.map((p,i)=>`${i?'L':'M'} ${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join(' ');const ticks=Array.from({length:5},(_,i)=>minV+(maxV-minV)*i/4).map(v=>`<line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" stroke="rgba(230,214,184,.10)"/><text x="${L-9}" y="${y(v)+4}" text-anchor="end" fill="#887e6c" font-size="12">${unit==='ADC'?Math.round(v):v.toFixed(1)}${unit==='°F'?'°':''}</text>`).join('');const start=new Date(minT).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),end=new Date(maxT).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});target.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label} chart"><g>${ticks}</g><path d="${path}" fill="none" stroke="#d7b77b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="${L}" y="${H-12}" fill="#887e6c" font-size="12">${start}</text><text x="${W-R}" y="${H-12}" text-anchor="end" fill="#887e6c" font-size="12">${end}</text></svg>`}
 function renderCharts(){drawChart(els.rockChart,rockRows(),rockAdc,'ADC',els.rockChartCount,'rock ADC');drawChart(els.tempChart,temperatureRows(),tempF,'°F',els.tempChartCount,'MX2201 temperature')}
 function renderTable(){const rows=mergeMinuteRows(experimentRows()).slice(0,40);if(!rows.length){els.recent.innerHTML='<tr><td colspan="9">No CCS3 experiment readings yet.</td></tr>';return}els.recent.innerHTML=rows.map(r=>{const adc=rockAdc(r),w=calcWetness(r),pv=rockVoltage(r),tf=tempF(r),hit=motionMetric(r)!==null?motionHit(r):null,bp=batteryPct(r),bv=batteryV(r),rssi=num(r?.radio?.rssi);const source=r.station_name||r.telemetry_type||'CCS3';let battery='—';if(bv!==null&&bp!==null)battery=`${bv.toFixed(2)}V · ${Math.round(bp)}%`;else if(bv!==null)battery=`${bv.toFixed(2)}V`;else if(bp!==null)battery=`${Math.round(bp)}%`;return`<tr><td>${fmtMinute(r.observed_at)}</td><td>${source}</td><td class="right mono">${adc===null?'—':Math.round(adc)}</td><td class="right">${w===null?'—':w.toFixed(1)+'%'}</td><td class="right mono">${pv===null?'—':pv.toFixed(3)}</td><td class="right">${tf===null?'—':tf.toFixed(1)}</td><td class="${hit===true?'motion-hit':hit===false?'motion-clear':''}">${hit===null?'—':hit?'MOTION':'clear'}</td><td class="right">${battery}</td><td class="right mono">${rssi===null?'—':Math.round(rssi)}</td></tr>`}).join('')}
-function render(){renderSummary();renderExperimentStats();renderCharts();renderTable();els.updated.textContent=`Refreshed ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}`}
+function render(){renderSummary();renderExperimentStats();renderCharts();renderTable();els.updated.textContent=`Refreshed ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})`}
 async function load(){try{const bucket=state.hours>=168?15:state.hours>=24?5:0;const url=`/api/readings?hours=${state.hours}&limit=10000${bucket?`&bucket_minutes=${bucket}`:''}`;const res=await fetch(url,{cache:'no-store'});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||'request failed');state.readings=data.readings||[];render()}catch(err){console.error(err);els.status.className='live-pill offline';els.statusText.textContent='Cloud query failed'}}
 els.tabs?.addEventListener('click',e=>{const b=e.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours);els.tabs.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));load()});
 load();setInterval(load,30000);
