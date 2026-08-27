@@ -7,6 +7,8 @@ const EXPERIMENT_TYPES = new Set(['telemetry','rock','rock_test','sandstone','mo
 const EXPERIMENT_NODE_NUM = Number(process.env.EXPERIMENT_NODE_NUM || 1527161333);
 const EXPERIMENT_STORE_INTERVAL_MINUTES = 1;
 const EXPERIMENT_STORE_INTERVAL_MS = EXPERIMENT_STORE_INTERVAL_MINUTES * 60 * 1000;
+// Temporary manual pause: accept authenticated ingest requests but do not write anything to Neon.
+const INGEST_PAUSED = true;
 
 function parsePossibleJson(value){if(typeof value!=='string')return value;try{return JSON.parse(value)}catch{return value}}
 function unwrapBody(input){let body=parsePossibleJson(input);for(let i=0;i<4;i+=1){if(!body||typeof body!=='object'||Array.isArray(body))break;if(SUPPORTED.has(body.type)&&body.payload&&typeof body.payload==='object')return body;const candidates=[body.payload,body.body,body.message,body.data];const next=candidates.map(parsePossibleJson).find(v=>v&&typeof v==='object'&&!Array.isArray(v));if(!next||next===body)break;body=next}return body}
@@ -22,6 +24,7 @@ function intervalBucket(observedAt){const startMs=Math.floor(observedAt.getTime(
 export default async function handler(req,res){
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'POST required'})}
   const expectedKey=process.env.INGEST_KEY;if(!expectedKey)return res.status(500).json({ok:false,error:'INGEST_KEY is not configured'});if(readIngestKey(req)!==expectedKey)return res.status(401).json({ok:false,error:'Unauthorized'});
+  if(INGEST_PAUSED)return res.status(202).json({ok:true,stored:false,paused:true,reason:'Telemetry ingest is temporarily paused; no Neon insert performed'});
   const body=unwrapBody(req.body);if(!body||typeof body!=='object'||Array.isArray(body))return res.status(400).json({ok:false,error:'Expected a JSON object'});if(!SUPPORTED.has(body.type))return res.status(202).json({ok:true,stored:false,reason:'Unsupported telemetry type'});
   const metrics=body.payload;if(!metrics||typeof metrics!=='object'||Array.isArray(metrics))return res.status(202).json({ok:true,stored:false,reason:'Telemetry has no metrics payload'});
   const nodeNum=nodeNumber(body);
