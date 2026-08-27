@@ -29,13 +29,13 @@
     </div>
     <div class="hero-metrics">
       <div class="hero-metric"><span>Rock ADC</span><strong id="rockAdc">—</strong><small id="rockVoltage">raw capacitive reading</small></div>
-      <div class="hero-metric"><span>Wetness index</span><strong id="wetness">—</strong><small id="wetnessDetail">temporary bench/soil scale</small></div>
+      <div class="hero-metric"><span>Wetness index</span><strong id="wetness">—</strong><small id="wetnessDetail">0% dry → 100% extreme sandstone saturation</small></div>
       <div class="hero-metric"><span>MX2201 temp</span><strong id="temperature">—</strong><small id="tempSource">waiting for logger</small></div>
     </div>
   </section>
 
   <section class="quick-grid">
-    <article class="metric-card"><span>Temporary dry reference</span><strong id="dryBaseline">2303</strong><small id="baselineDetail">bench/soil reference</small></article>
+    <article class="metric-card"><span>Calibrated dry reference</span><strong id="dryBaseline">2303</strong><small id="baselineDetail">Aug 27 sandstone field calibration</small></article>
     <article class="metric-card"><span>Delta from dry</span><strong id="rockDelta">—</strong><small>ADC counts below 2303</small></article>
     <article class="metric-card"><span>Probe output</span><strong id="probeVoltage">—</strong><small>capacitive sensor voltage</small></article>
     <article class="metric-card"><span>Motion now</span><strong id="motionState">—</strong><small id="motionDetail">PIR on D6</small></article>
@@ -57,8 +57,8 @@
       </div>
     </article>
     <article class="panel notes-panel">
-      <div class="panel-head"><div><h2>Sandstone moisture scale</h2><p>Current test thresholds for the installed Navajo sandstone probe.</p></div></div>
-      <div class="note-copy"><strong>DRY</strong> ≥2300 · <strong>DAMP</strong> 1850–2299 · <strong>WET</strong> 1700–1849 · <strong>SOAKED</strong> ≤1699. The live headline changes to <strong>WETTING</strong> when the 10-minute ADC trend falls and <strong>DRYING</strong> when it rises. Lower ADC means wetter rock.</div>
+      <div class="panel-head"><div><h2>Sandstone moisture scale</h2><p>Field-calibrated Aug 27, 2026 for this installed Navajo sandstone probe.</p></div></div>
+      <div class="note-copy"><strong>DRY</strong> ≥2268 · <strong>BRIEF WETTING</strong> 2126–2267 · <strong>WET</strong> 1935–2125 · <strong>MOSTLY SOAKED</strong> 1667–1934 · <strong>EXTREMELY SATURATED</strong> ≤1666. Wetness Index is linear from 2303 ADC = 0% to 1484 ADC = 100%. The 10-minute trend still reports wetting or drying direction. Lower ADC means wetter rock; the percentage is a relative sandstone index, not volumetric water content.</div>
     </article>
   </section>
 
@@ -74,7 +74,7 @@
   </section>
 
   <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Experiment timeline</h2><p>One CCS3 sample per sensor type every 5 minutes · rock + MX2201 values combined when aligned · invalid/missing values remain blank</p></div></div>
+    <div class="panel-head"><div><h2>Experiment timeline</h2><p>One CCS3 sample per sensor type about every minute · rock + MX2201 values combined when aligned · invalid/missing values remain blank</p></div></div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Time</th><th>Source</th><th class="right">Rock ADC</th><th class="right">Wetness</th><th class="right">Probe V</th><th class="right">Temp °F</th><th>Motion</th><th class="right">Battery</th><th class="right">RSSI</th></tr></thead>
@@ -83,10 +83,10 @@
     </div>
   </section>
 
-  <footer><span>CCA · Navajo Sandstone Wetness Experiment · CCS3 · 5-minute cloud sampling</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>CCA · Navajo Sandstone Wetness Experiment · CCS3 · 1-minute cloud sampling</span><span id="updated">Not yet refreshed</span></footer>
 </main>
-<script src="/dashboard.js?v=20260826-2117"></script>
-<script src="/trend-fix.js?v=20260826-2117"></script>
-<script src="/band-fix.js?v=20260826-2117"></script>
+<script src="/dashboard.js?v=20260827-1335"></script>
+<script src="/trend-fix.js?v=20260827-1335"></script>
+<script src="/band-fix.js?v=20260827-1335"></script>
 </body>
 </html>
