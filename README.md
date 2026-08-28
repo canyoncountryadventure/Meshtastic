@@ -40,7 +40,7 @@ Vercel dashboard + station-health endpoint
 
 ## Dashboard measurements
 
-The production dashboard is dedicated to Hidden Valley and shows temperature history, 12-hour trend, selected-window high/low/average, packet reliability, RSSI/SNR, mesh routing, repeater battery/voltage, estimated solar charging behavior, interactive charts, and an interactive site map with topographic/satellite layers and a RAK4631 planning overlay.
+The production dashboard is dedicated to Hidden Valley and shows temperature history, a 12-hour trend, selected-window high/low/average, packet reliability, RSSI/SNR, mesh routing, repeater battery/voltage, estimated solar charging behavior, interactive charts, and an interactive site map with topographic/satellite layers and a RAK4631 planning overlay.
 
 ## Monitoring / missed-reading alert
 
@@ -70,18 +70,10 @@ Rock calibration/runtime files must remain off the Hidden Valley production bran
 
 ## Firmware separation
 
-Remote repeater sensor firmware:
+Remote repeater sensor firmware and the home Heltec HTTP gateway firmware are maintained separately in `canyoncountryadventure/firmware`. New home-gateway work should use:
 
 ```text
-Repository: canyoncountryadventure/firmware
-Branch:     hobo-mx2001-mx2201-mx2203
+heltec-home-http-gateway-hidden-valley
 ```
 
-Home Heltec HTTP gateway firmware:
-
-```text
-Repository: canyoncountryadventure/firmware
-Branch:     heltec-home-http-gateway-hidden-valley
-```
-
-The older `heltec-home-http-gateway-rock` branch is historical. New Hidden Valley gateway work should use the clean Hidden Valley branch above.
+The older rock-named home-gateway branch is historical.
