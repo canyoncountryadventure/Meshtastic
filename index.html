@@ -7,6 +7,7 @@
 <title>Hidden Valley Temperature Station</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="/dashboard.css?v=20260828-interactive"/>
+<link rel="stylesheet" href="/coverage-planner.css?v=20260828-terrain"/>
 </head>
 <body>
 <main class="shell">
@@ -76,10 +77,10 @@
     </article>
     <article class="panel map-panel">
       <div class="panel-head"><div><h2>Repeater site</h2><p>38.53880, -109.5409 · 5,800 ft</p></div><button type="button" class="expand-btn" data-expand-map="siteMap" data-title="Hidden Valley repeater site">Expand</button></div>
-      <div class="map-controls" role="group" aria-label="Map layers"><button type="button" id="mapTopoBtn" class="active">Topo</button><button type="button" id="mapSatBtn">Satellite</button><button type="button" id="coverageBtn">Radio coverage</button></div>
+      <div class="map-controls" role="group" aria-label="Map layers"><button type="button" id="mapTopoBtn" class="active">Topo</button><button type="button" id="mapSatBtn">Satellite</button><button type="button" id="coverageBtn">Terrain RF heatmap</button></div>
       <div id="siteMap" class="site-map" aria-label="Interactive map of Hidden Valley repeater"></div>
       <div id="mapStatus" class="chart-note" style="padding-top:0;min-height:18px">Loading map…</div>
-      <div class="coverage-legend" id="coverageLegend" hidden><strong>RAK4631 planning overlay</strong><span>22 dBm TX · antenna 0.5 m AGL · approximate LoRa coverage rings</span><small>This is a planning aid, not a terrain propagation model. Ridges can block coverage; clear line-of-sight can extend it far beyond the rings.</small></div>
+      <div class="coverage-legend" id="coverageLegend" hidden><strong>Terrain-aware coverage</strong><span>Official Meshtastic Site Planner · ITM/Longley-Rice</span><small>The Terrain RF heatmap button runs a high-resolution colored signal-strength simulation using real terrain.</small></div>
     </article>
   </section>
 
@@ -94,5 +95,6 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/dashboard.js?v=20260828-interactive"></script>
 <script src="/map-fix.js?v=20260828-usgs-mapfix"></script>
+<script src="/coverage-planner.js?v=20260828-terrain"></script>
 </body>
 </html>
