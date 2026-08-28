@@ -2,6 +2,7 @@ import { getSql } from './db.js';
 
 const HIDDEN_VALLEY_NODE_NUM = 1436900584; // !55a55ce8
 const SUPPORTED = new Set(['telemetry', 'device']);
+const MERGE_WINDOW_MINUTES = 50;
 
 function parsePossibleJson(value) {
   if (typeof value !== 'string') return value;
@@ -102,6 +103,7 @@ export default async function handler(req, res) {
   }
 
   const observedAt = observedAtFor(body);
+  const observedIso = observedAt.toISOString();
   const nestedRadio = body.radio && typeof body.radio === 'object' ? body.radio : {};
   const radio = {
     rssi: finiteOrNull(body.rssi ?? nestedRadio.rssi),
@@ -116,17 +118,80 @@ export default async function handler(req, res) {
     gateway: body.sender ?? body.mesh_source ?? nestedRadio.gateway ?? null,
   };
 
+  const storedMetrics = telemetryType === 'device'
+    ? { ...metrics, device_observed_at: observedIso }
+    : { ...metrics };
+
   try {
     const sql = getSql();
+
+    // Device telemetry normally arrives on a different minute than the hourly MX2201 reading.
+    // Merge it into the most recent temperature row so the dashboard has one combined record.
+    if (telemetryType === 'device') {
+      const merged = await sql`
+        UPDATE telemetry_readings
+        SET metrics = telemetry_readings.metrics || ${JSON.stringify(storedMetrics)}::jsonb,
+            raw = telemetry_readings.raw || jsonb_build_object('device_telemetry', ${JSON.stringify(body)}::jsonb),
+            received_at = NOW()
+        WHERE id = (
+          SELECT id
+          FROM telemetry_readings
+          WHERE node_num = ${nodeNum}
+            AND telemetry_type = 'environment'
+            AND temperature_c IS NOT NULL
+            AND observed_at <= ${observedIso}
+            AND observed_at >= ${observedIso}::timestamptz - (${MERGE_WINDOW_MINUTES} * INTERVAL '1 minute')
+          ORDER BY observed_at DESC
+          LIMIT 1
+        )
+        RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio
+      `;
+      if (merged.length) {
+        return res.status(200).json({ ok: true, stored: true, merged: true, reading: merged[0] });
+      }
+    }
+
+    // If device telemetry arrived first because an environmental packet was delayed,
+    // convert that nearby device-only row into the combined environmental row.
+    if (telemetryType === 'environment') {
+      const merged = await sql`
+        UPDATE telemetry_readings
+        SET observed_at = ${observedIso},
+            telemetry_type = 'environment',
+            temperature_c = ${temperatureC},
+            metrics = telemetry_readings.metrics || ${JSON.stringify(storedMetrics)}::jsonb,
+            radio = ${JSON.stringify(radio)}::jsonb,
+            raw = jsonb_build_object(
+              'environment_telemetry', ${JSON.stringify(body)}::jsonb,
+              'device_telemetry', telemetry_readings.raw
+            ),
+            received_at = NOW()
+        WHERE id = (
+          SELECT id
+          FROM telemetry_readings
+          WHERE node_num = ${nodeNum}
+            AND telemetry_type = 'device'
+            AND observed_at <= ${observedIso}
+            AND observed_at >= ${observedIso}::timestamptz - (${MERGE_WINDOW_MINUTES} * INTERVAL '1 minute')
+          ORDER BY observed_at DESC
+          LIMIT 1
+        )
+        RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio
+      `;
+      if (merged.length) {
+        return res.status(200).json({ ok: true, stored: true, merged: true, reading: merged[0] });
+      }
+    }
+
     const rows = await sql`
       INSERT INTO telemetry_readings
         (observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio, raw)
       VALUES
-        (${observedAt.toISOString()}, ${nodeNum}, ${'Hidden Valley Repeater'}, ${telemetryType}, ${temperatureC},
-         ${JSON.stringify(metrics)}::jsonb, ${JSON.stringify(radio)}::jsonb, ${JSON.stringify(body)}::jsonb)
+        (${observedIso}, ${nodeNum}, ${'Hidden Valley Repeater'}, ${telemetryType}, ${temperatureC},
+         ${JSON.stringify(storedMetrics)}::jsonb, ${JSON.stringify(radio)}::jsonb, ${JSON.stringify(body)}::jsonb)
       RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio
     `;
-    return res.status(201).json({ ok: true, stored: true, reading: rows[0] });
+    return res.status(201).json({ ok: true, stored: true, merged: false, reading: rows[0] });
   } catch (error) {
     console.error('Telemetry ingest failed', error);
     return res.status(500).json({ ok: false, error: 'Database insert failed' });
