@@ -1,24 +1,17 @@
-const HVRP_NODE_NUM = 1436900584;
-const EXPECTED_TEMP_INTERVAL_HOURS = 1;
-const STALE_AFTER_HOURS = 3.25;
-const SITE = { lat: 38.53880, lon: -109.5409, elevationFt: 5800 };
-const state = { hours: 24, readings: [], map: null, baseLayer: null, coverageLayer: null, coverageVisible: false, expandedMap: null };
-
-const $ = id => document.getElementById(id);
-const els = {
-  status: $('status'), statusText: $('statusText'), temperature: $('temperature'), tempDetail: $('tempDetail'),
-  lastPacket: $('lastPacket'), packetTime: $('packetTime'), linkNow: $('linkNow'), linkDetail: $('linkDetail'),
-  battery: $('battery'), batteryDetail: $('batteryDetail'), high24: $('high24'), low24: $('low24'), avg24: $('avg24'),
-  tempTrend: $('tempTrend'), tempTrendDetail: $('tempTrendDetail'), reliability: $('reliability'), reliabilityDetail: $('reliabilityDetail'),
-  longestGap: $('longestGap'), avgHops: $('avgHops'), hopDetail: $('hopDetail'), avgSnr: $('avgSnr'), snrDetail: $('snrDetail'),
-  solarHours: $('solarHours'), solarDetail: $('solarDetail'), batteryChange: $('batteryChange'), batteryChangeDetail: $('batteryChangeDetail'),
-  bestRssi: $('bestRssi'), packetCount: $('packetCount'), packetCountDetail: $('packetCountDetail'), tabs: $('tabs'),
-  tempChart: $('tempChart'), tempChartCount: $('tempChartCount'), batteryChart: $('batteryChart'), batteryChartCount: $('batteryChartCount'),
-  linkChart: $('linkChart'), linkChartCount: $('linkChartCount'), hopChart: $('hopChart'), hopChartCount: $('hopChartCount'),
-  recent: $('recent'), updated: $('updated'), mapTopoBtn: $('mapTopoBtn'), mapSatBtn: $('mapSatBtn'),
-  coverageBtn: $('coverageBtn'), coverageLegend: $('coverageLegend'), expandDialog: $('expandDialog'),
-  expandTitle: $('expandTitle'), expandClose: $('expandClose'), expandedChart: $('expandedChart'), expandedMap: $('expandedMap')
+const STATIONS = {
+  hv: {
+    key: 'hv', node: 1436900584, name: 'Hidden Valley', fullName: 'Hidden Valley Repeater', short: 'HVRP',
+    color: '#55d9b7', coords: [38.53880, -109.54090], elevationFt: 5800, battery: true,
+  },
+  home: {
+    key: 'home', node: 2740603892, name: 'Heltec Home', fullName: 'Heltec Home', short: 'Home',
+    color: '#ff9a67', coords: [38.54898, -109.52236], elevationFt: 4080, battery: false,
+  },
 };
+const EXPECTED_INTERVAL_HOURS = 1;
+const STALE_AFTER_HOURS = 3.25;
+const state = { hours: 24, readings: [], map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
+const $ = id => document.getElementById(id);
 
 const num = v => {
   if (v === null || v === undefined || v === '') return null;
@@ -37,368 +30,157 @@ const batteryTime = r => metric(r, 'device_observed_at') || r?.observed_at;
 const rssi = r => num(r?.radio?.rssi);
 const snr = r => num(r?.radio?.snr);
 const hops = r => num(r?.radio?.hops_away);
+const mean = xs => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : null;
 const ageMs = iso => Math.max(0, Date.now() - new Date(iso).getTime());
 const ageHours = iso => ageMs(iso) / 3600000;
-const mean = values => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
-const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function ageText(iso) {
-  const s = ageMs(iso) / 1000;
-  if (s < 60) return `${Math.round(s)} sec`;
-  if (s < 3600) return `${Math.round(s / 60)} min`;
-  if (s < 86400) return `${(s / 3600).toFixed(1)} hr`;
-  return `${(s / 86400).toFixed(1)} d`;
+function ageText(iso){
+  if(!iso) return '—';
+  const s=ageMs(iso)/1000;
+  if(s<60) return `${Math.round(s)} sec ago`;
+  if(s<3600) return `${Math.round(s/60)} min ago`;
+  if(s<86400) return `${(s/3600).toFixed(1)} hr ago`;
+  return `${(s/86400).toFixed(1)} d ago`;
 }
-function fmtTime(iso) {
-  return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
-function fmtAxisTime(ms, spanMs) {
-  const d = new Date(ms);
-  if (spanMs > 3 * 86400000) return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-function rows() { return state.readings.filter(r => num(r?.node_num) === HVRP_NODE_NUM); }
-function tempRows() { return rows().filter(r => tempC(r) !== null && r.telemetry_type === 'environment'); }
-function deviceRows() { return rows().filter(r => batteryV(r) !== null || batteryPct(r) !== null); }
+function fmtTime(iso){return new Date(iso).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function fmtAxis(ms,span){const d=new Date(ms);return span>3*86400000?d.toLocaleDateString([],{month:'short',day:'numeric'}):d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}
+function stationRows(key){const s=STATIONS[key];return state.readings.filter(r=>num(r?.node_num)===s.node);}
+function tempRows(key){return stationRows(key).filter(r=>tempF(r)!==null && r.telemetry_type==='environment').sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));}
+function hvDeviceRows(){return stationRows('hv').filter(r=>batteryV(r)!==null||batteryPct(r)!==null).sort((a,b)=>new Date(batteryTime(b))-new Date(batteryTime(a)));}
+function latestTemp(key){return tempRows(key)[0]||null;}
 
-function rfClassFromRssi(v) {
-  if (!Number.isFinite(v)) return '';
-  if (v >= -110) return 'rf-strong';
-  if (v >= -122) return 'rf-fair';
-  return 'rf-weak';
-}
-function rfClassFromSnr(v) {
-  if (!Number.isFinite(v)) return '';
-  if (v >= -7) return 'rf-strong';
-  if (v >= -15) return 'rf-fair';
-  return 'rf-weak';
-}
-function setRfClass(el, cls) {
-  if (!el) return;
-  el.classList.remove('rf-strong', 'rf-fair', 'rf-weak');
-  if (cls) el.classList.add(cls);
-}
-
-function reliabilityStats(rs) {
-  if (!rs.length) return { pct: null, expected: 0, actual: 0, gapH: null };
-  const asc = [...rs].sort((a, b) => new Date(a.observed_at) - new Date(b.observed_at));
-  const first = new Date(asc[0].observed_at).getTime();
-  const last = new Date(asc[asc.length - 1].observed_at).getTime();
-  const spanH = Math.max(0, (last - first) / 3600000);
-  const expected = Math.max(1, Math.floor(spanH / EXPECTED_TEMP_INTERVAL_HOURS + 0.25) + 1);
-  const actual = asc.length;
-  const pct = Math.min(100, actual / expected * 100);
-  let gapH = 0;
-  for (let i = 1; i < asc.length; i++) gapH = Math.max(gapH, (new Date(asc[i].observed_at) - new Date(asc[i - 1].observed_at)) / 3600000);
-  return { pct, expected, actual, gapH: asc.length > 1 ? gapH : null };
-}
-
-function trendForHours(rs, hours) {
-  if (rs.length < 2) return null;
-  const cutoff = Date.now() - hours * 3600000;
-  const recent = rs.filter(r => new Date(r.observed_at).getTime() >= cutoff).sort((a, b) => new Date(a.observed_at) - new Date(b.observed_at));
-  if (recent.length < 2) return null;
-  const first = recent[0], last = recent[recent.length - 1];
-  const dt = (new Date(last.observed_at) - new Date(first.observed_at)) / 3600000;
-  if (dt <= 0) return null;
-  const delta = tempF(last) - tempF(first);
-  return { delta, perHour: delta / dt, hours: dt, count: recent.length };
-}
-
-function solarEstimate(rs) {
-  const asc = [...rs].filter(r => batteryV(r) !== null).sort((a, b) => new Date(batteryTime(a)) - new Date(batteryTime(b)));
-  if (asc.length < 2) return { hours: null, rises: 0 };
-  let hours = 0, rises = 0;
-  for (let i = 1; i < asc.length; i++) {
-    const prev = asc[i - 1], cur = asc[i];
-    const dt = (new Date(batteryTime(cur)) - new Date(batteryTime(prev))) / 3600000;
-    const dv = batteryV(cur) - batteryV(prev);
-    if (dt > 0 && dt <= 3 && dv >= 0.002) { hours += dt; rises += 1; }
+function statsFor(key){
+  const rows=tempRows(key); const now=Date.now();
+  const last24=rows.filter(r=>now-new Date(r.observed_at).getTime()<=86400000);
+  const vals=last24.map(tempF).filter(Number.isFinite);
+  const sorted=[...rows].sort((a,b)=>new Date(a.observed_at)-new Date(b.observed_at));
+  let longest=null;
+  if(sorted.length>1){longest=0;for(let i=1;i<sorted.length;i++)longest=Math.max(longest,(new Date(sorted[i].observed_at)-new Date(sorted[i-1].observed_at))/3600000);}
+  let reliability=null,expected=0;
+  if(sorted.length){
+    const first=new Date(sorted[0].observed_at).getTime(),last=new Date(sorted.at(-1).observed_at).getTime();
+    expected=Math.max(1,Math.floor(((last-first)/3600000)/EXPECTED_INTERVAL_HOURS+.25)+1);
+    reliability=Math.min(100,sorted.length/expected*100);
   }
-  return { hours, rises };
+  const cutoff=now-12*3600000; const recent=sorted.filter(r=>new Date(r.observed_at).getTime()>=cutoff);
+  let trend=null;
+  if(recent.length>=2){const a=recent[0],b=recent.at(-1),dt=(new Date(b.observed_at)-new Date(a.observed_at))/3600000;if(dt>0)trend={delta:tempF(b)-tempF(a),perHour:(tempF(b)-tempF(a))/dt,hours:dt};}
+  return {rows,last24,high:vals.length?Math.max(...vals):null,low:vals.length?Math.min(...vals):null,avg:mean(vals),longest,reliability,expected,actual:sorted.length,trend};
+}
+function setText(id,val){const el=$(id);if(el)el.textContent=val;}
+function setStationState(key,latest){
+  const el=$(key==='hv'?'hvState':'homeState'); if(!el)return;
+  if(!latest){el.className='station-state offline';el.textContent='No temperature yet';return;}
+  const online=ageHours(latest.observed_at)<=STALE_AFTER_HOURS;
+  el.className=`station-state ${online?'online':'stale'}`;
+  el.textContent=online?'Reporting normally':`Stale · ${ageText(latest.observed_at)}`;
+}
+function fillStats(key,prefix){
+  const s=statsFor(key);
+  setText(`${prefix}High`,s.high===null?'—':`${s.high.toFixed(1)}°`);
+  setText(`${prefix}Low`,s.low===null?'—':`${s.low.toFixed(1)}°`);
+  setText(`${prefix}Avg`,s.avg===null?'—':`${s.avg.toFixed(1)}°`);
+  if(s.trend){setText(`${prefix}Trend`,`${s.trend.delta>=0?'+':''}${s.trend.delta.toFixed(1)}°`);setText(`${prefix}TrendDetail`,`${s.trend.perHour>=0?'+':''}${s.trend.perHour.toFixed(2)}°/hr`);} else {setText(`${prefix}Trend`,'—');setText(`${prefix}TrendDetail`,'need 2 readings in 12h');}
+  setText(`${prefix}Reliability`,s.reliability===null?'—':`${s.reliability.toFixed(0)}%`);
+  setText(`${prefix}ReliabilityDetail`,s.actual?`${s.actual}/${s.expected} expected in selected window`:'no readings');
+  setText(`${prefix}Gap`,s.longest===null?'—':`${s.longest.toFixed(1)} hr`);
 }
 
-function renderSummary() {
-  const tr = tempRows();
-  const dr = deviceRows();
-  const latestT = tr[0] || null;
-  const latestD = [...dr].sort((a, b) => new Date(batteryTime(b)) - new Date(batteryTime(a)))[0] || null;
-  const latestAny = rows()[0] || latestT || latestD;
+function renderSummary(){
+  const hv=latestTemp('hv'),home=latestTemp('home');
+  setText('hvTemp',hv?tempF(hv).toFixed(1):'—'); setText('homeTemp',home?tempF(home).toFixed(1):'—');
+  setText('hvUpdated',hv?`Updated ${ageText(hv.observed_at)}`:'Waiting for temperature');
+  setText('homeUpdated',home?`Updated ${ageText(home.observed_at)}`:'Waiting for temperature');
+  setStationState('hv',hv); setStationState('home',home);
 
-  if (latestT) {
-    const f = tempF(latestT);
-    els.temperature.textContent = f.toFixed(1);
-    els.tempDetail.textContent = `Automatic temperature reading received ${ageText(latestT.observed_at)} ago.`;
-    els.lastPacket.textContent = ageText(latestT.observed_at);
-    els.packetTime.textContent = fmtTime(latestT.observed_at);
-    const online = ageHours(latestT.observed_at) <= STALE_AFTER_HOURS;
-    els.status.className = `live-pill ${online ? 'online' : 'offline'}`;
-    els.statusText.textContent = online ? 'Hidden Valley telemetry live' : `Last temperature packet ${ageText(latestT.observed_at)} ago`;
-  } else {
-    els.temperature.textContent = '—';
-    els.tempDetail.textContent = 'Waiting for automatic temperature telemetry.';
-    els.lastPacket.textContent = '—';
-    els.packetTime.textContent = 'no telemetry yet';
-    els.status.className = 'live-pill offline';
-    els.statusText.textContent = 'Waiting for temperature telemetry';
-  }
+  const dr=hvDeviceRows(),latestD=dr[0]||null;
+  if(latestD){const p=batteryPct(latestD),v=batteryV(latestD);setText('hvHeroBattery',p!==null?`Battery ${Math.round(p)}%`:v!==null?`${v.toFixed(3)} V`:'Battery —');}
+  else setText('hvHeroBattery','Battery —');
 
-  const linkSource = latestT || latestAny;
-  if (linkSource && (rssi(linkSource) !== null || snr(linkSource) !== null)) {
-    const rv = rssi(linkSource), sv = snr(linkSource), hv = hops(linkSource);
-    els.linkNow.textContent = rv === null ? '—' : `${Math.round(rv)} dBm`;
-    setRfClass(els.linkNow, rfClassFromRssi(rv));
-    const routeText = hv === 0 ? 'direct' : hv === 1 ? '1 relay' : hv !== null ? `${Math.round(hv)} relays` : 'route unknown';
-    els.linkDetail.textContent = `SNR ${sv === null ? '—' : sv.toFixed(1) + ' dB'} · ${routeText}`;
-  } else {
-    els.linkNow.textContent = '—'; setRfClass(els.linkNow, ''); els.linkDetail.textContent = 'RSSI / SNR / route';
-  }
-
-  if (latestD) {
-    const v = batteryV(latestD), p = batteryPct(latestD), bt = batteryTime(latestD);
-    els.battery.textContent = p !== null ? `${Math.round(p)}%` : v !== null ? `${v.toFixed(3)} V` : '—';
-    els.batteryDetail.textContent = [v !== null ? `${v.toFixed(3)} V` : null, bt ? `updated ${ageText(bt)} ago` : null].filter(Boolean).join(' · ');
-  } else {
-    els.battery.textContent = '—'; els.batteryDetail.textContent = 'battery telemetry pending';
-  }
-
-  const now = Date.now();
-  const last24 = tr.filter(r => now - new Date(r.observed_at).getTime() <= 24 * 3600000);
-  const temps24 = last24.map(tempF).filter(Number.isFinite);
-  els.high24.textContent = temps24.length ? `${Math.max(...temps24).toFixed(1)}°` : '—';
-  els.low24.textContent = temps24.length ? `${Math.min(...temps24).toFixed(1)}°` : '—';
-  const avg = mean(temps24); els.avg24.textContent = avg === null ? '—' : `${avg.toFixed(1)}°`;
-
-  const trend = trendForHours(tr, 12);
-  if (trend) {
-    els.tempTrend.textContent = `${trend.delta > 0 ? '+' : ''}${trend.delta.toFixed(1)}°`;
-    els.tempTrendDetail.textContent = `${trend.perHour >= 0 ? '+' : ''}${trend.perHour.toFixed(2)}°/hr across ${trend.hours.toFixed(1)} hr`;
-  } else { els.tempTrend.textContent = '—'; els.tempTrendDetail.textContent = 'need at least 2 readings in 12 hours'; }
-
-  const rel = reliabilityStats(tr);
-  els.reliability.textContent = rel.pct === null ? '—' : `${rel.pct.toFixed(0)}%`;
-  els.reliabilityDetail.textContent = rel.actual ? `${rel.actual}/${rel.expected} expected temperature packets` : 'expected 1 temperature packet/hour';
-  els.longestGap.textContent = rel.gapH === null ? '—' : `${rel.gapH.toFixed(1)} hr`;
-
-  const hv = tr.map(hops).filter(Number.isFinite), hs = mean(hv), directCount = hv.filter(v => v === 0).length, relayedCount = hv.filter(v => v > 0).length;
-  if (hs === null) { els.avgHops.textContent = '—'; els.hopDetail.textContent = '0 = direct, 1 = one relay'; }
-  else {
-    els.avgHops.textContent = relayedCount === 0 ? 'Direct' : directCount >= relayedCount ? 'Mostly direct' : `${hs.toFixed(1)} avg`;
-    els.hopDetail.textContent = `${hs.toFixed(1)} average · ${directCount} direct · ${relayedCount} relayed`;
-  }
-
-  const sv = tr.map(snr).filter(Number.isFinite), sa = mean(sv);
-  els.avgSnr.textContent = sa === null ? '—' : `${sa.toFixed(1)} dB`; setRfClass(els.avgSnr, rfClassFromSnr(sa));
-  els.snrDetail.textContent = sv.length ? `best ${Math.max(...sv).toFixed(1)} · worst ${Math.min(...sv).toFixed(1)} dB` : 'selected window';
-
-  const rv = tr.map(rssi).filter(Number.isFinite), best = rv.length ? Math.max(...rv) : null;
-  els.bestRssi.textContent = best === null ? '—' : `${best.toFixed(0)} dBm`; setRfClass(els.bestRssi, rfClassFromRssi(best));
-  els.packetCount.textContent = tr.length ? String(tr.length) : '0';
-  els.packetCountDetail.textContent = `within selected ${state.hours >= 24 ? state.hours / 24 + ' day' + (state.hours === 24 ? '' : 's') : state.hours + 'h'} window`;
-
-  const solar = solarEstimate(dr);
-  if (solar.hours === null) { els.solarHours.textContent = '—'; els.solarDetail.textContent = 'need at least 2 battery readings'; }
-  else if (solar.rises === 0) { els.solarHours.textContent = '0.0 hr'; els.solarDetail.textContent = 'no clear voltage-rise interval detected yet'; }
-  else { els.solarHours.textContent = `${solar.hours.toFixed(1)} hr`; els.solarDetail.textContent = `${solar.rises} rising-voltage interval${solar.rises === 1 ? '' : 's'} detected`; }
-
-  const dvRows = [...dr].filter(r => batteryV(r) !== null).sort((a, b) => new Date(batteryTime(a)) - new Date(batteryTime(b)));
-  if (dvRows.length >= 2) {
-    const firstV = batteryV(dvRows[0]), lastV = batteryV(dvRows[dvRows.length - 1]), change = lastV - firstV;
-    els.batteryChange.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(3)} V`;
-    els.batteryChangeDetail.textContent = `${firstV.toFixed(3)} → ${lastV.toFixed(3)} V · ${dvRows.length} samples`;
-  } else if (dvRows.length === 1) { els.batteryChange.textContent = '0.000 V'; els.batteryChangeDetail.textContent = 'only one battery sample in selected window'; }
-  else { els.batteryChange.textContent = '—'; els.batteryChangeDetail.textContent = 'no battery data in selected window'; }
+  if(hv&&home){const a=tempF(hv),b=tempF(home),spread=Math.abs(a-b),warmer=a>=b?STATIONS.hv:STATIONS.home;setText('tempSpread',`${spread.toFixed(1)}°F`);setText('tempSpreadDetail',`${warmer.name} is ${(spread).toFixed(1)}° warmer`);setText('warmestStation',warmer.name);setText('warmestDetail',`${Math.max(a,b).toFixed(1)}°F now`);}
+  else {setText('tempSpread','—');setText('tempSpreadDetail','need both current readings');const only=hv?STATIONS.hv:home?STATIONS.home:null;setText('warmestStation',only?only.name:'—');setText('warmestDetail',only?'only station currently reporting':'latest readings');}
+  const latests=[['hv',hv],['home',home]].filter(x=>x[1]).sort((a,b)=>new Date(b[1].observed_at)-new Date(a[1].observed_at));
+  if(latests.length){setText('freshestStation',STATIONS[latests[0][0]].name);setText('freshestDetail',ageText(latests[0][1].observed_at));}else{setText('freshestStation','—');setText('freshestDetail','no telemetry');}
+  const healthy=[hv,home].filter(r=>r&&ageHours(r.observed_at)<=STALE_AFTER_HOURS).length;setText('stationsReporting',`${healthy} / 2`);
+  const n=$('networkStatus');if(n){n.className=`live-pill ${healthy===2?'online':healthy===1?'partial':'offline'}`;setText('networkStatusText',healthy===2?'Both stations reporting':healthy===1?'1 of 2 stations reporting':'No current station telemetry');}
+  fillStats('hv','hv'); fillStats('home','home'); renderBattery(); renderRf();
 }
 
-function tooltipMarkup(title, lines) { return `<strong>${esc(title)}</strong>${lines.filter(Boolean).map(line => `<div>${esc(line)}</div>`).join('')}`; }
-function attachChartTooltip(target) {
-  if (!target) return;
-  let tip = target.querySelector('.chart-tooltip');
-  if (!tip) { tip = document.createElement('div'); tip.className = 'chart-tooltip'; tip.hidden = true; target.appendChild(tip); }
-  const show = (point, ev) => {
-    tip.innerHTML = point.dataset.tip || ''; tip.hidden = false;
-    const rect = target.getBoundingClientRect(), clientX = ev?.clientX ?? rect.left + rect.width / 2, clientY = ev?.clientY ?? rect.top + rect.height / 2;
-    tip.style.left = `${Math.max(0, Math.min(rect.width - 180, clientX - rect.left))}px`; tip.style.top = `${Math.max(70, clientY - rect.top)}px`;
-  };
-  target.querySelectorAll('[data-tip]').forEach(point => {
-    point.addEventListener('mouseenter', ev => show(point, ev)); point.addEventListener('mousemove', ev => show(point, ev));
-    point.addEventListener('focus', ev => show(point, ev)); point.addEventListener('click', ev => { ev.stopPropagation(); show(point, ev); });
-    point.addEventListener('mouseleave', () => { if (!point.matches(':focus')) tip.hidden = true; }); point.addEventListener('blur', () => { tip.hidden = true; });
+function svgEl(tag,attrs={}){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;}
+function addText(svg,x,y,text,anchor='start',fill='#78949b',size=11){const t=svgEl('text',{x,y,'text-anchor':anchor,fill,'font-size':size,'font-family':'Inter,system-ui,sans-serif'});t.textContent=text;svg.appendChild(t);return t;}
+function chartDimensions(container){const w=Math.max(520,container.clientWidth||900),h=Math.max(240,container.clientHeight||300);return {w,h,left:54,right:22,top:18,bottom:38,plotW:w-76,plotH:h-56};}
+function renderLineChart(container,series,opts={}){
+  container.innerHTML=''; const all=series.flatMap(s=>s.points).filter(p=>Number.isFinite(p.y)&&Number.isFinite(p.x));
+  if(!all.length){container.innerHTML=`<div class="empty">${esc(opts.empty||'No data in this window.')}</div>`;return;}
+  const d=chartDimensions(container); const xs=all.map(p=>p.x),ys=all.map(p=>p.y);let xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);if(xmax===xmin)xmax=xmin+3600000;const pad=(ymax-ymin||2)*.14;ymin-=pad;ymax+=pad;
+  if(Number.isFinite(opts.yMin))ymin=opts.yMin;if(Number.isFinite(opts.yMax))ymax=opts.yMax;
+  const x=v=>d.left+(v-xmin)/(xmax-xmin)*d.plotW,y=v=>d.top+(ymax-v)/(ymax-ymin)*d.plotH;
+  const svg=svgEl('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'none'});container.appendChild(svg);
+  for(let i=0;i<=4;i++){const yy=d.top+d.plotH*i/4;svg.appendChild(svgEl('line',{x1:d.left,x2:d.left+d.plotW,y1:yy,y2:yy,stroke:'#17343d','stroke-width':1}));const val=ymax-(ymax-ymin)*i/4;addText(svg,d.left-8,yy+4,opts.yFormat?opts.yFormat(val):val.toFixed(1),'end');}
+  const span=xmax-xmin;for(let i=0;i<=4;i++){const xx=d.left+d.plotW*i/4;svg.appendChild(svgEl('line',{x1:xx,x2:xx,y1:d.top,y2:d.top+d.plotH,stroke:'#102b33','stroke-width':1}));addText(svg,xx,d.h-12,fmtAxis(xmin+span*i/4,span),'middle');}
+  series.forEach(s=>{
+    const pts=[...s.points].filter(p=>Number.isFinite(p.y)).sort((a,b)=>a.x-b.x);if(!pts.length)return;
+    const poly=pts.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:s.color,'stroke-width':opts.strokeWidth||3,'stroke-linecap':'round','stroke-linejoin':'round'}));
+    pts.forEach(p=>{const c=svgEl('circle',{cx:x(p.x),cy:y(p.y),r:opts.pointRadius||3.1,fill:s.color,stroke:'#08171d','stroke-width':1.4});c.style.cursor='crosshair';c.addEventListener('mouseenter',ev=>showTooltip(container,ev,`${s.name}<br><strong>${opts.tooltipValue?opts.tooltipValue(p.y):p.y.toFixed(1)}</strong><br>${fmtTime(p.iso||new Date(p.x).toISOString())}`));c.addEventListener('mouseleave',()=>hideTooltip(container));svg.appendChild(c);});
   });
-  target.addEventListener('click', ev => { if (!ev.target.closest('[data-tip]')) tip.hidden = true; });
+  if(opts.axisLabel)addText(svg,8,14,opts.axisLabel,'start','#90aab0',11);
+}
+function showTooltip(container,event,html){hideTooltip(container);const tip=document.createElement('div');tip.className='chart-tooltip';tip.innerHTML=html;const r=container.getBoundingClientRect();tip.style.left=`${event.clientX-r.left}px`;tip.style.top=`${event.clientY-r.top}px`;container.appendChild(tip);}
+function hideTooltip(container){container.querySelector('.chart-tooltip')?.remove();}
+
+function renderTemperatureChart(target=$('tempChart')){
+  const hv=tempRows('hv').map(r=>({x:new Date(r.observed_at).getTime(),y:tempF(r),iso:r.observed_at}));
+  const home=tempRows('home').map(r=>({x:new Date(r.observed_at).getTime(),y:tempF(r),iso:r.observed_at}));
+  renderLineChart(target,[{name:'Hidden Valley',color:STATIONS.hv.color,points:hv},{name:'Heltec Home',color:STATIONS.home.color,points:home}],{axisLabel:'Temperature °F',tooltipValue:v=>`${v.toFixed(1)} °F`,strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for temperature telemetry.'});
+  setText('tempChartCount',`${hv.length} Hidden Valley · ${home.length} Heltec Home readings`);
+}
+function renderBattery(target=$('batteryChart')){
+  const dr=hvDeviceRows(),latest=dr[0]||null;
+  if(latest){const p=batteryPct(latest),v=batteryV(latest);setText('batteryNow',p!==null?`${Math.round(p)}%`:v!==null?`${v.toFixed(3)} V`:'—');setText('batteryNowDetail',[v!==null?`${v.toFixed(3)} V`:null,ageText(batteryTime(latest))].filter(Boolean).join(' · '));}else{setText('batteryNow','—');setText('batteryNowDetail','battery telemetry pending');}
+  const vals=dr.filter(r=>batteryV(r)!==null).sort((a,b)=>new Date(batteryTime(a))-new Date(batteryTime(b)));
+  if(vals.length>=2){const a=batteryV(vals[0]),b=batteryV(vals.at(-1)),change=b-a;setText('batteryChange',`${change>=0?'+':''}${change.toFixed(3)} V`);setText('batteryChangeDetail',`${a.toFixed(3)} → ${b.toFixed(3)} V`);}else{setText('batteryChange','—');setText('batteryChangeDetail','need 2 voltage samples');}
+  let solar=0,rises=0;for(let i=1;i<vals.length;i++){const dt=(new Date(batteryTime(vals[i]))-new Date(batteryTime(vals[i-1])))/3600000,dv=batteryV(vals[i])-batteryV(vals[i-1]);if(dt>0&&dt<=3&&dv>=.002){solar+=dt;rises++;}}
+  if(vals.length<2){setText('solarHours','—');setText('solarDetail','need at least 2 readings');}else{setText('solarHours',`${solar.toFixed(1)} hr`);setText('solarDetail',rises?`${rises} rising-voltage interval${rises===1?'':'s'}`:'no clear voltage rise yet');}
+  setText('batteryChartCount',vals.length?`${vals.length} voltage samples · Hidden Valley only`:'Battery telemetry pending');
+  const points=vals.map(r=>({x:new Date(batteryTime(r)).getTime(),y:batteryV(r),iso:batteryTime(r)}));renderLineChart(target,[{name:'Hidden Valley voltage',color:'#f3c969',points}],{axisLabel:'Battery V',tooltipValue:v=>`${v.toFixed(3)} V`,empty:'Waiting for Hidden Valley battery telemetry.',pointRadius:3});
+}
+function rfClass(v){if(!Number.isFinite(v))return'';if(v>=-110)return'rf-strong';if(v>=-122)return'rf-fair';return'rf-weak';}
+function applyRf(id,v){const el=$(id);if(!el)return;el.classList.remove('rf-strong','rf-fair','rf-weak');const c=rfClass(v);if(c)el.classList.add(c);}
+function renderRf(target=$('rfChart')){
+  const rows=tempRows('hv').filter(r=>rssi(r)!==null);const latest=rows[0]||null;const vals=rows.map(rssi).filter(Number.isFinite);const avg=mean(vals),best=vals.length?Math.max(...vals):null;
+  if(latest){const rv=rssi(latest),sv=snr(latest),hp=hops(latest);setText('latestRssi',`${Math.round(rv)} dBm`);applyRf('latestRssi',rv);setText('latestSnr',`SNR ${sv===null?'—':sv.toFixed(1)+' dB'}`);setText('routeNow',hp===0?'Direct':hp===1?'1 relay':hp!==null?`${Math.round(hp)} relays`:'—');setText('routeDetail',hp===null?'hop metadata unavailable':`${Math.round(hp)} hop${hp===1?'':'s'} away`);}else{setText('latestRssi','—');setText('latestSnr','SNR —');setText('routeNow','—');setText('routeDetail','hop metadata');}
+  setText('avgRssi',avg===null?'—':`${avg.toFixed(0)} dBm`);applyRf('avgRssi',avg);setText('bestRssi',best===null?'best —':`best ${best.toFixed(0)} dBm`);setText('rfChartCount',rows.length?`${rows.length} Hidden Valley RF samples`:'RF metadata pending');
+  const points=[...rows].reverse().map(r=>({x:new Date(r.observed_at).getTime(),y:rssi(r),iso:r.observed_at}));renderLineChart(target,[{name:'RSSI',color:'#63b7ff',points}],{axisLabel:'RSSI dBm',tooltipValue:v=>`${Math.round(v)} dBm`,empty:'Waiting for Hidden Valley RF metadata.',pointRadius:3});
 }
 
-function drawLineChart(target, inputRows, valueFn, opts = {}) {
-  const pts = inputRows.map(r => ({ t: new Date(opts.timeFn ? opts.timeFn(r) : r.observed_at).getTime(), v: valueFn(r), r })).filter(p => Number.isFinite(p.t) && Number.isFinite(p.v)).sort((a, b) => a.t - b.t);
-  if (!pts.length) { target.innerHTML = `<div class="empty">${esc(opts.empty || 'Waiting for telemetry.')}</div>`; return; }
-  if (pts.length === 1) { target.innerHTML = `<div class="single-reading"><strong>${esc(opts.format ? opts.format(pts[0].v) : pts[0].v)}</strong><span>${esc(fmtTime(new Date(pts[0].t).toISOString()))}</span></div>`; return; }
-  const W = 980, H = opts.large ? 360 : 300, L = 64, R = 24, T = 24, B = 44;
-  const minT = Math.min(...pts.map(p => p.t)), maxT = Math.max(...pts.map(p => p.t)), spanT = Math.max(1, maxT - minT);
-  let minV = opts.min ?? Math.min(...pts.map(p => p.v)), maxV = opts.max ?? Math.max(...pts.map(p => p.v));
-  if (maxV - minV < (opts.minSpan || 1)) { const mid = (maxV + minV) / 2, half = (opts.minSpan || 1) / 2; minV = mid - half; maxV = mid + half; }
-  if (opts.min === undefined || opts.max === undefined) { const pad = (maxV - minV) * 0.12; minV -= pad; maxV += pad; }
-  const x = t => L + ((t - minT) / spanT) * (W - L - R), y = v => T + (1 - (v - minV) / Math.max(0.0001, maxV - minV)) * (H - T - B);
-  const path = pts.map((p, i) => `${i ? 'L' : 'M'} ${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join(' ');
-  const grid = Array.from({ length: 5 }, (_, i) => minV + (maxV - minV) * i / 4).map(v => `<line x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}" class="gridline"/><text x="${L - 10}" y="${y(v) + 4}" text-anchor="end" class="axis-label">${esc(opts.axisFormat ? opts.axisFormat(v) : v.toFixed(1))}</text>`).join('');
-  const dots = pts.map(p => {
-    const tip = tooltipMarkup(fmtTime(new Date(p.t).toISOString()), [opts.format ? opts.format(p.v) : String(p.v), opts.extraTip ? opts.extraTip(p.r) : null]);
-    const cls = opts.dotClassFn ? opts.dotClassFn(p.r, p.v) : (opts.dotClass || 'temp');
-    return `<circle cx="${x(p.t)}" cy="${y(p.v)}" r="4.2" class="chart-dot ${esc(cls)}" tabindex="0" data-tip="${esc(tip)}"/>`;
-  }).join('');
-  target.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || 'chart')}">${grid}<path d="${path}" class="chart-line ${esc(opts.lineClass || '')}"/>${dots}<text x="${L}" y="${H - 12}" class="axis-label">${esc(fmtAxisTime(minT, spanT))}</text><text x="${W - R}" y="${H - 12}" text-anchor="end" class="axis-label">${esc(fmtAxisTime(maxT, spanT))}</text></svg>`;
-  attachChartTooltip(target);
+function renderRecent(){
+  const rows=state.readings.filter(r=>r.telemetry_type==='environment'&&tempF(r)!==null&&(num(r.node_num)===STATIONS.hv.node||num(r.node_num)===STATIONS.home.node)).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)).slice(0,40);
+  const tbody=$('recent');if(!rows.length){tbody.innerHTML='<tr><td colspan="8">Waiting for telemetry.</td></tr>';return;}
+  tbody.innerHTML=rows.map(r=>{const key=num(r.node_num)===STATIONS.hv.node?'hv':'home',s=STATIONS[key],p=key==='hv'?batteryPct(r):null,v=key==='hv'?batteryV(r):null,rv=key==='hv'?rssi(r):null,sv=key==='hv'?snr(r):null,h=key==='hv'?hops(r):null;return `<tr><td>${esc(fmtTime(r.observed_at))}</td><td><span class="station-cell"><i class="legend-swatch ${key}"></i>${esc(s.name)}</span></td><td class="right">${tempF(r).toFixed(1)}</td><td class="right">${p===null?'—':Math.round(p)+'%'}</td><td class="right">${v===null?'—':v.toFixed(3)}</td><td class="right">${rv===null?'—':Math.round(rv)}</td><td class="right">${sv===null?'—':sv.toFixed(1)}</td><td class="right">${h===null?'—':Math.round(h)}</td></tr>`;}).join('');
 }
 
-function drawBatteryChart(target, inputRows) {
-  const pts = inputRows.map(r => ({ t: new Date(batteryTime(r)).getTime(), v: batteryV(r), p: batteryPct(r), r })).filter(p => Number.isFinite(p.t) && Number.isFinite(p.v)).sort((a, b) => a.t - b.t);
-  if (!pts.length) { target.innerHTML = '<div class="empty">Waiting for battery telemetry.</div>'; return; }
-  if (pts.length === 1) { const p = pts[0]; target.innerHTML = `<div class="single-reading"><strong>${p.v.toFixed(3)} V</strong><span>${p.p === null ? '' : Math.round(p.p) + '% · '}${esc(fmtTime(new Date(p.t).toISOString()))}</span></div>`; return; }
-  const W = 980, H = 300, L = 68, R = 24, T = 24, B = 44, minT = pts[0].t, maxT = pts[pts.length - 1].t, spanT = Math.max(1, maxT - minT);
-  let minV = Math.min(...pts.map(p => p.v)), maxV = Math.max(...pts.map(p => p.v));
-  if (maxV - minV < 0.03) { const mid = (maxV + minV) / 2; minV = mid - 0.015; maxV = mid + 0.015; } else { const pad = (maxV - minV) * 0.15; minV -= pad; maxV += pad; }
-  const x = t => L + ((t - minT) / spanT) * (W - L - R), y = v => T + (1 - (v - minV) / (maxV - minV)) * (H - T - B);
-  const path = pts.map((p, i) => `${i ? 'L' : 'M'} ${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join(' ');
-  const grid = Array.from({ length: 5 }, (_, i) => minV + (maxV - minV) * i / 4).map(v => `<line x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}" class="gridline"/><text x="${L - 10}" y="${y(v) + 4}" text-anchor="end" class="axis-label">${v.toFixed(3)}V</text>`).join('');
-  const dots = pts.map((p, i) => {
-    const charging = i > 0 && p.v - pts[i - 1].v >= 0.002;
-    const tip = tooltipMarkup(fmtTime(new Date(p.t).toISOString()), [`${p.v.toFixed(3)} V`, p.p === null ? null : `${Math.round(p.p)}% battery`, charging ? `Voltage rose ${(p.v - pts[i - 1].v).toFixed(3)} V · possible charging` : null]);
-    return `<circle cx="${x(p.t)}" cy="${y(p.v)}" r="${charging ? 5 : 4.2}" class="chart-dot ${charging ? 'charge' : 'battery'}" tabindex="0" data-tip="${esc(tip)}"/>`;
-  }).join('');
-  target.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Battery voltage and possible solar charging">${grid}<path d="${path}" class="chart-line secondary"/>${dots}<text x="${L}" y="${H - 12}" class="axis-label">${esc(fmtAxisTime(minT, spanT))}</text><text x="${W - R}" y="${H - 12}" text-anchor="end" class="axis-label">${esc(fmtAxisTime(maxT, spanT))}</text><text x="${L}" y="16" class="legend-label">Voltage · amber points = possible charging</text></svg>`;
-  attachChartTooltip(target);
+const MAP_PROVIDERS={topo:{url:'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',attr:'USGS The National Map'},sat:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'Imagery © Esri'}};
+function mapLayer(kind){const p=MAP_PROVIDERS[kind]||MAP_PROVIDERS.topo;return L.tileLayer(p.url,{maxZoom:20,attribution:p.attr,updateWhenIdle:true,keepBuffer:3});}
+function addMarkers(map){
+  Object.values(STATIONS).forEach(s=>{const marker=L.circleMarker(s.coords,{radius:9,color:'#edf7f6',weight:2,fillColor:s.color,fillOpacity:1}).addTo(map);const location=s.key==='home'?'Approx. Hollyoak Ln × Mill Creek Dr':`${s.coords[0].toFixed(5)}, ${s.coords[1].toFixed(5)}`;marker.bindPopup(`<strong>${esc(s.fullName)}</strong><br>${esc(location)}<br>${s.elevationFt.toLocaleString()} ft elevation<br><span style="color:#91aab0">${s.key==='home'?'Approximate display location':'Remote station location'}</span>`);});
 }
+function setMapKind(kind,map=state.map){if(!map||!window.L)return;state.mapKind=kind==='sat'?'sat':'topo';if(map===state.map&&state.baseLayer){try{map.removeLayer(state.baseLayer)}catch{}}const layer=mapLayer(state.mapKind).addTo(map);if(map===state.map){state.baseLayer=layer;$('mapTopoBtn')?.classList.toggle('active',state.mapKind==='topo');$('mapSatBtn')?.classList.toggle('active',state.mapKind==='sat');}setText('mapStatus',state.mapKind==='topo'?'USGS topo · two station locations':'Satellite imagery · two station locations');}
+function initMap(){if(!window.L){setText('mapStatus','Map engine unavailable.');return;}const el=$('stationMap');if(!el)return;if(state.map){try{state.map.remove()}catch{}}state.map=L.map(el,{zoomControl:true,preferCanvas:true,minZoom:3,maxZoom:20});setMapKind('topo',state.map);addMarkers(state.map);state.map.fitBounds([STATIONS.hv.coords,STATIONS.home.coords],{padding:[45,45],maxZoom:12});setTimeout(()=>state.map.invalidateSize(true),120);$('mapTopoBtn')?.addEventListener('click',()=>setMapKind('topo'));$('mapSatBtn')?.addEventListener('click',()=>setMapKind('sat'));}
 
-function drawLinkChart(target, inputRows) {
-  const pts = inputRows.map(r => ({ t: new Date(r.observed_at).getTime(), r: rssi(r), s: snr(r), row: r })).filter(p => Number.isFinite(p.t) && (Number.isFinite(p.r) || Number.isFinite(p.s))).sort((a, b) => a.t - b.t);
-  if (!pts.length) { target.innerHTML = '<div class="empty">Waiting for RSSI/SNR metadata.</div>'; return; }
-  if (pts.length === 1) { target.innerHTML = `<div class="single-reading"><strong>${pts[0].r ?? '—'} dBm</strong><span>SNR ${pts[0].s ?? '—'} dB</span></div>`; return; }
-  const W = 980, H = 300, L = 66, R = 66, T = 24, B = 44, minT = pts[0].t, maxT = pts[pts.length - 1].t, spanT = Math.max(1, maxT - minT);
-  const rVals = pts.map(p => p.r).filter(Number.isFinite), sVals = pts.map(p => p.s).filter(Number.isFinite);
-  let rMin = Math.min(...rVals) - 4, rMax = Math.max(...rVals) + 4, sMin = Math.min(...sVals) - 2, sMax = Math.max(...sVals) + 2;
-  if (rMax - rMin < 12) { const m = (rMax + rMin) / 2; rMin = m - 6; rMax = m + 6; }
-  if (sMax - sMin < 8) { const m = (sMax + sMin) / 2; sMin = m - 4; sMax = m + 4; }
-  const x = t => L + ((t - minT) / spanT) * (W - L - R), yr = v => T + (1 - (v - rMin) / (rMax - rMin)) * (H - T - B), ys = v => T + (1 - (v - sMin) / (sMax - sMin)) * (H - T - B);
-  const rPath = pts.filter(p => Number.isFinite(p.r)).map((p, i) => `${i ? 'L' : 'M'} ${x(p.t).toFixed(1)} ${yr(p.r).toFixed(1)}`).join(' '), sPath = pts.filter(p => Number.isFinite(p.s)).map((p, i) => `${i ? 'L' : 'M'} ${x(p.t).toFixed(1)} ${ys(p.s).toFixed(1)}`).join(' ');
-  const leftTicks = Array.from({length:5},(_,i)=>rMin+(rMax-rMin)*i/4).map(v=>`<text x="${L-10}" y="${yr(v)+4}" text-anchor="end" class="axis-label">${Math.round(v)}</text><line x1="${L}" y1="${yr(v)}" x2="${W-R}" y2="${yr(v)}" class="gridline"/>`).join('');
-  const rightTicks = Array.from({length:5},(_,i)=>sMin+(sMax-sMin)*i/4).map(v=>`<text x="${W-R+10}" y="${ys(v)+4}" class="axis-label">${v.toFixed(1)}</text>`).join('');
-  const rDots = pts.filter(p => Number.isFinite(p.r)).map(p => {
-    const tip = tooltipMarkup(fmtTime(new Date(p.t).toISOString()), [`${Math.round(p.r)} dBm RSSI`, Number.isFinite(p.s) ? `${p.s.toFixed(1)} dB SNR` : null, hops(p.row) === 0 ? 'Direct' : hops(p.row) === 1 ? '1 relay hop' : Number.isFinite(hops(p.row)) ? `${Math.round(hops(p.row))} relay hops` : null]);
-    return `<circle cx="${x(p.t)}" cy="${yr(p.r)}" r="4.4" class="chart-dot ${rfClassFromRssi(p.r)}" tabindex="0" data-tip="${esc(tip)}"/>`;
-  }).join('');
-  target.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="LoRa link quality">${leftTicks}${rightTicks}<path d="${rPath}" class="chart-line"/><path d="${sPath}" class="chart-line secondary"/>${rDots}<text x="${L}" y="${H-12}" class="axis-label">${esc(fmtAxisTime(minT,spanT))}</text><text x="${W-R}" y="${H-12}" text-anchor="end" class="axis-label">${esc(fmtAxisTime(maxT,spanT))}</text><text x="${L}" y="16" class="legend-label">RSSI dBm</text><text x="${W-R}" y="16" text-anchor="end" class="legend-label snr-label">SNR dB</text></svg>`;
-  attachChartTooltip(target);
+function bindExpand(){
+  const dialog=$('expandDialog'),title=$('expandTitle'),chart=$('expandedChart'),mapEl=$('expandedMap');
+  $('expandClose')?.addEventListener('click',()=>dialog.close());
+  document.querySelectorAll('[data-expand]').forEach(btn=>btn.addEventListener('click',()=>{title.textContent=btn.dataset.title||'Chart';mapEl.hidden=true;chart.hidden=false;dialog.showModal();setTimeout(()=>{if(btn.dataset.expand==='tempChart')renderTemperatureChart(chart);else if(btn.dataset.expand==='batteryChart')renderBattery(chart);else if(btn.dataset.expand==='rfChart')renderRf(chart);},40);}));
+  document.querySelectorAll('[data-expand-map]').forEach(btn=>btn.addEventListener('click',()=>{title.textContent=btn.dataset.title||'Station map';chart.hidden=true;mapEl.hidden=false;dialog.showModal();setTimeout(()=>{if(state.expandedMap){try{state.expandedMap.remove()}catch{}}mapEl.innerHTML='';state.expandedMap=L.map(mapEl,{preferCanvas:true,minZoom:3,maxZoom:20});mapLayer(state.mapKind).addTo(state.expandedMap);addMarkers(state.expandedMap);state.expandedMap.fitBounds([STATIONS.hv.coords,STATIONS.home.coords],{padding:[55,55],maxZoom:13});state.expandedMap.invalidateSize(true);},80);}));
+  dialog?.addEventListener('close',()=>{if(state.expandedMap){try{state.expandedMap.remove()}catch{}state.expandedMap=null;}chart.innerHTML='';});
 }
+function renderAll(){renderSummary();renderTemperatureChart();renderRecent();setText('updated',`Refreshed ${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'})}`);}
+async function loadData(){
+  try{const res=await fetch(`/api/readings?hours=${state.hours}&limit=10000`,{cache:'no-store'});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);state.readings=Array.isArray(data.readings)?data.readings:[];renderAll();}
+  catch(err){console.error(err);setText('networkStatusText','Telemetry API unavailable');$('networkStatus').className='live-pill offline';setText('updated','Refresh failed');}
+}
+function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours)||24;$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadData();});}
 
-function renderCharts() {
-  const tr = tempRows(), dr = deviceRows();
-  els.tempChartCount.textContent = `${tr.length} reading${tr.length === 1 ? '' : 's'} · hover/tap points for values`;
-  drawLineChart(els.tempChart, tr, tempF, { large: true, minSpan: 4, label: 'Temperature', format: v => `${v.toFixed(1)} °F`, axisFormat: v => `${v.toFixed(0)}°`, empty: 'Waiting for temperature telemetry.', dotClass: 'temp', extraTip: r => rssi(r) === null ? null : `RF ${Math.round(rssi(r))} dBm · SNR ${snr(r) === null ? '—' : snr(r).toFixed(1)} dB` });
-
-  const bv = dr.filter(r => batteryV(r) !== null);
-  els.batteryChartCount.textContent = bv.length ? `${bv.length} battery reading${bv.length === 1 ? '' : 's'} · voltage + charge-rise markers` : 'No battery telemetry yet';
-  drawBatteryChart(els.batteryChart, bv);
-
-  const linkRows = tr.filter(r => rssi(r) !== null || snr(r) !== null);
-  els.linkChartCount.textContent = `${linkRows.length} RF sample${linkRows.length === 1 ? '' : 's'} · RSSI + SNR`;
-  drawLinkChart(els.linkChart, linkRows);
-
-  const hopRows = tr.filter(r => hops(r) !== null);
-  els.hopChartCount.textContent = `${hopRows.length} route sample${hopRows.length === 1 ? '' : 's'} · 0 direct / 1 one relay`;
-  drawLineChart(els.hopChart, hopRows, hops, { min: 0, minSpan: 2, label: 'Mesh relay hops', format: v => v === 0 ? 'Direct · 0 hops' : `${Math.round(v)} relay hop${Math.round(v) === 1 ? '' : 's'}`, axisFormat: v => `${Math.max(0, Math.round(v))}`, empty: 'Waiting for hop metadata.', dotClass: 'hop', lineClass: 'hop-line', extraTip: r => rssi(r) === null ? null : `${Math.round(rssi(r))} dBm · ${snr(r) === null ? '—' : snr(r).toFixed(1)} dB SNR` });
-}
-
-function renderRecent() {
-  const rs = rows().slice(0, 30);
-  if (!rs.length) { els.recent.innerHTML = '<tr><td colspan="8">Waiting for telemetry.</td></tr>'; return; }
-  els.recent.innerHTML = rs.map(r => {
-    const f = tempF(r), p = batteryPct(r), v = batteryV(r), rr = rssi(r), ss = snr(r), hh = hops(r), rrCls = rfClassFromRssi(rr), ssCls = rfClassFromSnr(ss);
-    const hopText = hh === null ? '—' : hh === 0 ? 'Direct' : hh === 1 ? '1 relay' : `${Math.round(hh)} relays`;
-    return `<tr><td>${esc(fmtTime(r.observed_at))}</td><td><span class="type-pill">TEMPERATURE</span></td><td class="right">${f === null ? '—' : f.toFixed(1)}</td><td class="right">${p === null ? '—' : Math.round(p) + '%'}</td><td class="right">${v === null ? '—' : v.toFixed(3) + ' V'}</td><td class="right">${rr === null ? '—' : `<span class="rf-chip ${rrCls}">${Math.round(rr)} dBm</span>`}</td><td class="right">${ss === null ? '—' : `<span class="rf-chip ${ssCls}">${ss.toFixed(1)} dB</span>`}</td><td class="right">${esc(hopText)}</td></tr>`;
-  }).join('');
-}
-
-function mapPopupHtml() {
-  const latestT = tempRows()[0] || null, latestD = [...deviceRows()].sort((a, b) => new Date(batteryTime(b)) - new Date(batteryTime(a)))[0] || null;
-  const parts = ['<strong>Hidden Valley Repeater</strong>', `${SITE.lat.toFixed(5)}, ${SITE.lon.toFixed(4)}`, `${SITE.elevationFt.toLocaleString()} ft elevation`];
-  if (latestT) parts.push(`${tempF(latestT).toFixed(1)} °F · ${ageText(latestT.observed_at)} ago`);
-  if (latestD) parts.push(`${batteryPct(latestD) === null ? '—' : Math.round(batteryPct(latestD)) + '%'} · ${batteryV(latestD) === null ? '—' : batteryV(latestD).toFixed(3) + ' V'}`);
-  return parts.join('<br>');
-}
-
-function createBaseLayer(kind) {
-  if (!window.L) return null;
-  if (kind === 'sat') return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri and contributors' });
-  return L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: 'Map data © OpenStreetMap contributors · tiles © OpenTopoMap' });
-}
-function addSiteMarker(map) { return L.marker([SITE.lat, SITE.lon]).addTo(map).bindPopup(mapPopupHtml()); }
-function buildCoverageLayer(map) {
-  const group = L.layerGroup();
-  const rings = [
-    { km: 5, color: '#66d49d', label: '5 km · nearby / strong-line-of-sight zone' },
-    { km: 15, color: '#b9d86d', label: '15 km · good line-of-sight planning ring' },
-    { km: 30, color: '#f0bd6f', label: '30 km · long line-of-sight planning ring' },
-    { km: 60, color: '#ee8f8f', label: '60 km · edge / exceptional line-of-sight ring' }
-  ];
-  [...rings].reverse().forEach(ring => L.circle([SITE.lat, SITE.lon], { radius: ring.km * 1000, color: ring.color, weight: 2, fillColor: ring.color, fillOpacity: 0.06 }).bindTooltip(ring.label).addTo(group));
-  group.addTo(map); return group;
-}
-function setBaseMap(kind, map = state.map) {
-  if (!map) return;
-  if (state.baseLayer && map === state.map) map.removeLayer(state.baseLayer);
-  const layer = createBaseLayer(kind); if (layer) layer.addTo(map);
-  if (map === state.map) { state.baseLayer = layer; els.mapTopoBtn?.classList.toggle('active', kind === 'topo'); els.mapSatBtn?.classList.toggle('active', kind === 'sat'); }
-}
-function initMap() {
-  if (!window.L || !document.getElementById('siteMap') || state.map) return;
-  state.map = L.map('siteMap', { zoomControl: true }).setView([SITE.lat, SITE.lon], 11); setBaseMap('topo'); addSiteMarker(state.map).openPopup();
-  els.mapTopoBtn?.addEventListener('click', () => setBaseMap('topo'));
-  els.mapSatBtn?.addEventListener('click', () => setBaseMap('sat'));
-  els.coverageBtn?.addEventListener('click', () => {
-    state.coverageVisible = !state.coverageVisible; els.coverageBtn.classList.toggle('active', state.coverageVisible); els.coverageLegend.hidden = !state.coverageVisible;
-    if (state.coverageVisible) { state.coverageLayer = state.coverageLayer || buildCoverageLayer(state.map); state.coverageLayer.addTo(state.map); state.map.fitBounds(L.circle([SITE.lat, SITE.lon], { radius: 60000 }).getBounds(), { padding: [20, 20] }); }
-    else if (state.coverageLayer) { state.map.removeLayer(state.coverageLayer); state.map.setView([SITE.lat, SITE.lon], 11); }
-  });
-}
-
-function openExpandedChart(sourceId, title) {
-  const source = document.getElementById(sourceId); if (!source || !els.expandDialog) return;
-  els.expandTitle.textContent = title || 'Chart'; els.expandedMap.hidden = true; els.expandedChart.hidden = false;
-  const svg = source.querySelector('svg'), fallback = source.querySelector('.single-reading,.empty');
-  els.expandedChart.innerHTML = svg ? svg.outerHTML : fallback ? fallback.outerHTML : '<div class="empty">No chart data.</div>'; attachChartTooltip(els.expandedChart); els.expandDialog.showModal();
-}
-function openExpandedMap(title) {
-  if (!window.L || !els.expandDialog) return;
-  els.expandTitle.textContent = title || 'Repeater site'; els.expandedChart.hidden = true; els.expandedChart.innerHTML = ''; els.expandedMap.hidden = false; els.expandDialog.showModal();
-  if (state.expandedMap) { state.expandedMap.remove(); state.expandedMap = null; }
-  setTimeout(() => {
-    state.expandedMap = L.map('expandedMap').setView([SITE.lat, SITE.lon], state.coverageVisible ? 8 : 11);
-    createBaseLayer(els.mapSatBtn?.classList.contains('active') ? 'sat' : 'topo')?.addTo(state.expandedMap); addSiteMarker(state.expandedMap).openPopup(); if (state.coverageVisible) buildCoverageLayer(state.expandedMap); state.expandedMap.invalidateSize();
-  }, 50);
-}
-function initExpandControls() {
-  document.querySelectorAll('[data-expand]').forEach(btn => btn.addEventListener('click', () => openExpandedChart(btn.dataset.expand, btn.dataset.title)));
-  document.querySelectorAll('[data-expand-map]').forEach(btn => btn.addEventListener('click', () => openExpandedMap(btn.dataset.title)));
-  els.expandClose?.addEventListener('click', () => els.expandDialog?.close());
-  els.expandDialog?.addEventListener('close', () => { els.expandedChart.innerHTML = ''; if (state.expandedMap) { state.expandedMap.remove(); state.expandedMap = null; } els.expandedMap.innerHTML = ''; els.expandedMap.hidden = true; els.expandedChart.hidden = false; });
-}
-
-function render() {
-  renderSummary(); renderCharts(); renderRecent();
-  if (state.map && window.L) state.map.eachLayer(layer => { if (layer instanceof L.Marker) layer.setPopupContent(mapPopupHtml()); });
-  els.updated.textContent = `Refreshed ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
-}
-
-async function refresh() {
-  try {
-    const url = `/api/readings?hours=${state.hours}&limit=10000&bucket_minutes=0&node=${HVRP_NODE_NUM}&_=${Date.now()}`;
-    const res = await fetch(url, { cache: 'no-store' }); if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json(); state.readings = Array.isArray(data.readings) ? data.readings : []; render();
-  } catch (err) { els.status.className = 'live-pill offline'; els.statusText.textContent = 'Dashboard data unavailable'; els.tempDetail.textContent = `Could not load telemetry: ${err.message}`; }
-}
-
-els.tabs?.addEventListener('click', e => {
-  const btn = e.target.closest('button[data-hours]'); if (!btn) return;
-  state.hours = Number(btn.dataset.hours) || 24; els.tabs.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn)); refresh();
-});
-
-initExpandControls(); initMap(); refresh(); setInterval(refresh, 60 * 1000);
+bindTabs();bindExpand();initMap();loadData();setInterval(loadData,60000);
+window.addEventListener('resize',()=>{state.map?.invalidateSize(false);state.expandedMap?.invalidateSize(false);});
