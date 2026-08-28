@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="theme-color" content="#101820"/>
 <title>Hidden Valley Temperature Station</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="/dashboard.css?v=20260828-interactive"/>
 </head>
 <body>
@@ -78,6 +78,7 @@
       <div class="panel-head"><div><h2>Repeater site</h2><p>38.53880, -109.5409 · 5,800 ft</p></div><button type="button" class="expand-btn" data-expand-map="siteMap" data-title="Hidden Valley repeater site">Expand</button></div>
       <div class="map-controls" role="group" aria-label="Map layers"><button type="button" id="mapTopoBtn" class="active">Topo</button><button type="button" id="mapSatBtn">Satellite</button><button type="button" id="coverageBtn">Radio coverage</button></div>
       <div id="siteMap" class="site-map" aria-label="Interactive map of Hidden Valley repeater"></div>
+      <div id="mapStatus" class="chart-note" style="padding-top:0;min-height:18px">Loading map…</div>
       <div class="coverage-legend" id="coverageLegend" hidden><strong>RAK4631 planning overlay</strong><span>22 dBm TX · antenna 0.5 m AGL · approximate LoRa coverage rings</span><small>This is a planning aid, not a terrain propagation model. Ridges can block coverage; clear line-of-sight can extend it far beyond the rings.</small></div>
     </article>
   </section>
@@ -90,7 +91,8 @@
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/dashboard.js?v=20260828-interactive"></script>
+<script src="/map-fix.js?v=20260828-usgs-mapfix"></script>
 </body>
 </html>
