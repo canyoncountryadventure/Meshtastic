@@ -3,98 +3,142 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="theme-color" content="#101820"/>
-<title>Hidden Valley Temperature Station</title>
+<meta name="theme-color" content="#071319"/>
+<title>Meshtastic Environmental Network</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="/dashboard.css?v=20260828-interactive"/>
-<link rel="stylesheet" href="/coverage-planner.css?v=20260828-terrain"/>
+<link rel="stylesheet" href="/dashboard.css?v=20260828-two-station"/>
 </head>
 <body>
 <main class="shell">
   <header class="topbar">
     <div class="brand">
-      <div class="mark">HV</div>
-      <div><div class="eyebrow">Meshtastic remote environmental station</div><div class="brand-title">Hidden Valley Repeater</div></div>
+      <div class="mark">M</div>
+      <div>
+        <div class="eyebrow">Meshtastic remote environmental network</div>
+        <div class="brand-title">Moab Environmental Stations</div>
+      </div>
     </div>
-    <div class="live-pill offline" id="status"><span class="dot"></span><span id="statusText">Waiting for hourly temperature telemetry</span></div>
+    <div class="live-pill offline" id="networkStatus"><span class="dot"></span><span id="networkStatusText">Loading station telemetry…</span></div>
   </header>
 
-  <section class="hero">
-    <div class="hero-copy">
-      <div class="eyebrow">Temperature sensor · Hidden Valley Repeater</div>
-      <div class="temperature-line"><span id="temperature">—</span><small>°F</small></div>
-      <p id="tempDetail">The temperature sensor reports automatically through the mesh.</p>
-      <div class="pipeline"><strong>Hidden Valley site</strong><span>temperature sensor → BLE → repeater → LoRa mesh → Heltec Hub → Neon</span></div>
+  <section class="hero comparison-hero">
+    <div class="hero-intro">
+      <div class="eyebrow">Live station comparison</div>
+      <h1>Two permanent temperature stations. One view.</h1>
+      <p>Hidden Valley reports through the LoRa mesh. Heltec Home reads its local HOBO directly over BLE. Both streams land in Neon and are plotted together here.</p>
+      <div class="pipeline"><strong>Data path</strong><span>HOBO sensors → Meshtastic / Heltec → Vercel ingest → Neon history → dashboard</span></div>
     </div>
-    <div class="hero-metrics">
-      <div class="hero-metric"><span>Last temperature</span><strong id="lastPacket">—</strong><small id="packetTime">no telemetry yet</small></div>
-      <div class="hero-metric"><span>Link now</span><strong id="linkNow" class="rf-value">—</strong><small id="linkDetail">RSSI / SNR / route</small></div>
-      <div class="hero-metric"><span>Battery</span><strong id="battery">—</strong><small id="batteryDetail">device telemetry pending</small></div>
+    <div class="station-hero-grid">
+      <article class="station-hero hv-card">
+        <div class="station-heading"><span class="station-dot hv"></span><div><strong>Hidden Valley</strong><small>Repeater · HVRP · !55a55ce8</small></div></div>
+        <div class="big-temp"><span id="hvTemp">—</span><small>°F</small></div>
+        <div class="station-meta"><span id="hvUpdated">Waiting for temperature</span><span id="hvHeroBattery">Battery —</span></div>
+        <div class="station-state offline" id="hvState">No temperature yet</div>
+      </article>
+      <article class="station-hero home-card">
+        <div class="station-heading"><span class="station-dot home"></span><div><strong>Heltec Home</strong><small>Heltec V4 · Home · !a35a4bf4</small></div></div>
+        <div class="big-temp"><span id="homeTemp">—</span><small>°F</small></div>
+        <div class="station-meta"><span id="homeUpdated">Waiting for temperature</span><span>Local HOBO via BLE</span></div>
+        <div class="station-state offline" id="homeState">No temperature yet</div>
+      </article>
     </div>
   </section>
 
-  <section class="quick-grid">
-    <article class="metric-card"><span>24h high</span><strong id="high24">—</strong><small>temperature sensor</small></article>
-    <article class="metric-card"><span>24h low</span><strong id="low24">—</strong><small>temperature sensor</small></article>
-    <article class="metric-card"><span>24h average</span><strong id="avg24">—</strong><small>temperature readings</small></article>
-    <article class="metric-card"><span>12h trend</span><strong id="tempTrend">—</strong><small id="tempTrendDetail">last 12 hours</small></article>
-    <article class="metric-card"><span>Packet reliability</span><strong id="reliability">—</strong><small id="reliabilityDetail">expected 1 temperature packet/hour</small></article>
-    <article class="metric-card"><span>Longest gap</span><strong id="longestGap">—</strong><small>between temperature packets</small></article>
-    <article class="metric-card"><span>Mesh route</span><strong id="avgHops">—</strong><small id="hopDetail">0 = direct, 1 = one relay</small></article>
-    <article class="metric-card"><span>Average SNR</span><strong id="avgSnr" class="rf-value">—</strong><small id="snrDetail">selected window</small></article>
-    <article class="metric-card"><span>Solar charging</span><strong id="solarHours">—</strong><small id="solarDetail">estimated from battery-voltage rises</small></article>
-    <article class="metric-card"><span>Battery change</span><strong id="batteryChange">—</strong><small id="batteryChangeDetail">selected window</small></article>
-    <article class="metric-card"><span>Strongest RSSI</span><strong id="bestRssi" class="rf-value">—</strong><small>best received temperature packet</small></article>
-    <article class="metric-card"><span>Packets received</span><strong id="packetCount">—</strong><small id="packetCountDetail">temperature packets</small></article>
+  <section class="quick-grid overview-grid">
+    <article class="metric-card accent"><span>Temperature spread</span><strong id="tempSpread">—</strong><small id="tempSpreadDetail">difference between stations</small></article>
+    <article class="metric-card"><span>Warmest now</span><strong id="warmestStation">—</strong><small id="warmestDetail">latest readings</small></article>
+    <article class="metric-card"><span>Freshest station</span><strong id="freshestStation">—</strong><small id="freshestDetail">most recent packet</small></article>
+    <article class="metric-card"><span>Stations reporting</span><strong id="stationsReporting">0 / 2</strong><small>healthy within 3 hr 15 min</small></article>
   </section>
 
   <section class="panel control-panel">
     <div class="panel-head chart-head">
-      <div><h2>History window</h2><p>Temperature sensor cadence is approximately hourly.</p></div>
-      <div class="tabs" id="tabs"><button data-hours="12">12H</button><button data-hours="24" class="active">24H</button><button data-hours="72">3D</button><button data-hours="168">7D</button><button data-hours="720">30D</button></div>
+      <div><h2>History window</h2><p>Use the same time window across every graph and station metric.</p></div>
+      <div class="tabs" id="tabs">
+        <button data-hours="12">12H</button><button data-hours="24" class="active">24H</button><button data-hours="72">3D</button><button data-hours="168">7D</button><button data-hours="720">30D</button>
+      </div>
     </div>
   </section>
 
-  <section class="charts">
-    <article class="panel temp-panel">
-      <div class="panel-head"><div><h2>Temperature</h2><p id="tempChartCount">0 readings</p></div><button type="button" class="expand-btn" data-expand="tempChart" data-title="Temperature">Expand</button></div>
-      <div class="chart large" id="tempChart"><div class="empty">Waiting for temperature telemetry.</div></div>
+  <section class="panel temp-comparison-panel">
+    <div class="panel-head">
+      <div><h2>Temperature comparison</h2><p id="tempChartCount">Waiting for station data</p></div>
+      <button type="button" class="expand-btn" data-expand="tempChart" data-title="Temperature comparison">Expand</button>
+    </div>
+    <div class="legend"><span><i class="legend-swatch hv"></i>Hidden Valley</span><span><i class="legend-swatch home"></i>Heltec Home</span></div>
+    <div class="chart xlarge" id="tempChart"><div class="empty">Waiting for temperature telemetry.</div></div>
+  </section>
+
+  <section class="station-detail-grid">
+    <article class="panel station-detail hv-detail">
+      <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Hidden Valley</h2><p>38.53880, -109.54090 · 5,800 ft</p></div><span class="station-badge hv">HVRP</span></div>
+      <div class="detail-metrics">
+        <div><span>24h high</span><strong id="hvHigh">—</strong></div>
+        <div><span>24h low</span><strong id="hvLow">—</strong></div>
+        <div><span>24h average</span><strong id="hvAvg">—</strong></div>
+        <div><span>12h trend</span><strong id="hvTrend">—</strong><small id="hvTrendDetail">—</small></div>
+        <div><span>Packet reliability</span><strong id="hvReliability">—</strong><small id="hvReliabilityDetail">—</small></div>
+        <div><span>Longest gap</span><strong id="hvGap">—</strong></div>
+      </div>
+      <div class="path-note"><strong>Sensor path</strong><span>HOBO → BLE → Hidden Valley repeater → LoRa mesh → Heltec Home → internet</span></div>
     </article>
-    <article class="panel">
-      <div class="panel-head"><div><h2>Battery & solar behavior</h2><p id="batteryChartCount">No battery telemetry yet</p></div><button type="button" class="expand-btn" data-expand="batteryChart" data-title="Battery & solar behavior">Expand</button></div>
-      <div class="chart" id="batteryChart"><div class="empty">Battery history will populate from repeater device telemetry.</div></div>
-      <div class="chart-note">Voltage is plotted at the actual device-telemetry time. Rising-voltage intervals are marked as possible charging; this is an estimate, not a solar irradiance measurement.</div>
-    </article>
-    <article class="panel">
-      <div class="panel-head"><div><h2>LoRa link quality</h2><p id="linkChartCount">0 RF samples</p></div><button type="button" class="expand-btn" data-expand="linkChart" data-title="LoRa link quality">Expand</button></div>
-      <div class="chart" id="linkChart"><div class="empty">Waiting for RF metadata.</div></div>
-      <div class="chart-note">RF values and points are color-coded: green = strong, amber = usable/fair, red = weak.</div>
-    </article>
-    <article class="panel">
-      <div class="panel-head"><div><h2>Mesh hops</h2><p id="hopChartCount">0 packets</p></div><button type="button" class="expand-btn" data-expand="hopChart" data-title="Mesh hops">Expand</button></div>
-      <div class="chart" id="hopChart"><div class="empty">Waiting for hop metadata.</div></div>
-      <div class="chart-note">0 hops = received directly from the repeater. 1 hop = one intermediate relay was used.</div>
-    </article>
-    <article class="panel map-panel">
-      <div class="panel-head"><div><h2>Repeater site</h2><p>38.53880, -109.5409 · 5,800 ft</p></div><button type="button" class="expand-btn" data-expand-map="siteMap" data-title="Hidden Valley repeater site">Expand</button></div>
-      <div class="map-controls" role="group" aria-label="Map layers"><button type="button" id="mapTopoBtn" class="active">Topo</button><button type="button" id="mapSatBtn">Satellite</button><button type="button" id="coverageBtn">Terrain RF heatmap</button></div>
-      <div id="siteMap" class="site-map" aria-label="Interactive map of Hidden Valley repeater"></div>
-      <div id="mapStatus" class="chart-note" style="padding-top:0;min-height:18px">Loading map…</div>
-      <div class="coverage-legend" id="coverageLegend" hidden><strong>Terrain-aware coverage</strong><span>Official Meshtastic Site Planner · ITM/Longley-Rice</span><small>The Terrain RF heatmap button runs a high-resolution colored signal-strength simulation using real terrain.</small></div>
+
+    <article class="panel station-detail home-detail">
+      <div class="panel-head station-panel-head"><div><span class="eyebrow">Local direct station</span><h2>Heltec Home</h2><p>Approx. Hollyoak Ln × Mill Creek Dr · ~4,080 ft</p></div><span class="station-badge home">HOME</span></div>
+      <div class="detail-metrics">
+        <div><span>24h high</span><strong id="homeHigh">—</strong></div>
+        <div><span>24h low</span><strong id="homeLow">—</strong></div>
+        <div><span>24h average</span><strong id="homeAvg">—</strong></div>
+        <div><span>12h trend</span><strong id="homeTrend">—</strong><small id="homeTrendDetail">—</small></div>
+        <div><span>Packet reliability</span><strong id="homeReliability">—</strong><small id="homeReliabilityDetail">—</small></div>
+        <div><span>Longest gap</span><strong id="homeGap">—</strong></div>
+      </div>
+      <div class="path-note"><strong>Sensor path</strong><span>HOBO → BLE → Heltec Home → internet · no station battery analytics</span></div>
     </article>
   </section>
 
-  <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Recent Hidden Valley readings</h2><p>Temperature, battery and RF data are combined whenever they correspond to the same reporting cycle.</p></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div>
+  <section class="charts two-col">
+    <article class="panel">
+      <div class="panel-head"><div><h2>Hidden Valley battery</h2><p id="batteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" data-expand="batteryChart" data-title="Hidden Valley battery">Expand</button></div>
+      <div class="battery-summary">
+        <div><span>Latest</span><strong id="batteryNow">—</strong><small id="batteryNowDetail">—</small></div>
+        <div><span>Voltage change</span><strong id="batteryChange">—</strong><small id="batteryChangeDetail">selected window</small></div>
+        <div><span>Solar activity</span><strong id="solarHours">—</strong><small id="solarDetail">estimated from voltage rise</small></div>
+      </div>
+      <div class="chart" id="batteryChart"><div class="empty">Waiting for Hidden Valley battery telemetry.</div></div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><h2>Hidden Valley radio link</h2><p id="rfChartCount">RF metadata pending</p></div><button type="button" class="expand-btn" data-expand="rfChart" data-title="Hidden Valley radio link">Expand</button></div>
+      <div class="battery-summary">
+        <div><span>Latest RSSI</span><strong id="latestRssi" class="rf-value">—</strong><small id="latestSnr">SNR —</small></div>
+        <div><span>Average RSSI</span><strong id="avgRssi" class="rf-value">—</strong><small id="bestRssi">best —</small></div>
+        <div><span>Mesh route</span><strong id="routeNow">—</strong><small id="routeDetail">hop metadata</small></div>
+      </div>
+      <div class="chart" id="rfChart"><div class="empty">Waiting for Hidden Valley RF metadata.</div></div>
+    </article>
   </section>
-  <footer><span>Hidden Valley Repeater · HVRP · !55a55ce8 · hourly temperature sensor</span><span id="updated">Not yet refreshed</span></footer>
+
+  <section class="panel map-panel">
+    <div class="panel-head">
+      <div><h2>Station map</h2><p>Hidden Valley and approximate Heltec Home location</p></div>
+      <button type="button" class="expand-btn" data-expand-map="stationMap" data-title="Station map">Expand</button>
+    </div>
+    <div class="map-controls" role="group" aria-label="Map layers"><button type="button" id="mapTopoBtn" class="active">Topo</button><button type="button" id="mapSatBtn">Satellite</button></div>
+    <div id="stationMap" class="site-map" aria-label="Interactive map of environmental stations"></div>
+    <div id="mapStatus" class="chart-note">Loading map…</div>
+  </section>
+
+  <section class="panel recent-panel">
+    <div class="panel-head"><div><h2>Recent readings</h2><p>Combined history from both permanent temperature stations.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div>
+  </section>
+
+  <footer><span>Meshtastic environmental network · Hidden Valley + Heltec Home</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/dashboard.js?v=20260828-interactive"></script>
-<script src="/map-fix.js?v=20260828-usgs-mapfix"></script>
-<script src="/coverage-planner.js?v=20260828-terrain"></script>
+<script src="/dashboard.js?v=20260828-two-station"></script>
 </body>
 </html>
