@@ -81,6 +81,10 @@ export default async function handler(req, res) {
       `;
     }
 
+    // Short edge cache prevents repeated clicks/page reloads from waking Neon repeatedly.
+    // Browser itself still revalidates; Vercel serves identical requests from edge for 60 seconds.
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=60');
     return res.status(200).json({ ok: true, hours, node, bucket_minutes: bucketMinutes, readings: rows });
   } catch (error) {
     console.error('Telemetry query failed', error);
