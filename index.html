@@ -18,7 +18,10 @@
         <div class="brand-title">Moab Environmental Stations</div>
       </div>
     </div>
-    <div class="live-pill offline" id="networkStatus"><span class="dot"></span><span id="networkStatusText">Loading station telemetry…</span></div>
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+      <div class="live-pill offline" id="networkStatus"><span class="dot"></span><span id="networkStatusText">Loading station telemetry…</span></div>
+      <button type="button" class="expand-btn" id="refreshDataBtn" onclick="loadData()">Refresh data</button>
+    </div>
   </header>
 
   <section class="hero comparison-hero">
@@ -134,11 +137,27 @@
     <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
-  <footer><span>Meshtastic environmental network · Hidden Valley + Heltec Home</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Meshtastic environmental network · Hidden Valley + Heltec Home · refreshes only on demand to conserve Neon compute</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  const nativeSetInterval = window.setInterval.bind(window);
+  window.__meshtasticNativeSetInterval = nativeSetInterval;
+  window.setInterval = function(fn, delay, ...args) {
+    if (delay === 60000 && typeof fn === 'function' && fn.name === 'loadData') return 0;
+    return nativeSetInterval(fn, delay, ...args);
+  };
+})();
+</script>
 <script src="/dashboard.js?v=20260828-two-station"></script>
+<script>
+if (window.__meshtasticNativeSetInterval) {
+  window.setInterval = window.__meshtasticNativeSetInterval;
+  delete window.__meshtasticNativeSetInterval;
+}
+</script>
 </body>
 </html>
