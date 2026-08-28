@@ -55,7 +55,7 @@ function fmtAxisTime(ms, spanMs) {
 }
 function rows() { return state.readings.filter(r => num(r?.node_num) === HVRP_NODE_NUM); }
 function tempRows() { return rows().filter(r => tempC(r) !== null && r.telemetry_type === 'environment'); }
-function deviceRows() { return rows().filter(r => r.telemetry_type === 'device' && (batteryV(r) !== null || batteryPct(r) !== null)); }
+function deviceRows() { return rows().filter(r => batteryV(r) !== null || batteryPct(r) !== null); }
 
 function reliabilityStats(rs) {
   if (!rs.length) return { pct: null, expected: 0, actual: 0, gapH: null };
