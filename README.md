@@ -121,7 +121,7 @@ Home Heltec HTTP gateway firmware:
 
 ```text
 Repository: canyoncountryadventure/firmware
-Branch:     heltec-home-http-gateway-rock
+Branch:     heltec-home-http-gateway-hidden-valley
 ```
 
-Despite the historical branch name, that Heltec branch is the current Hidden Valley HTTP gateway firmware. The production web repository does not contain rock-moisture runtime code.
+The older `heltec-home-http-gateway-rock` branch is historical. New Hidden Valley gateway work should use the clean Hidden Valley branch above.
