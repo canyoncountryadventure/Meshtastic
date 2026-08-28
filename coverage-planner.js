@@ -24,6 +24,10 @@
 
   const plannerUrl = `https://site.meshtastic.org/?${PARAMS.toString()}`;
 
+  function resetButton() {
+    document.getElementById('coverageBtn')?.classList.remove('active');
+  }
+
   function getDialog() {
     let dialog = document.getElementById('coverageDialog');
     if (dialog) return dialog;
@@ -70,6 +74,7 @@
     dialog.addEventListener('click', (ev) => {
       if (ev.target === dialog) dialog.close();
     });
+    dialog.addEventListener('close', resetButton);
     return dialog;
   }
 
