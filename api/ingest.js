@@ -1,9 +1,11 @@
 import { getSql } from './db.js';
 
 const SUPPORTED = new Set(['telemetry','mx2001','rock','rock_test','sandstone','motion']);
-const EXPERIMENT_TYPES = new Set(['telemetry','rock','rock_test','sandstone','motion']);
+// Sandstone experiment filtering applies only to the experiment packet types.
+// Standard TELEMETRY_APP packets (including MX2201/MX2203 temperature) are accepted from any node.
+const EXPERIMENT_TYPES = new Set(['rock','rock_test','sandstone','motion']);
 // Current Navajo sandstone experiment node (CCS3 / !5b0782f5).
-// MX2001 records are intentionally exempt so the established water-level pipeline keeps working.
+// MX2001 records and standard environmental telemetry are intentionally exempt.
 const EXPERIMENT_NODE_NUM = Number(process.env.EXPERIMENT_NODE_NUM || 1527161333);
 const EXPERIMENT_STORE_INTERVAL_MINUTES = 1;
 const EXPERIMENT_STORE_INTERVAL_MS = EXPERIMENT_STORE_INTERVAL_MINUTES * 60 * 1000;
