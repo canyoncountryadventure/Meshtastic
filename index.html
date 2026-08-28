@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="theme-color" content="#101820"/>
 <title>Hidden Valley Temperature Station</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynhty1W2JbD5efwR5gZ3Z7XvJ0nA=" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="/dashboard.css?v=20260828-interactive"/>
 </head>
 <body>
@@ -13,10 +13,7 @@
   <header class="topbar">
     <div class="brand">
       <div class="mark">HV</div>
-      <div>
-        <div class="eyebrow">Meshtastic remote environmental station</div>
-        <div class="brand-title">Hidden Valley Repeater</div>
-      </div>
+      <div><div class="eyebrow">Meshtastic remote environmental station</div><div class="brand-title">Hidden Valley Repeater</div></div>
     </div>
     <div class="live-pill offline" id="status"><span class="dot"></span><span id="statusText">Waiting for hourly temperature telemetry</span></div>
   </header>
@@ -53,13 +50,7 @@
   <section class="panel control-panel">
     <div class="panel-head chart-head">
       <div><h2>History window</h2><p>Temperature sensor cadence is approximately hourly.</p></div>
-      <div class="tabs" id="tabs">
-        <button data-hours="12">12H</button>
-        <button data-hours="24" class="active">24H</button>
-        <button data-hours="72">3D</button>
-        <button data-hours="168">7D</button>
-        <button data-hours="720">30D</button>
-      </div>
+      <div class="tabs" id="tabs"><button data-hours="12">12H</button><button data-hours="24" class="active">24H</button><button data-hours="72">3D</button><button data-hours="168">7D</button><button data-hours="720">30D</button></div>
     </div>
   </section>
 
@@ -68,61 +59,38 @@
       <div class="panel-head"><div><h2>Temperature</h2><p id="tempChartCount">0 readings</p></div><button type="button" class="expand-btn" data-expand="tempChart" data-title="Temperature">Expand</button></div>
       <div class="chart large" id="tempChart"><div class="empty">Waiting for temperature telemetry.</div></div>
     </article>
-
     <article class="panel">
       <div class="panel-head"><div><h2>Battery & solar behavior</h2><p id="batteryChartCount">No battery telemetry yet</p></div><button type="button" class="expand-btn" data-expand="batteryChart" data-title="Battery & solar behavior">Expand</button></div>
       <div class="chart" id="batteryChart"><div class="empty">Battery history will populate from repeater device telemetry.</div></div>
       <div class="chart-note">Voltage is plotted at the actual device-telemetry time. Rising-voltage intervals are marked as possible charging; this is an estimate, not a solar irradiance measurement.</div>
     </article>
-
     <article class="panel">
       <div class="panel-head"><div><h2>LoRa link quality</h2><p id="linkChartCount">0 RF samples</p></div><button type="button" class="expand-btn" data-expand="linkChart" data-title="LoRa link quality">Expand</button></div>
       <div class="chart" id="linkChart"><div class="empty">Waiting for RF metadata.</div></div>
       <div class="chart-note">RF values and points are color-coded: green = strong, amber = usable/fair, red = weak.</div>
     </article>
-
     <article class="panel">
       <div class="panel-head"><div><h2>Mesh hops</h2><p id="hopChartCount">0 packets</p></div><button type="button" class="expand-btn" data-expand="hopChart" data-title="Mesh hops">Expand</button></div>
       <div class="chart" id="hopChart"><div class="empty">Waiting for hop metadata.</div></div>
       <div class="chart-note">0 hops = received directly from the repeater. 1 hop = one intermediate relay was used.</div>
     </article>
-
     <article class="panel map-panel">
       <div class="panel-head"><div><h2>Repeater site</h2><p>38.53880, -109.5409 · 5,800 ft</p></div><button type="button" class="expand-btn" data-expand-map="siteMap" data-title="Hidden Valley repeater site">Expand</button></div>
-      <div class="map-controls" role="group" aria-label="Map layers">
-        <button type="button" id="mapTopoBtn" class="active">Topo</button>
-        <button type="button" id="mapSatBtn">Satellite</button>
-        <button type="button" id="coverageBtn">Radio coverage</button>
-      </div>
+      <div class="map-controls" role="group" aria-label="Map layers"><button type="button" id="mapTopoBtn" class="active">Topo</button><button type="button" id="mapSatBtn">Satellite</button><button type="button" id="coverageBtn">Radio coverage</button></div>
       <div id="siteMap" class="site-map" aria-label="Interactive map of Hidden Valley repeater"></div>
-      <div class="coverage-legend" id="coverageLegend" hidden>
-        <strong>RAK4631 planning overlay</strong>
-        <span>22 dBm TX · antenna 0.5 m AGL · approximate LoRa coverage rings</span>
-        <small>This is a planning aid, not a terrain propagation model. Ridges can block coverage; clear line-of-sight can extend it far beyond the rings.</small>
-      </div>
+      <div class="coverage-legend" id="coverageLegend" hidden><strong>RAK4631 planning overlay</strong><span>22 dBm TX · antenna 0.5 m AGL · approximate LoRa coverage rings</span><small>This is a planning aid, not a terrain propagation model. Ridges can block coverage; clear line-of-sight can extend it far beyond the rings.</small></div>
     </article>
   </section>
 
   <section class="panel recent-panel">
     <div class="panel-head"><div><h2>Recent Hidden Valley readings</h2><p>Temperature, battery and RF data are combined whenever they correspond to the same reporting cycle.</p></div></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Time</th><th>Source</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead>
-        <tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody>
-      </table>
-    </div>
+    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
-
   <footer><span>Hidden Valley Repeater · HVRP · !55a55ce8 · hourly temperature sensor</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
-<dialog id="expandDialog" class="expand-dialog">
-  <div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div>
-  <div id="expandedChart" class="expanded-chart"></div>
-  <div id="expandedMap" class="expanded-map" hidden></div>
-</dialog>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/dashboard.js?v=20260828-interactive"></script>
 </body>
 </html>
