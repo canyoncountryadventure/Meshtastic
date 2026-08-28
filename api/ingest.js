@@ -125,7 +125,7 @@ export default async function handler(req, res) {
   try {
     const sql = getSql();
 
-    // Device telemetry normally arrives on a different minute than the hourly MX2201 reading.
+    // Device telemetry normally arrives on a different minute than the temperature reading.
     // Merge it into the most recent temperature row so the dashboard has one combined record.
     if (telemetryType === 'device') {
       const merged = await sql`
@@ -151,8 +151,8 @@ export default async function handler(req, res) {
       }
     }
 
-    // If device telemetry arrived first because an environmental packet was delayed,
-    // convert that nearby device-only row into the combined environmental row.
+    // If device telemetry arrived first because a temperature packet was delayed,
+    // convert that nearby device-only row into the combined temperature row.
     if (telemetryType === 'environment') {
       const merged = await sql`
         UPDATE telemetry_readings
