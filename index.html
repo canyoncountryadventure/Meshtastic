@@ -3,90 +3,99 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="theme-color" content="#171511"/>
-<title>Navajo Sandstone Wetness Test</title>
-<link rel="stylesheet" href="/dashboard.css"/>
+<meta name="theme-color" content="#101820"/>
+<title>Hidden Valley Temperature Station</title>
+<link rel="stylesheet" href="/dashboard.css?v=20260827-hvrp"/>
 </head>
 <body>
 <main class="shell">
   <header class="topbar">
     <div class="brand">
-      <div class="mark">◫</div>
+      <div class="mark">HV</div>
       <div>
-        <div class="eyebrow">Meshtastic field experiment</div>
-        <div class="brand-title">Navajo Sandstone Wetness Test</div>
+        <div class="eyebrow">Meshtastic remote environmental station</div>
+        <div class="brand-title">Hidden Valley Repeater</div>
       </div>
     </div>
-    <div class="live-pill" id="status"><span class="dot"></span><span id="statusText">Waiting for test data</span></div>
+    <div class="live-pill offline" id="status"><span class="dot"></span><span id="statusText">Waiting for hourly MX2201 telemetry</span></div>
   </header>
 
   <section class="hero">
     <div class="hero-copy">
-      <div class="eyebrow">Current sandstone condition</div>
-      <div class="state-line"><span id="rockState">NO DATA</span></div>
-      <p id="stateDetail">The dashboard will populate when CCS3 sends its first moisture packet.</p>
-      <div class="pipeline"><strong>Rock probe + PIR</strong><span>→ CCS3 Seeed node → LoRa mesh → Heltec V4 → Neon → Vercel</span></div>
+      <div class="eyebrow">HOBO MX2201 · Logger E4:27:8C:B9:F4:B8</div>
+      <div class="temperature-line"><span id="temperature">—</span><small>°F</small></div>
+      <p id="tempDetail">The logger records once per hour. The dashboard will populate from automatic packets received through the mesh.</p>
+      <div class="pipeline"><strong>Hidden Valley summit</strong><span>MX2201 → BLE → HVRP → LoRa mesh → Heltec Hub → Neon</span></div>
     </div>
     <div class="hero-metrics">
-      <div class="hero-metric"><span>Rock ADC</span><strong id="rockAdc">—</strong><small id="rockVoltage">raw capacitive reading</small></div>
-      <div class="hero-metric"><span>Wetness index</span><strong id="wetness">—</strong><small id="wetnessDetail">0% dry → 100% extreme sandstone saturation</small></div>
-      <div class="hero-metric"><span>MX2201 temp</span><strong id="temperature">—</strong><small id="tempSource">waiting for logger</small></div>
+      <div class="hero-metric"><span>Last packet</span><strong id="lastPacket">—</strong><small id="packetTime">no telemetry yet</small></div>
+      <div class="hero-metric"><span>Link now</span><strong id="linkNow">—</strong><small id="linkDetail">RSSI / SNR / hops</small></div>
+      <div class="hero-metric"><span>Battery</span><strong id="battery">—</strong><small id="batteryDetail">device telemetry pending</small></div>
     </div>
   </section>
 
   <section class="quick-grid">
-    <article class="metric-card"><span>Calibrated dry reference</span><strong id="dryBaseline">2303</strong><small id="baselineDetail">Aug 27 sandstone field calibration</small></article>
-    <article class="metric-card"><span>Delta from dry</span><strong id="rockDelta">—</strong><small>ADC counts below 2303</small></article>
-    <article class="metric-card"><span>Probe output</span><strong id="probeVoltage">—</strong><small>capacitive sensor voltage</small></article>
-    <article class="metric-card"><span>Motion now</span><strong id="motionState">—</strong><small id="motionDetail">PIR on D6</small></article>
-    <article class="metric-card"><span>Last motion</span><strong id="lastMotion">—</strong><small id="lastMotionDetail">sampled PIR detection</small></article>
-    <article class="metric-card"><span>Last clear</span><strong id="lastClear">—</strong><small id="lastClearDetail">sampled PIR clear</small></article>
-    <article class="metric-card"><span>Node battery</span><strong id="battery">—</strong><small id="batteryDetail">validated 2.5–5.0 V only</small></article>
-    <article class="metric-card"><span>Last packet</span><strong id="lastPacket">—</strong><small id="packetTime">no telemetry yet</small></article>
-    <article class="metric-card"><span>LoRa link</span><strong id="lora">—</strong><small id="loraDetail">RSSI / SNR</small></article>
+    <article class="metric-card"><span>24h high</span><strong id="high24">—</strong><small>MX2201 temperature</small></article>
+    <article class="metric-card"><span>24h low</span><strong id="low24">—</strong><small>MX2201 temperature</small></article>
+    <article class="metric-card"><span>24h average</span><strong id="avg24">—</strong><small>hourly logger readings</small></article>
+    <article class="metric-card"><span>Temperature trend</span><strong id="tempTrend">—</strong><small id="tempTrendDetail">last available readings</small></article>
+    <article class="metric-card"><span>Packet reliability</span><strong id="reliability">—</strong><small id="reliabilityDetail">expected 1 packet/hour</small></article>
+    <article class="metric-card"><span>Longest gap</span><strong id="longestGap">—</strong><small>between temperature packets</small></article>
+    <article class="metric-card"><span>Average hops</span><strong id="avgHops">—</strong><small id="hopDetail">selected window</small></article>
+    <article class="metric-card"><span>Average SNR</span><strong id="avgSnr">—</strong><small id="snrDetail">selected window</small></article>
+    <article class="metric-card"><span>Solar charging</span><strong id="solarHours">—</strong><small id="solarDetail">estimated from rising battery voltage</small></article>
+    <article class="metric-card"><span>Battery change</span><strong id="batteryChange">—</strong><small id="batteryChangeDetail">selected window</small></article>
+    <article class="metric-card"><span>Strongest RSSI</span><strong id="bestRssi">—</strong><small>best received packet</small></article>
+    <article class="metric-card"><span>Packets received</span><strong id="packetCount">—</strong><small id="packetCountDetail">temperature packets</small></article>
   </section>
 
-  <section class="test-grid">
-    <article class="panel summary-panel">
-      <div class="panel-head"><div><h2>Wetness-test summary</h2><p>Values are based only on CCS3 readings received during this experiment.</p></div></div>
-      <div class="summary-grid">
-        <div><span>Highest ADC</span><strong id="highestAdc">—</strong><small>driest observed</small></div>
-        <div><span>Lowest ADC</span><strong id="lowestAdc">—</strong><small>wettest observed</small></div>
-        <div><span>Observed span</span><strong id="adcSpan">—</strong><small>ADC counts</small></div>
-        <div><span>Motion events</span><strong id="motionCount">—</strong><small>rock-node rising edges since boot</small></div>
+  <section class="panel control-panel">
+    <div class="panel-head chart-head">
+      <div><h2>History window</h2><p>Logger cadence is fixed at 1 hour.</p></div>
+      <div class="tabs" id="tabs">
+        <button data-hours="24" class="active">24H</button>
+        <button data-hours="72">3D</button>
+        <button data-hours="168">7D</button>
+        <button data-hours="720">30D</button>
       </div>
-    </article>
-    <article class="panel notes-panel">
-      <div class="panel-head"><div><h2>Sandstone moisture scale</h2><p>Field-calibrated Aug 27, 2026 for this installed Navajo sandstone probe.</p></div></div>
-      <div class="note-copy"><strong>DRY</strong> ≥2268 · <strong>BRIEF WETTING</strong> 2126–2267 · <strong>WET</strong> 1935–2125 · <strong>MOSTLY SOAKED</strong> 1667–1934 · <strong>EXTREMELY SATURATED</strong> ≤1666. Wetness Index is linear from 2303 ADC = 0% to 1484 ADC = 100%. The 10-minute trend still reports wetting or drying direction. Lower ADC means wetter rock; the percentage is a relative sandstone index, not volumetric water content.</div>
-    </article>
+    </div>
   </section>
 
   <section class="charts">
     <article class="panel">
-      <div class="panel-head chart-head"><div><h2>Rock moisture response</h2><p id="rockChartCount">0 readings</p></div><div class="tabs" id="tabs"><button data-hours="1">1H</button><button data-hours="3">3H</button><button data-hours="6" class="active">6H</button><button data-hours="12">12H</button><button data-hours="24">24H</button><button data-hours="168">7D</button></div></div>
-      <div class="chart" id="rockChart"><div class="empty">Waiting for rock ADC telemetry.</div></div>
-    </article>
-    <article class="panel">
       <div class="panel-head"><div><h2>MX2201 temperature</h2><p id="tempChartCount">0 readings</p></div></div>
-      <div class="chart" id="tempChart"><div class="empty">Waiting for MX2201 temperature telemetry.</div></div>
+      <div class="chart large" id="tempChart"><div class="empty">Waiting for the first automatic MX2201 packet.</div></div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><h2>Battery & solar behavior</h2><p id="batteryChartCount">No device telemetry yet</p></div></div>
+      <div class="chart" id="batteryChart"><div class="empty">Battery graph will populate when Hidden Valley device telemetry reaches the gateway.</div></div>
+      <div class="chart-note">Solar charging hours are an estimate based on periods where battery voltage rises between device-telemetry samples. This is not a direct irradiance measurement.</div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><h2>LoRa link quality</h2><p id="linkChartCount">0 packets</p></div></div>
+      <div class="chart" id="linkChart"><div class="empty">Waiting for RF metadata.</div></div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><h2>Mesh hops</h2><p id="hopChartCount">0 packets</p></div></div>
+      <div class="chart" id="hopChart"><div class="empty">Waiting for hop metadata.</div></div>
     </article>
   </section>
 
   <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Experiment timeline</h2><p>One CCS3 sample per sensor type about every minute · rock + MX2201 values combined when aligned · invalid/missing values remain blank</p></div></div>
+    <div class="panel-head"><div><h2>Recent Hidden Valley packets</h2><p>Only HVRP temperature and device/battery telemetry are retained after the reset.</p></div></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Time</th><th>Source</th><th class="right">Rock ADC</th><th class="right">Wetness</th><th class="right">Probe V</th><th class="right">Temp °F</th><th>Motion</th><th class="right">Battery</th><th class="right">RSSI</th></tr></thead>
-        <tbody id="recent"><tr><td colspan="9">Waiting for telemetry.</td></tr></tbody>
+        <thead><tr><th>Time</th><th>Type</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead>
+        <tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody>
       </table>
     </div>
   </section>
 
-  <footer><span>CCA · Navajo Sandstone Wetness Experiment · CCS3 · 1-minute cloud sampling</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Hidden Valley Repeater · HVRP · !55a55ce8 · MX2201 hourly logger</span><span id="updated">Not yet refreshed</span></footer>
 </main>
-<script src="/dashboard.js?v=20260827-1335"></script>
-<script src="/trend-fix.js?v=20260827-1335"></script>
-<script src="/band-fix.js?v=20260827-1335"></script>
+<script src="/dashboard.js?v=20260827-hvrp"></script>
 </body>
 </html>
