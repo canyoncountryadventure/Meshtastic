@@ -3,63 +3,89 @@
 Archived before the Meshtastic dashboard was repurposed for the Hidden Valley MX2201 temperature station.
 
 **Archive date:** 2026-08-27  
-**Source:** production `dashboard.js` in this repository / Vercel deployment
+**Source:** production `dashboard.js`, `band-fix.js`, `trend-fix.js`, and `index.html` from the Vercel-connected `main` branch.
 
-## Sandstone moisture calibration
+> Important: `band-fix.js` and `trend-fix.js` loaded after `dashboard.js` and overrode the older provisional calibration functions. The values below are the **final live production values** immediately before the dashboard reset.
 
-The production dashboard used the following reference points:
+## Final Navajo sandstone wetness calibration
+
+Lower ADC = wetter sandstone.
+
+### Calibration anchors
 
 | Reference | ADC |
 |---|---:|
-| Dry reference | **2303** |
-| Water reference | **1386** |
+| Dry baseline / 0% wetness | **2303** |
+| Brief wetting / passing shower reference | **~2232** |
+| Surface-wet cluster | **~2032 to ~2009** |
+| Mostly soaked / prolonged penetration reference | **~1850** |
+| Extreme saturation / 100% wetness | **1484** |
 
-When a packet did not provide its own calibration values, relative wetness was calculated as:
+The live Sandstone Wetness Index was linear between the final dry and saturated anchors:
 
 ```text
-wetness % = (dry_adc - current_adc) * 100 / (dry_adc - wet_adc)
+wetness % = (2303 - current_adc) * 100 / (2303 - 1484)
 ```
 
-using `dry_adc = 2303` and `wet_adc = 1386`, clamped to 0–100%.
+The result was clamped to 0–100%.
 
-Lower ADC values were interpreted as wetter sandstone.
+This was explicitly a **relative Sandstone Wetness Index**, not volumetric water content.
 
-## Moisture-state thresholds
+## Final live moisture-state thresholds
+
+These were the thresholds actually applied by `band-fix.js` on the production Vercel page:
 
 | State | ADC rule |
 |---|---|
-| DRY | `ADC >= 2303` |
-| TRANSITION | `2000 <= ADC < 2303` |
-| DAMP | `1713 <= ADC < 2000` |
-| WET | `1600 <= ADC < 1713` |
-| SOAKED | `1451 <= ADC < 1600` |
-| WATER | `ADC < 1451` |
+| DRY | `ADC >= 2268` |
+| BRIEF WETTING | `2126 <= ADC < 2268` |
+| WET | `1935 <= ADC < 2126` |
+| MOSTLY SOAKED | `1667 <= ADC < 1935` |
+| EXTREMELY SATURATED | `ADC < 1667` |
 
-## Wetting / drying trend calibration
+## Final live wetting / drying trend logic
 
-The production dashboard also overrode the instantaneous moisture band when a sustained trend was detected.
+`trend-fix.js` replaced the older provisional slope threshold logic.
 
-| Parameter | Value |
+| Parameter | Final value |
 |---|---:|
 | Trend window | **10 minutes** |
-| Minimum span required | **9 minutes** |
-| Minimum absolute ADC change | **8 ADC** |
-| Minimum slope magnitude | **0.8 ADC/minute** |
+| Minimum time span | **9 minutes** |
+| Minimum net ADC change | **4 ADC** |
 
 Interpretation:
 
-- **WETTING:** slope `<= -0.8 ADC/min` and total change `<= -8 ADC`
-- **DRYING:** slope `>= +0.8 ADC/min` and total change `>= +8 ADC`
+- **WETTING:** ADC change over the qualifying window `<= -4`
+- **DRYING:** ADC change over the qualifying window `>= +4`
+- Otherwise no directional trend was reported.
 
-## Original production constants
+The final override calculated slope for display, but **did not require a minimum slope magnitude** after the `trend-fix.js` override.
+
+## Final production constants
+
+From `band-fix.js`:
 
 ```js
-const TEMP_DRY_ADC=2303;
-const TEMP_WATER_ADC=1386;
-const TREND_WINDOW_MS=10*60*1000;
-const TREND_MIN_SPAN_MS=9*60*1000;
-const TREND_MIN_ABS_CHANGE=8;
-const TREND_MIN_SLOPE_ADC_PER_MIN=0.8;
+const DRY_ADC = 2303;
+const SATURATED_ADC = 1484;
+
+if (adc >= 2268) return 'DRY';
+if (adc >= 2126) return 'BRIEF WETTING';
+if (adc >= 1935) return 'WET';
+if (adc >= 1667) return 'MOSTLY SOAKED';
+return 'EXTREMELY SATURATED';
 ```
 
-These values are preserved here so the prior sandstone calibration can be recovered even though the live Vercel dashboard is being replaced.
+From `trend-fix.js`:
+
+```js
+const WINDOW_MS = 10 * 60 * 1000;
+const MIN_SPAN_MS = 9 * 60 * 1000;
+const MIN_NET_CHANGE = 4;
+```
+
+## Superseded provisional values
+
+The base `dashboard.js` still contained older fallback/provisional constants (`2303/1386`, older band cutoffs, and an 8-ADC / 0.8-ADC-per-minute trend threshold). Those values were **not the final displayed production calibration** because the two override scripts loaded afterward.
+
+This file preserves the final field calibration so it can be recovered after the live dashboard is repurposed.
