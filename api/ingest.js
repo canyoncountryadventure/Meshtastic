@@ -3,6 +3,7 @@ import { getSql } from './db.js';
 const STATIONS = new Map([
   [1436900584, { name: 'Hidden Valley Repeater', acceptsDeviceTelemetry: true }], // !55a55ce8
   [2740603892, { name: 'Heltec Home', acceptsDeviceTelemetry: false }],          // !a35a4bf4
+  [1577197109, { name: 'Fishlake Hightop', acceptsDeviceTelemetry: true }],      // !5e021e35
 ]);
 const SUPPORTED = new Set(['telemetry', 'device']);
 const MERGE_WINDOW_MINUTES = 50;
@@ -89,7 +90,7 @@ async function processReading(sql, body) {
     if (temperatureC === null) return reject(202, `${station.name} environmental packet has no temperature`);
     telemetryType = 'environment';
   } else {
-    if (!station.acceptsDeviceTelemetry) return reject(202, 'Device/battery telemetry is not stored for Heltec Home');
+    if (!station.acceptsDeviceTelemetry) return reject(202, `Device/battery telemetry is not stored for ${station.name}`);
     const batteryLevel = finiteOrNull(metrics.battery_level ?? metrics.battery_percent ?? metrics.battery_pct);
     const voltage = finiteOrNull(metrics.voltage ?? metrics.battery_voltage ?? metrics.battery_voltage_v);
     if (batteryLevel === null && voltage === null) return reject(202, `${station.name} device packet has no battery measurement`);
@@ -113,7 +114,7 @@ async function processReading(sql, body) {
   };
   const storedMetrics = telemetryType === 'device' ? { ...metrics, device_observed_at: observedIso } : { ...metrics };
 
-  // Hidden Valley device telemetry arrives separately; merge it with the nearest temperature cycle.
+  // Remote station device telemetry can arrive separately; merge it with the nearest temperature cycle.
   if (telemetryType === 'device') {
     const merged = await sql`
       UPDATE telemetry_readings
