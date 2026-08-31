@@ -1,12 +1,19 @@
 (() => {
   const FISHLAKE = {
+    key: 'fl',
     node: 1577197109,
     id: '!5e021e35',
     name: 'Fishlake Hightop',
+    fullName: 'Fishlake Hightop',
     short: 'FLHT',
     color: '#b58cff',
+    coords: [38.60727, -111.73972],
+    elevationFt: 11600,
     battery: true,
   };
+
+  // Make Fishlake available to the shared map/expanded-map helpers.
+  STATIONS.fl = FISHLAKE;
 
   const style = document.createElement('style');
   style.textContent = `
@@ -15,7 +22,7 @@
     .fl-card{border-color:rgba(181,140,255,.42);background:linear-gradient(160deg,rgba(181,140,255,.16),rgba(13,34,42,.95) 55%)}
     .fl-card:after{background:var(--fl)}
     .station-dot.fl,.legend-swatch.fl{background:var(--fl);box-shadow:0 0 18px rgba(181,140,255,.68)}
-    .fl-detail{border-color:rgba(181,140,255,.3)}
+    .fl-detail,.fl-battery-panel{border-color:rgba(181,140,255,.3)}
     .station-badge.fl{background:var(--fl-soft);color:#dcc9ff}
     .station-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     @media(max-width:1000px){.station-hero-grid{grid-template-columns:1fr 1fr}.station-detail-grid{grid-template-columns:1fr}}
@@ -38,7 +45,7 @@
   if (detailGrid && !document.getElementById('flHigh')) {
     detailGrid.insertAdjacentHTML('beforeend', `
       <article class="panel station-detail fl-detail">
-        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Fishlake Hightop</h2><p>RAK WisBlock 4631 · deployment coordinates not yet configured</p></div><span class="station-badge fl">FLHT</span></div>
+        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Fishlake Hightop</h2><p>38.60727, -111.73972 · 11,600 ft</p></div><span class="station-badge fl">FLHT</span></div>
         <div class="detail-metrics">
           <div><span>24h high</span><strong id="flHigh">—</strong></div>
           <div><span>24h low</span><strong id="flLow">—</strong></div>
@@ -49,6 +56,23 @@
         </div>
         <div class="path-note"><strong>Sensor path</strong><span>HOBO → BLE → Fishlake Hightop RAK → LoRa mesh → Heltec Home → internet</span></div>
       </article>`);
+  }
+
+  const chartGrid = document.querySelector('.charts.two-col');
+  if (chartGrid && !document.getElementById('flBatteryChart')) {
+    const firstPanel = chartGrid.querySelector('article.panel');
+    const html = `
+      <article class="panel fl-battery-panel">
+        <div class="panel-head"><div><h2>Fishlake battery</h2><p id="flBatteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" id="flBatteryExpand">Expand</button></div>
+        <div class="battery-summary">
+          <div><span>Latest</span><strong id="flBatteryNow">—</strong><small id="flBatteryNowDetail">—</small></div>
+          <div><span>Voltage change</span><strong id="flBatteryChange">—</strong><small id="flBatteryChangeDetail">selected window</small></div>
+          <div><span>Solar activity</span><strong id="flSolarHours">—</strong><small id="flSolarDetail">estimated from voltage rise</small></div>
+        </div>
+        <div class="chart" id="flBatteryChart"><div class="empty">Waiting for Fishlake battery telemetry.</div></div>
+      </article>`;
+    if (firstPanel) firstPanel.insertAdjacentHTML('afterend', html);
+    else chartGrid.insertAdjacentHTML('afterbegin', html);
   }
 
   const legend = document.querySelector('.temp-comparison-panel .legend');
@@ -63,11 +87,33 @@
   const reporting = document.getElementById('stationsReporting');
   if (reporting && reporting.textContent.trim() === '0 / 2') reporting.textContent = '0 / 3';
   const mapText = document.querySelector('.map-panel .panel-head p');
-  if (mapText) mapText.textContent = 'Hidden Valley and approximate Heltec Home locations · Fishlake coordinates pending';
+  if (mapText) mapText.textContent = 'Hidden Valley, Fishlake Hightop, and approximate Heltec Home locations';
   const recentText = document.querySelector('.recent-panel .panel-head p');
   if (recentText) recentText.textContent = 'Combined history from all three permanent temperature stations.';
   const footer = document.querySelector('footer span:first-child');
   if (footer) footer.textContent = 'Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop · refreshes only on demand to conserve Neon compute';
+
+  function addFishlakeMarkerToMainMap() {
+    if (!window.L || !state.map) return;
+    const marker = L.circleMarker(FISHLAKE.coords, {
+      radius: 9,
+      color: '#edf7f6',
+      weight: 2,
+      fillColor: FISHLAKE.color,
+      fillOpacity: 1,
+    }).addTo(state.map);
+    marker.bindPopup(`<strong>${esc(FISHLAKE.fullName)}</strong><br>${FISHLAKE.coords[0].toFixed(5)}, ${FISHLAKE.coords[1].toFixed(5)}<br>${FISHLAKE.elevationFt.toLocaleString()} ft elevation<br><span style="color:#91aab0">Remote station location</span>`);
+    state.map.fitBounds([STATIONS.hv.coords, STATIONS.home.coords, FISHLAKE.coords], {padding:[45,45], maxZoom:12});
+    setText('mapStatus', state.mapKind === 'sat' ? 'Satellite imagery · three station locations' : 'USGS topo · three station locations');
+    setTimeout(() => state.map?.invalidateSize(true), 100);
+  }
+  addFishlakeMarkerToMainMap();
+
+  const originalSetMapKind = setMapKind;
+  setMapKind = function(kind, map = state.map) {
+    originalSetMapKind(kind, map);
+    if (map === state.map) setText('mapStatus', state.mapKind === 'sat' ? 'Satellite imagery · three station locations' : 'USGS topo · three station locations');
+  };
 
   const flRows = () => state.readings.filter(r => num(r?.node_num) === FISHLAKE.node);
   const flTempRows = () => flRows().filter(r => tempF(r) !== null && r.telemetry_type === 'environment').sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
@@ -110,6 +156,69 @@
     setText('flGap', longest === null ? '—' : `${longest.toFixed(1)} hr`);
   }
 
+  function renderFishlakeBattery(target = document.getElementById('flBatteryChart')) {
+    if (!target) return;
+    const dr = flDeviceRows();
+    const latest = dr[0] || null;
+    if (latest) {
+      const p = batteryPct(latest), v = batteryV(latest);
+      setText('flBatteryNow', p !== null ? `${Math.round(p)}%` : v !== null ? `${v.toFixed(3)} V` : '—');
+      setText('flBatteryNowDetail', [v !== null ? `${v.toFixed(3)} V` : null, ageText(batteryTime(latest))].filter(Boolean).join(' · '));
+    } else {
+      setText('flBatteryNow', '—');
+      setText('flBatteryNowDetail', 'battery telemetry pending');
+    }
+
+    const vals = dr.filter(r => batteryV(r) !== null).sort((a,b) => new Date(batteryTime(a)) - new Date(batteryTime(b)));
+    if (vals.length >= 2) {
+      const a = batteryV(vals[0]), b = batteryV(vals.at(-1)), change = b - a;
+      setText('flBatteryChange', `${change >= 0 ? '+' : ''}${change.toFixed(3)} V`);
+      setText('flBatteryChangeDetail', `${a.toFixed(3)} → ${b.toFixed(3)} V`);
+    } else {
+      setText('flBatteryChange', '—');
+      setText('flBatteryChangeDetail', 'need 2 voltage samples');
+    }
+
+    let solar = 0, rises = 0;
+    for (let i = 1; i < vals.length; i++) {
+      const dt = (new Date(batteryTime(vals[i])) - new Date(batteryTime(vals[i-1]))) / 3600000;
+      const dv = batteryV(vals[i]) - batteryV(vals[i-1]);
+      if (dt > 0 && dt <= 3 && dv >= .002) { solar += dt; rises++; }
+    }
+    if (vals.length < 2) {
+      setText('flSolarHours', '—');
+      setText('flSolarDetail', 'need at least 2 readings');
+    } else {
+      setText('flSolarHours', `${solar.toFixed(1)} hr`);
+      setText('flSolarDetail', rises ? `${rises} rising-voltage interval${rises === 1 ? '' : 's'}` : 'no clear voltage rise yet');
+    }
+
+    setText('flBatteryChartCount', vals.length ? `${vals.length} voltage samples · Fishlake Hightop` : 'Battery telemetry pending');
+    const points = vals.map(r => ({x:new Date(batteryTime(r)).getTime(), y:batteryV(r), iso:batteryTime(r)}));
+    renderLineChart(target, [{name:'Fishlake voltage', color:FISHLAKE.color, points}], {
+      axisLabel:'Battery V',
+      tooltipValue:v=>`${v.toFixed(3)} V`,
+      empty:'Waiting for Fishlake battery telemetry.',
+      pointRadius:3,
+    });
+  }
+
+  const flBatteryExpand = document.getElementById('flBatteryExpand');
+  if (flBatteryExpand) {
+    flBatteryExpand.addEventListener('click', () => {
+      const dialog = document.getElementById('expandDialog');
+      const title = document.getElementById('expandTitle');
+      const chart = document.getElementById('expandedChart');
+      const mapEl = document.getElementById('expandedMap');
+      if (!dialog || !title || !chart || !mapEl) return;
+      title.textContent = 'Fishlake battery';
+      mapEl.hidden = true;
+      chart.hidden = false;
+      dialog.showModal();
+      setTimeout(() => renderFishlakeBattery(chart), 40);
+    });
+  }
+
   const originalRenderSummary = renderSummary;
   renderSummary = function() {
     originalRenderSummary();
@@ -133,6 +242,7 @@
       setText('flHeroBattery', p !== null ? `Battery ${Math.round(p)}%` : v !== null ? `${v.toFixed(3)} V` : 'Battery —');
     } else setText('flHeroBattery', 'Battery —');
     fillFishlakeStats();
+    renderFishlakeBattery();
 
     const current = [
       { station: STATIONS.hv, reading: latestTemp('hv') },
