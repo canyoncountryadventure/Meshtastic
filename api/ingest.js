@@ -73,7 +73,7 @@ function reject(status, reason) {
   return { status, response: { ok: status < 400, stored: false, reason } };
 }
 
-async function processReading(sql, body) {
+function prepareReading(body, index = 0) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return reject(400, 'Expected a JSON object');
   if (!SUPPORTED.has(body.type)) return reject(202, 'Unsupported telemetry type');
 
@@ -115,57 +115,148 @@ async function processReading(sql, body) {
   };
   const storedMetrics = telemetryType === 'device' ? { ...metrics, device_observed_at: observedIso } : { ...metrics };
 
-  // Remote station device telemetry can arrive separately; merge it with the nearest temperature cycle.
-  if (telemetryType === 'device') {
-    const merged = await sql`
-      UPDATE telemetry_readings
-      SET metrics = telemetry_readings.metrics || ${JSON.stringify(storedMetrics)}::jsonb,
-          raw = telemetry_readings.raw || jsonb_build_object('device_telemetry', ${JSON.stringify(body)}::jsonb),
-          received_at = NOW()
-      WHERE id = (
-        SELECT id FROM telemetry_readings
-        WHERE node_num = ${nodeNum}
-          AND telemetry_type = 'environment'
-          AND temperature_c IS NOT NULL
-          AND observed_at <= ${observedIso}
-          AND observed_at >= ${observedIso}::timestamptz - (${MERGE_WINDOW_MINUTES} * INTERVAL '1 minute')
-        ORDER BY observed_at DESC LIMIT 1
+  return {
+    prepared: true,
+    index,
+    body,
+    nodeNum,
+    station,
+    telemetryType,
+    temperatureC,
+    observedAt,
+    observedIso,
+    radio,
+    storedMetrics,
+  };
+}
+
+function atomicQueryForReading(sql, p) {
+  const metricsJson = JSON.stringify(p.storedMetrics);
+  const radioJson = JSON.stringify(p.radio);
+  const bodyJson = JSON.stringify(p.body);
+
+  if (p.telemetryType === 'device') {
+    return sql`
+      WITH merged AS (
+        UPDATE telemetry_readings
+        SET metrics = telemetry_readings.metrics || ${metricsJson}::jsonb,
+            raw = telemetry_readings.raw || jsonb_build_object('device_telemetry', ${bodyJson}::jsonb),
+            received_at = NOW()
+        WHERE id = (
+          SELECT id FROM telemetry_readings
+          WHERE node_num = ${p.nodeNum}
+            AND telemetry_type = 'environment'
+            AND temperature_c IS NOT NULL
+            AND observed_at <= ${p.observedIso}
+            AND observed_at >= ${p.observedIso}::timestamptz - (${MERGE_WINDOW_MINUTES} * INTERVAL '1 minute')
+          ORDER BY observed_at DESC LIMIT 1
+        )
+        RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio, TRUE AS merged
+      ), inserted AS (
+        INSERT INTO telemetry_readings
+          (observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio, raw)
+        SELECT
+          ${p.observedIso}, ${p.nodeNum}, ${p.station.name}, ${p.telemetryType}, ${p.temperatureC},
+          ${metricsJson}::jsonb, ${radioJson}::jsonb, ${bodyJson}::jsonb
+        WHERE NOT EXISTS (SELECT 1 FROM merged)
+        RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio, FALSE AS merged
       )
-      RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio
+      SELECT * FROM merged
+      UNION ALL
+      SELECT * FROM inserted
+      LIMIT 1
     `;
-    if (merged.length) return { status: 200, response: { ok: true, stored: true, merged: true, reading: merged[0] } };
   }
 
-  if (telemetryType === 'environment' && station.acceptsDeviceTelemetry) {
-    const merged = await sql`
-      UPDATE telemetry_readings
-      SET observed_at = ${observedIso}, telemetry_type = 'environment', temperature_c = ${temperatureC},
-          metrics = telemetry_readings.metrics || ${JSON.stringify(storedMetrics)}::jsonb,
-          radio = ${JSON.stringify(radio)}::jsonb,
-          raw = jsonb_build_object('environment_telemetry', ${JSON.stringify(body)}::jsonb, 'device_telemetry', telemetry_readings.raw),
-          received_at = NOW()
-      WHERE id = (
-        SELECT id FROM telemetry_readings
-        WHERE node_num = ${nodeNum}
-          AND telemetry_type = 'device'
-          AND observed_at <= ${observedIso}
-          AND observed_at >= ${observedIso}::timestamptz - (${MERGE_WINDOW_MINUTES} * INTERVAL '1 minute')
-        ORDER BY observed_at DESC LIMIT 1
+  if (p.station.acceptsDeviceTelemetry) {
+    return sql`
+      WITH merged AS (
+        UPDATE telemetry_readings
+        SET observed_at = ${p.observedIso},
+            telemetry_type = 'environment',
+            temperature_c = ${p.temperatureC},
+            metrics = telemetry_readings.metrics || ${metricsJson}::jsonb,
+            radio = ${radioJson}::jsonb,
+            raw = jsonb_build_object('environment_telemetry', ${bodyJson}::jsonb, 'device_telemetry', telemetry_readings.raw),
+            received_at = NOW()
+        WHERE id = (
+          SELECT id FROM telemetry_readings
+          WHERE node_num = ${p.nodeNum}
+            AND telemetry_type = 'device'
+            AND observed_at <= ${p.observedIso}
+            AND observed_at >= ${p.observedIso}::timestamptz - (${MERGE_WINDOW_MINUTES} * INTERVAL '1 minute')
+          ORDER BY observed_at DESC LIMIT 1
+        )
+        RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio, TRUE AS merged
+      ), inserted AS (
+        INSERT INTO telemetry_readings
+          (observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio, raw)
+        SELECT
+          ${p.observedIso}, ${p.nodeNum}, ${p.station.name}, ${p.telemetryType}, ${p.temperatureC},
+          ${metricsJson}::jsonb, ${radioJson}::jsonb, ${bodyJson}::jsonb
+        WHERE NOT EXISTS (SELECT 1 FROM merged)
+        RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio, FALSE AS merged
       )
-      RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio
+      SELECT * FROM merged
+      UNION ALL
+      SELECT * FROM inserted
+      LIMIT 1
     `;
-    if (merged.length) return { status: 200, response: { ok: true, stored: true, merged: true, reading: merged[0] } };
   }
 
-  const rows = await sql`
+  return sql`
     INSERT INTO telemetry_readings
       (observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio, raw)
     VALUES
-      (${observedIso}, ${nodeNum}, ${station.name}, ${telemetryType}, ${temperatureC},
-       ${JSON.stringify(storedMetrics)}::jsonb, ${JSON.stringify(radio)}::jsonb, ${JSON.stringify(body)}::jsonb)
-    RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio
+      (${p.observedIso}, ${p.nodeNum}, ${p.station.name}, ${p.telemetryType}, ${p.temperatureC},
+       ${metricsJson}::jsonb, ${radioJson}::jsonb, ${bodyJson}::jsonb)
+    RETURNING id, observed_at, station_name, telemetry_type, temperature_c, metrics, radio, FALSE AS merged
   `;
-  return { status: 201, response: { ok: true, stored: true, merged: false, reading: rows[0] } };
+}
+
+function resultFromRow(row) {
+  const merged = row?.merged === true;
+  return {
+    status: merged ? 200 : 201,
+    response: { ok: true, stored: true, merged, reading: row },
+  };
+}
+
+async function processReading(sql, body) {
+  const p = prepareReading(body);
+  if (!p.prepared) return p;
+  const rows = await atomicQueryForReading(sql, p);
+  return resultFromRow(rows[0]);
+}
+
+async function processBatch(sql, bodies) {
+  const results = new Array(bodies.length);
+  const prepared = [];
+
+  bodies.forEach((body, index) => {
+    const p = prepareReading(body, index);
+    if (p.prepared) prepared.push(p);
+    else results[index] = p;
+  });
+
+  if (!prepared.length) return results;
+
+  // Preserve per-node merge semantics while still using one Neon HTTP transaction.
+  // Earlier observations execute first, so an environment/device pair in the same
+  // gateway batch can merge whichever packet arrived first into the later one.
+  prepared.sort((a, b) => {
+    const dt = a.observedAt.getTime() - b.observedAt.getTime();
+    return dt || a.index - b.index;
+  });
+
+  const queries = prepared.map(p => atomicQueryForReading(sql, p));
+  const rowsByQuery = await sql.transaction(queries);
+
+  prepared.forEach((p, queryIndex) => {
+    results[p.index] = resultFromRow(rowsByQuery[queryIndex]?.[0]);
+  });
+
+  return results;
 }
 
 export default async function handler(req, res) {
@@ -184,8 +275,9 @@ export default async function handler(req, res) {
 
   try {
     const sql = getSql();
-    const results = [];
-    for (const body of bodies) results.push(await processReading(sql, body));
+    const results = bodies.length === 1
+      ? [await processReading(sql, bodies[0])]
+      : await processBatch(sql, bodies);
 
     if (bodies.length === 1) {
       const single = results[0];
