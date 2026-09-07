@@ -58,7 +58,8 @@ Meshtastic ID:   !742ecff5
 Hardware:        RAK WisBlock 4631
 Device role:     ROUTER
 Sensor:          HOBO MX2201 over BLE
-Location:        pending
+Coordinates:     38.54279, -110.49269
+Elevation:       6,000 ft
 Battery:         device/battery telemetry accepted and graphed when received
 ```
 
@@ -103,8 +104,8 @@ The map currently includes:
 
 - Hidden Valley at 38.53880, -109.54090 · 5,800 ft
 - Fishlake Hightop at 38.60727, -111.73972 · 11,600 ft
+- It's a Swell Day at 38.54279, -110.49269 · 6,000 ft
 - approximate Heltec Home location
-- It's a Swell Day will be added to the map when its coordinates are configured
 
 Hidden Valley, Fishlake, and It's a Swell Day support battery/device telemetry. Their battery views include latest battery state, voltage history, voltage change, and estimated solar activity when enough voltage samples are available.
 
