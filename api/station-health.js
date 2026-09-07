@@ -4,6 +4,7 @@ const STATIONS = [
   { node: 1436900584, name: 'Hidden Valley Repeater', battery: true },
   { node: 2740603892, name: 'Heltec Home', battery: false },
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
+  { node: 1949224949, name: "It's a Swell Day", battery: true },
 ];
 const EXPECTED_INTERVAL_MINUTES = 60;
 const ALERT_AFTER_MINUTES = 195;
