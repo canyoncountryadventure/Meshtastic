@@ -4,6 +4,7 @@ const STATIONS = new Map([
   [1436900584, { name: 'Hidden Valley Repeater', acceptsDeviceTelemetry: true }], // !55a55ce8
   [2740603892, { name: 'Heltec Home', acceptsDeviceTelemetry: false }],          // !a35a4bf4
   [1577197109, { name: 'Fishlake Hightop', acceptsDeviceTelemetry: true }],      // !5e021e35
+  [1949224949, { name: "It's a Swell Day", acceptsDeviceTelemetry: true }],     // !742ecff5
 ]);
 const SUPPORTED = new Set(['telemetry', 'device']);
 const MERGE_WINDOW_MINUTES = 50;
