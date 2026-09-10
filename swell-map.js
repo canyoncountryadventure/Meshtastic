@@ -81,4 +81,15 @@
     previousSetMapKind(kind, map);
     if (map === state.map) setText('mapStatus', mapStatusText());
   };
+
+  // Keep all known station history visible on first load. Fishlake's last stored
+  // reading currently predates seven days, so a 7D default made that station look
+  // deleted even though its records still exist. Health badges remain age-based.
+  if (state.hours !== 720) {
+    state.hours = 720;
+    document.querySelectorAll('#tabs button[data-hours]').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.hours) === 720);
+    });
+    loadData();
+  }
 })();
