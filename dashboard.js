@@ -10,7 +10,7 @@ const STATIONS = {
 };
 const EXPECTED_INTERVAL_HOURS = 1;
 const STALE_AFTER_HOURS = 3.25;
-const state = { hours: 168, readings: [], map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
+const state = { hours: 720, readings: [], map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
 const $ = id => document.getElementById(id);
 
 const num = v => {
@@ -190,7 +190,7 @@ async function loadData(){
   try{const res=await fetch(`/api/readings?hours=${state.hours}&limit=10000`,{cache:'no-store'});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);state.readings=Array.isArray(data.readings)?data.readings:[];renderAll();}
   catch(err){console.error(err);setText('networkStatusText','Telemetry API unavailable');$('networkStatus').className='live-pill offline';setText('updated','Refresh failed');}
 }
-function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours)||168;$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadData();});}
+function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours)||720;$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadData();});}
 
 bindTabs();bindExpand();initMap();loadData();setInterval(loadData,60000);
 window.addEventListener('resize',()=>{state.map?.invalidateSize(false);state.expandedMap?.invalidateSize(false);});
