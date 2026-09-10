@@ -1,6 +1,6 @@
 const STATIONS = {
   hv: {
-    key: 'hv', node: 1436900584, name: 'Hidden Valley', fullName: 'Hidden Valley Repeater', short: 'HVRP',
+    key: 'hv', node: 3044869407, name: 'Hidden Valley', fullName: 'Hidden Valley Repeater', short: 'HVRP',
     color: '#55d9b7', coords: [38.53880, -109.54090], elevationFt: 5800, battery: true,
   },
   home: {
@@ -10,7 +10,7 @@ const STATIONS = {
 };
 const EXPECTED_INTERVAL_HOURS = 1;
 const STALE_AFTER_HOURS = 3.25;
-const state = { hours: 24, readings: [], map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
+const state = { hours: 168, readings: [], map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
 const $ = id => document.getElementById(id);
 
 const num = v => {
@@ -45,9 +45,19 @@ function ageText(iso){
 }
 function fmtTime(iso){return new Date(iso).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
 function fmtAxis(ms,span){const d=new Date(ms);return span>3*86400000?d.toLocaleDateString([],{month:'short',day:'numeric'}):d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}
-function stationRows(key){const s=STATIONS[key];return state.readings.filter(r=>num(r?.node_num)===s.node);}
+function isLegacyHiddenValleyBackfill(r){
+  return num(r?.node_num)===1436900584 &&
+    metric(r,'source')==='hobo_manual_backfill' &&
+    String(metric(r,'logger_serial') ?? '')==='22231149';
+}
+function rowMatchesStation(r,s){
+  const n=num(r?.node_num);
+  if(n===s.node)return true;
+  return s.key==='hv' && isLegacyHiddenValleyBackfill(r);
+}
+function stationRows(key){const s=STATIONS[key];return state.readings.filter(r=>rowMatchesStation(r,s));}
 function tempRows(key){return stationRows(key).filter(r=>tempF(r)!==null && r.telemetry_type==='environment').sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));}
-function hvDeviceRows(){return stationRows('hv').filter(r=>batteryV(r)!==null||batteryPct(r)!==null).sort((a,b)=>new Date(batteryTime(b))-new Date(batteryTime(a)));}
+function hvDeviceRows(){return stationRows('hv').filter(r=>num(r?.node_num)===STATIONS.hv.node&&(batteryV(r)!==null||batteryPct(r)!==null)).sort((a,b)=>new Date(batteryTime(b))-new Date(batteryTime(a)));}
 function latestTemp(key){return tempRows(key)[0]||null;}
 
 function statsFor(key){
@@ -71,7 +81,7 @@ function statsFor(key){
 function setText(id,val){const el=$(id);if(el)el.textContent=val;}
 function setStationState(key,latest){
   const el=$(key==='hv'?'hvState':'homeState'); if(!el)return;
-  if(!latest){el.className='station-state offline';el.textContent='No temperature yet';return;}
+  if(!latest){el.className='station-state offline';el.textContent='No data in selected window';return;}
   const online=ageHours(latest.observed_at)<=STALE_AFTER_HOURS;
   el.className=`station-state ${online?'online':'stale'}`;
   el.textContent=online?'Reporting normally':`Stale · ${ageText(latest.observed_at)}`;
@@ -148,16 +158,16 @@ function renderBattery(target=$('batteryChart')){
 function rfClass(v){if(!Number.isFinite(v))return'';if(v>=-110)return'rf-strong';if(v>=-122)return'rf-fair';return'rf-weak';}
 function applyRf(id,v){const el=$(id);if(!el)return;el.classList.remove('rf-strong','rf-fair','rf-weak');const c=rfClass(v);if(c)el.classList.add(c);}
 function renderRf(target=$('rfChart')){
-  const rows=tempRows('hv').filter(r=>rssi(r)!==null);const latest=rows[0]||null;const vals=rows.map(rssi).filter(Number.isFinite);const avg=mean(vals),best=vals.length?Math.max(...vals):null;
+  const rows=tempRows('hv').filter(r=>num(r?.node_num)===STATIONS.hv.node&&rssi(r)!==null);const latest=rows[0]||null;const vals=rows.map(rssi).filter(Number.isFinite);const avg=mean(vals),best=vals.length?Math.max(...vals):null;
   if(latest){const rv=rssi(latest),sv=snr(latest),hp=hops(latest);setText('latestRssi',`${Math.round(rv)} dBm`);applyRf('latestRssi',rv);setText('latestSnr',`SNR ${sv===null?'—':sv.toFixed(1)+' dB'}`);setText('routeNow',hp===0?'Direct':hp===1?'1 relay':hp!==null?`${Math.round(hp)} relays`:'—');setText('routeDetail',hp===null?'hop metadata unavailable':`${Math.round(hp)} hop${hp===1?'':'s'} away`);}else{setText('latestRssi','—');setText('latestSnr','SNR —');setText('routeNow','—');setText('routeDetail','hop metadata');}
   setText('avgRssi',avg===null?'—':`${avg.toFixed(0)} dBm`);applyRf('avgRssi',avg);setText('bestRssi',best===null?'best —':`best ${best.toFixed(0)} dBm`);setText('rfChartCount',rows.length?`${rows.length} Hidden Valley RF samples`:'RF metadata pending');
   const points=[...rows].reverse().map(r=>({x:new Date(r.observed_at).getTime(),y:rssi(r),iso:r.observed_at}));renderLineChart(target,[{name:'RSSI',color:'#63b7ff',points}],{axisLabel:'RSSI dBm',tooltipValue:v=>`${Math.round(v)} dBm`,empty:'Waiting for Hidden Valley RF metadata.',pointRadius:3});
 }
 
 function renderRecent(){
-  const rows=state.readings.filter(r=>r.telemetry_type==='environment'&&tempF(r)!==null&&(num(r.node_num)===STATIONS.hv.node||num(r.node_num)===STATIONS.home.node)).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)).slice(0,40);
+  const rows=state.readings.filter(r=>r.telemetry_type==='environment'&&tempF(r)!==null&&(rowMatchesStation(r,STATIONS.hv)||rowMatchesStation(r,STATIONS.home))).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)).slice(0,40);
   const tbody=$('recent');if(!rows.length){tbody.innerHTML='<tr><td colspan="8">Waiting for telemetry.</td></tr>';return;}
-  tbody.innerHTML=rows.map(r=>{const key=num(r.node_num)===STATIONS.hv.node?'hv':'home',s=STATIONS[key],p=key==='hv'?batteryPct(r):null,v=key==='hv'?batteryV(r):null,rv=key==='hv'?rssi(r):null,sv=key==='hv'?snr(r):null,h=key==='hv'?hops(r):null;return `<tr><td>${esc(fmtTime(r.observed_at))}</td><td><span class="station-cell"><i class="legend-swatch ${key}"></i>${esc(s.name)}</span></td><td class="right">${tempF(r).toFixed(1)}</td><td class="right">${p===null?'—':Math.round(p)+'%'}</td><td class="right">${v===null?'—':v.toFixed(3)}</td><td class="right">${rv===null?'—':Math.round(rv)}</td><td class="right">${sv===null?'—':sv.toFixed(1)}</td><td class="right">${h===null?'—':Math.round(h)}</td></tr>`;}).join('');
+  tbody.innerHTML=rows.map(r=>{const key=rowMatchesStation(r,STATIONS.hv)?'hv':'home',s=STATIONS[key],isLiveHv=key==='hv'&&num(r?.node_num)===STATIONS.hv.node,p=isLiveHv?batteryPct(r):null,v=isLiveHv?batteryV(r):null,rv=isLiveHv?rssi(r):null,sv=isLiveHv?snr(r):null,h=isLiveHv?hops(r):null;return `<tr><td>${esc(fmtTime(r.observed_at))}</td><td><span class="station-cell"><i class="legend-swatch ${key}"></i>${esc(s.name)}</span></td><td class="right">${tempF(r).toFixed(1)}</td><td class="right">${p===null?'—':Math.round(p)+'%'}</td><td class="right">${v===null?'—':v.toFixed(3)}</td><td class="right">${rv===null?'—':Math.round(rv)}</td><td class="right">${sv===null?'—':sv.toFixed(1)}</td><td class="right">${h===null?'—':Math.round(h)}</td></tr>`;}).join('');
 }
 
 const MAP_PROVIDERS={topo:{url:'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',attr:'USGS The National Map'},sat:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'Imagery © Esri'}};
@@ -165,7 +175,7 @@ function mapLayer(kind){const p=MAP_PROVIDERS[kind]||MAP_PROVIDERS.topo;return L
 function addMarkers(map){
   Object.values(STATIONS).forEach(s=>{const marker=L.circleMarker(s.coords,{radius:9,color:'#edf7f6',weight:2,fillColor:s.color,fillOpacity:1}).addTo(map);const location=s.key==='home'?'Approx. Hollyoak Ln × Mill Creek Dr':`${s.coords[0].toFixed(5)}, ${s.coords[1].toFixed(5)}`;marker.bindPopup(`<strong>${esc(s.fullName)}</strong><br>${esc(location)}<br>${s.elevationFt.toLocaleString()} ft elevation<br><span style="color:#91aab0">${s.key==='home'?'Approximate display location':'Remote station location'}</span>`);});
 }
-function setMapKind(kind,map=state.map){if(!map||!window.L)return;state.mapKind=kind==='sat'?'sat':'topo';if(map===state.map&&state.baseLayer){try{map.removeLayer(state.baseLayer)}catch{}}const layer=mapLayer(state.mapKind).addTo(map);if(map===state.map){state.baseLayer=layer;$('mapTopoBtn')?.classList.toggle('active',state.mapKind==='topo');$('mapSatBtn')?.classList.toggle('active',state.mapKind==='sat');}setText('mapStatus',state.mapKind==='topo'?'USGS topo · two station locations':'Satellite imagery · two station locations');}
+function setMapKind(kind,map=state.map){if(!map||!window.L)return;state.mapKind=kind==='sat'?'sat':'topo';if(map===state.map&&state.baseLayer){try{map.removeLayer(state.baseLayer)}catch{}}const layer=mapLayer(state.mapKind).addTo(map);if(map===state.map){state.baseLayer=layer;$('mapTopoBtn')?.classList.toggle('active',state.mapKind==='topo');$('mapSatBtn')?.classList.toggle('active',state.mapKind==='sat');}setText('mapStatus',state.mapKind==='topo'?'USGS topo · station locations':'Satellite imagery · station locations');}
 function initMap(){if(!window.L){setText('mapStatus','Map engine unavailable.');return;}const el=$('stationMap');if(!el)return;if(state.map){try{state.map.remove()}catch{}}state.map=L.map(el,{zoomControl:true,preferCanvas:true,minZoom:3,maxZoom:20});setMapKind('topo',state.map);addMarkers(state.map);state.map.fitBounds([STATIONS.hv.coords,STATIONS.home.coords],{padding:[45,45],maxZoom:12});setTimeout(()=>state.map.invalidateSize(true),120);$('mapTopoBtn')?.addEventListener('click',()=>setMapKind('topo'));$('mapSatBtn')?.addEventListener('click',()=>setMapKind('sat'));}
 
 function bindExpand(){
@@ -180,7 +190,7 @@ async function loadData(){
   try{const res=await fetch(`/api/readings?hours=${state.hours}&limit=10000`,{cache:'no-store'});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);state.readings=Array.isArray(data.readings)?data.readings:[];renderAll();}
   catch(err){console.error(err);setText('networkStatusText','Telemetry API unavailable');$('networkStatus').className='live-pill offline';setText('updated','Refresh failed');}
 }
-function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours)||24;$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadData();});}
+function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours)||168;$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadData();});}
 
 bindTabs();bindExpand();initMap();loadData();setInterval(loadData,60000);
 window.addEventListener('resize',()=>{state.map?.invalidateSize(false);state.expandedMap?.invalidateSize(false);});
