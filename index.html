@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="theme-color" content="#071319"/>
-<title>Meshtastic Environmental Network</title>
+<title>Autonomous Watershed Awareness and Knowledge Engine (AWAKE)</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="/dashboard.css?v=20260909-gateway-fix"/>
 </head>
@@ -27,9 +27,9 @@
   <section class="hero comparison-hero">
     <div class="hero-intro">
       <div class="eyebrow">Live station comparison</div>
-      <h1>Four permanent temperature stations. One view.</h1>
-      <p>Hidden Valley, Fishlake Hightop, and It's a Swell Day report through the LoRa mesh. Heltec Home reads its local HOBO directly over BLE and serves as the normal hourly cloud-batch trigger.</p>
-      <div class="pipeline"><strong>Data path</strong><span>HOBO sensors → Meshtastic / Heltec → Home-triggered HTTPS batch → Vercel ingest → Neon history → dashboard</span></div>
+      <h1>Meshtastic Command Dashboard</h1>
+      <p>Hidden Valley, Fishlake Hightop, and It's a Swell Day report through the LoRa mesh. Heltec Home reads its local Temperature Sensor directly over BLE and serves as the normal hourly cloud-batch trigger.</p>
+      <div class="pipeline"><strong>Data path</strong><span>Temperature sensors → Meshtastic / Heltec → Home-triggered HTTPS batch → Vercel ingest → Neon history → dashboard</span></div>
     </div>
     <div class="station-hero-grid">
       <article class="station-hero hv-card">
@@ -41,7 +41,7 @@
       <article class="station-hero home-card">
         <div class="station-heading"><span class="station-dot home"></span><div><strong>Heltec Home</strong><small>Heltec V4 · Home · !a35a4bf4</small></div></div>
         <div class="big-temp"><span id="homeTemp">—</span><small>°F</small></div>
-        <div class="station-meta"><span id="homeUpdated">Waiting for temperature</span><span>Local HOBO via BLE</span></div>
+        <div class="station-meta"><span id="homeUpdated">Waiting for temperature</span><span>Local Temperature via BLE</span></div>
         <div class="station-state offline" id="homeState">No temperature yet</div>
       </article>
     </div>
@@ -83,7 +83,7 @@
         <div><span>Packet reliability</span><strong id="hvReliability">—</strong><small id="hvReliabilityDetail">—</small></div>
         <div><span>Longest gap</span><strong id="hvGap">—</strong></div>
       </div>
-      <div class="path-note"><strong>Sensor path</strong><span>MX2201 → BLE → Hidden Valley RAK4631 → LoRa mesh → Heltec Home → synchronized cloud batch</span></div>
+      <div class="path-note"><strong>Sensor path</strong><span>Temp Sensor → BLE → Hidden Valley RAK4631 → LoRa mesh → Heltec Home → synchronized cloud batch</span></div>
     </article>
 
     <article class="panel station-detail home-detail">
@@ -96,7 +96,7 @@
         <div><span>Packet reliability</span><strong id="homeReliability">—</strong><small id="homeReliabilityDetail">—</small></div>
         <div><span>Longest gap</span><strong id="homeGap">—</strong></div>
       </div>
-      <div class="path-note"><strong>Sensor path</strong><span>HOBO → BLE → Heltec Home → Home reading flushes held permanent-station data to Vercel/Neon · 70 min safety fallback</span></div>
+      <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Heltec Home → Home reading flushes held permanent-station data to Vercel/Neon · 70 min safety fallback</span></div>
     </article>
   </section>
 
