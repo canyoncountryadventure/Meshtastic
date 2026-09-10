@@ -110,7 +110,7 @@ The gateway remote hold queue is 48 readings. The Vercel ingest endpoint accepts
 
 The production dashboard compares all four permanent stations and includes temperature history, 12-hour trends, selected-window high/low/average, packet reliability, recent readings, RSSI/SNR and route metadata for remote stations, battery/device telemetry, and an interactive map.
 
-The default history window is **7 days**, rather than 24 hours, so a temporary ingest outage does not make existing station history appear deleted. The current-health badges still use the latest observation time and mark stale stations appropriately.
+The default history window is **30 days**, rather than 24 hours, so a temporary ingest outage or an older Fishlake reading does not make existing station history appear deleted. The current-health badges still use the latest observation time and mark stale stations appropriately.
 
 The map currently includes:
 
