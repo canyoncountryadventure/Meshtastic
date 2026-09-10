@@ -16,6 +16,22 @@
   // after the dialog opens, so registering here automatically includes Swell there.
   STATIONS.sw = SWELL_MAP;
 
+  // Final page copy runs after Fishlake + Swell extension scripts so older extension
+  // wording cannot overwrite the current four-station gateway architecture.
+  const heroTitle = document.querySelector('.hero-intro h1');
+  if (heroTitle) heroTitle.textContent = 'Four permanent temperature stations. One view.';
+  const heroText = document.querySelector('.hero-intro p');
+  if (heroText) heroText.textContent = "Hidden Valley, Fishlake Hightop, and It's a Swell Day report through the LoRa mesh. Heltec Home reads its local HOBO over BLE; each Home temperature reading normally flushes the synchronized station batch to Vercel/Neon, with a 70-minute safety fallback.";
+  const pipeline = document.querySelector('.pipeline span');
+  if (pipeline) pipeline.textContent = 'HOBO sensors → Meshtastic / Heltec → Home-triggered HTTPS batch → Vercel ingest → Neon history → dashboard';
+  const footer = document.querySelector('footer span:first-child');
+  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop + It's a Swell Day · Home-triggered cloud batching with independent safety flush";
+
+  const flPath = document.querySelector('.fl-detail .path-note span');
+  if (flPath) flPath.textContent = 'HOBO → BLE → Fishlake Hightop RAK → LoRa mesh → Heltec Home → synchronized cloud batch';
+  const swPath = document.querySelector('.sw-detail .path-note span');
+  if (swPath) swPath.textContent = "HOBO → BLE → It's a Swell Day RAK → LoRa mesh → Heltec Home → synchronized cloud batch";
+
   const detailText = document.querySelector('.sw-detail .station-panel-head p');
   if (detailText) detailText.textContent = '38.54279, -110.49269 · 6,000 ft · RAK WisBlock 4631 · MX2201';
 
