@@ -1,13 +1,15 @@
 import { getSql } from './db.js';
 
 const STATIONS = new Map([
+  [3044869407, { name: 'Hidden Valley', acceptsDeviceTelemetry: true }],          // !b57d051f
   [2740603892, { name: 'Heltec Home', acceptsDeviceTelemetry: false }],          // !a35a4bf4
   [1577197109, { name: 'Fishlake Hightop', acceptsDeviceTelemetry: true }],      // !5e021e35
   [1949224949, { name: "It's a Swell Day", acceptsDeviceTelemetry: true }],     // !742ecff5
 ]);
+// !55a55ce8 / 1436900584 is not Hidden Valley and is intentionally not accepted.
 const SUPPORTED = new Set(['telemetry', 'device']);
 const MERGE_WINDOW_MINUTES = 50;
-const MAX_BATCH_SIZE = 24;
+const MAX_BATCH_SIZE = 64;
 
 function parsePossibleJson(value) {
   if (typeof value !== 'string') return value;
@@ -240,9 +242,6 @@ async function processBatch(sql, bodies) {
 
   if (!prepared.length) return results;
 
-  // Preserve per-node merge semantics while still using one Neon HTTP transaction.
-  // Earlier observations execute first, so an environment/device pair in the same
-  // gateway batch can merge whichever packet arrived first into the later one.
   prepared.sort((a, b) => {
     const dt = a.observedAt.getTime() - b.observedAt.getTime();
     return dt || a.index - b.index;
