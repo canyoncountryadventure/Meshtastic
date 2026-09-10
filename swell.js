@@ -66,10 +66,7 @@
     legend.insertAdjacentHTML('beforeend', '<span><i class="legend-swatch sw"></i>It\'s a Swell Day</span>');
   }
 
-  const heroTitle = document.querySelector('.hero-intro h1');
-  if (heroTitle) heroTitle.textContent = 'Four permanent temperature stations. One view.';
-  const heroText = document.querySelector('.hero-intro p');
-  if (heroText) heroText.textContent = "Hidden Valley, Fishlake Hightop, and It's a Swell Day report through the LoRa mesh. Heltec Home reads its local HOBO directly over BLE. All four streams land in Neon and are plotted together here.";
+  // Introductory copy is owned by index.html; station modules must not overwrite it.
   const mapText = document.querySelector('.map-panel .panel-head p');
   if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, and approximate Heltec Home locations · It's a Swell Day location pending";
   const recentText = document.querySelector('.recent-panel .panel-head p');

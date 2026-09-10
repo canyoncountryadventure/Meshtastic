@@ -54,7 +54,7 @@
           <div><span>Packet reliability</span><strong id="flReliability">—</strong><small id="flReliabilityDetail">—</small></div>
           <div><span>Longest gap</span><strong id="flGap">—</strong></div>
         </div>
-        <div class="path-note"><strong>Sensor path</strong><span>HOBO → BLE → Fishlake Hightop RAK → LoRa mesh → Heltec Home → internet</span></div>
+        <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Fishlake Hightop RAK → LoRa mesh → Heltec Home → internet</span></div>
       </article>`);
   }
 
@@ -80,10 +80,7 @@
     legend.insertAdjacentHTML('beforeend', '<span><i class="legend-swatch fl"></i>Fishlake Hightop</span>');
   }
 
-  const heroTitle = document.querySelector('.hero-intro h1');
-  if (heroTitle) heroTitle.textContent = 'Three permanent temperature stations. One view.';
-  const heroText = document.querySelector('.hero-intro p');
-  if (heroText) heroText.textContent = 'Hidden Valley and Fishlake Hightop report through the LoRa mesh. Heltec Home reads its local HOBO directly over BLE. All three streams land in Neon and are plotted together here.';
+  // Introductory copy is owned by index.html; station modules must not overwrite it.
   const reporting = document.getElementById('stationsReporting');
   if (reporting && reporting.textContent.trim() === '0 / 2') reporting.textContent = '0 / 3';
   const mapText = document.querySelector('.map-panel .panel-head p');
