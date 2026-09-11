@@ -61,12 +61,6 @@ function observedIso(body) {
   return new Date().toISOString();
 }
 
-function stationName(body, nodeNum) {
-  if (KNOWN_STATIONS.has(nodeNum)) return KNOWN_STATIONS.get(nodeNum);
-  if (typeof body?.station_name === 'string' && body.station_name.trim()) return body.station_name.trim();
-  return nodeNum === null ? 'Unknown node' : `Node ${nodeNum.toString(16).padStart(8, '0')}`;
-}
-
 function telemetryType(body) {
   if (body.type === 'device') return 'device';
   if (body.type === 'mx2001') return 'mx2001';
@@ -108,6 +102,9 @@ function validate(body) {
 
   const nodeNum = nodeNumber(body);
   if (nodeNum === null) throw new Error('Missing node number/from');
+  if (!KNOWN_STATIONS.has(nodeNum)) {
+    throw new Error(`Node ${nodeNum} is not an approved telemetry station`);
+  }
 
   if (body.type === 'telemetry' && temperatureC(body) === null) {
     throw new Error('Telemetry packet has no temperature');
@@ -119,7 +116,7 @@ function validate(body) {
 async function insertReading(sql, body) {
   const nodeNum = validate(body);
   const observedAt = observedIso(body);
-  const name = stationName(body, nodeNum);
+  const name = KNOWN_STATIONS.get(nodeNum);
   const type = telemetryType(body);
   const tempC = temperatureC(body);
   const metrics = JSON.stringify(body.payload);
