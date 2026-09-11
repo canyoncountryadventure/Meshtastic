@@ -5,6 +5,7 @@ const KNOWN_STATIONS = new Map([
   [2740603892, 'Heltec Home'],
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "It's a Swell Day"],
+  [2650172798, 'Moab'],
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test']);
