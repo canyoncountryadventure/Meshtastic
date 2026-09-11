@@ -70,7 +70,7 @@
   const mapText = document.querySelector('.map-panel .panel-head p');
   if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, and approximate Heltec Home locations · It's a Swell Day location pending";
   const recentText = document.querySelector('.recent-panel .panel-head p');
-  if (recentText) recentText.textContent = 'Combined history from all four permanent temperature stations.';
+  if (recentText) recentText.textContent = 'Combined history from the permanent temperature stations.';
   const footer = document.querySelector('footer span:first-child');
   if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop + It's a Swell Day · refreshes only on demand to conserve Neon compute";
 
@@ -229,11 +229,11 @@
       setText('freshestDetail', ageText(latests[0].reading.observed_at));
     }
     const healthy = current.filter(x => ageHours(x.reading.observed_at) <= STALE_AFTER_HOURS).length;
-    setText('stationsReporting', `${healthy} / 4`);
+    setText('stationsReporting', `${healthy} / 5`);
     const n = document.getElementById('networkStatus');
     if (n) {
-      n.className = `live-pill ${healthy === 4 ? 'online' : healthy > 0 ? 'partial' : 'offline'}`;
-      setText('networkStatusText', healthy === 4 ? 'All 4 stations reporting' : healthy > 0 ? `${healthy} of 4 stations reporting` : 'No current station telemetry');
+      n.className = `live-pill ${healthy === 5 ? 'online' : healthy > 0 ? 'partial' : 'offline'}`;
+      setText('networkStatusText', healthy === 5 ? 'All 5 stations reporting' : healthy > 0 ? `${healthy} of 5 stations reporting` : 'No current station telemetry');
     }
   };
 

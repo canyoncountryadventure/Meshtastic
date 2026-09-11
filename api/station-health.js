@@ -5,7 +5,7 @@ const STATIONS = [
   { node: 2740603892, name: 'Heltec Home', battery: false },
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
   { node: 1949224949, name: "It's a Swell Day", battery: true },
-  { node: 2650172798, name: 'Moab', battery: true },
+  { node: 2650172798, name: 'Seed (aka Moab)', battery: true },
 ];
 
 const EXPECTED_INTERVAL_MINUTES = 60;
