@@ -6,8 +6,8 @@
     fullName: 'Thousand Lake Mountain',
     short: 'TLRP',
     color: '#f5d05f',
-    coords: [38.553861, -109.524222],
-    elevationFt: 5100,
+    coords: [38.52008, -111.48206],
+    elevationFt: 10600,
     battery: true,
   };
 
@@ -42,7 +42,7 @@
   if (detailGrid && !document.getElementById('seedHigh')) {
     detailGrid.insertAdjacentHTML('beforeend', `
       <article class="panel station-detail seed-detail">
-        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Thousand Lake Mountain</h2><p>38.553861, -109.524222 · 5,100 ft · XIAO nRF52840 + Wio-SX1262 · HOBO MX2203</p></div><span class="station-badge seed">TLRP</span></div>
+        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Thousand Lake Mountain</h2><p>38.52008, -111.48206 · 10,600 ft · XIAO nRF52840 + Wio-SX1262 · HOBO MX2203</p></div><span class="station-badge seed">TLRP</span></div>
         <div class="detail-metrics">
           <div><span>24h high</span><strong id="seedHigh">—</strong></div>
           <div><span>24h low</span><strong id="seedLow">—</strong></div>

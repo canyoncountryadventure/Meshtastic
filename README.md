@@ -78,8 +78,8 @@ Node number:     2650172798
 Meshtastic ID:   !9df66d7e
 Hardware:        Seeed XIAO nRF52840 + Wio-SX1262 (XIAO_NRF52_KIT)
 Sensor:          HOBO MX2201 over BLE
-Coordinates:     38.553861, -109.524222
-Elevation:       5,100 ft
+Coordinates:     38.52008, -111.48206
+Elevation:       10,600 ft
 Mode:            automatic remote HOBO telemetry
 Battery:         device/battery telemetry accepted and graphed when received
 ```
@@ -133,7 +133,7 @@ The map currently includes:
 - Hidden Valley at 38.53880, -109.54090 · 5,800 ft
 - Fishlake Hightop at 38.60727, -111.73972 · 11,600 ft
 - It's a Swell Day at 38.54279, -110.49269 · 6,000 ft
-- Thousand Lake Mountain at 38.553861, -109.524222 · 5,100 ft
+- Thousand Lake Mountain at 38.52008, -111.48206 · 10,600 ft
 - approximate Moab location
 
 ## Cloud filtering and row model
