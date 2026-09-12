@@ -18,15 +18,15 @@ Short name:      HVRP
 Node number:     3044869407
 Meshtastic ID:   !b57d051f
 Hardware:        RAK WisBlock 4631
-Sensor:          HOBO MX2201 over BLE
+Sensor:          Temperature Sensor over BLE
 Coordinates:     38.53880, -109.54090
 Elevation:       5,800 ft
-Mode:            automatic remote HOBO telemetry
-HOBO interval:   3600 sec at last field check
+Mode:            automatic remote Temperature Sensor telemetry
+Temperature Sensor interval:   3600 sec at last field check
 Battery:         device/battery telemetry stored and graphed
 ```
 
-**Identity warning:** `!55a55ce8 / 1436900584` is not Hidden Valley and is not accepted as a production live station. A historical manual HOBO workbook backfill was previously stored under that old number before the identity error was discovered. The dashboard recognizes only those verified manual-backfill rows when reconstructing Hidden Valley temperature history; it does not attribute RF or battery metadata from that node to Hidden Valley.
+**Identity warning:** `!55a55ce8 / 1436900584` is not Hidden Valley and is not accepted as a production live station. A historical manual Temperature Sensor workbook backfill was previously stored under that old number before the identity error was discovered. The dashboard recognizes only those verified manual-backfill rows when reconstructing Hidden Valley temperature history; it does not attribute RF or battery metadata from that node to Hidden Valley.
 
 ### Moab
 
@@ -35,7 +35,7 @@ Meshtastic name: Moab
 Node number:     2740603892
 Meshtastic ID:   !a35a4bf4
 Hardware:        Heltec V4 OLED
-Mode:            automatic local HOBO BLE read + internet gateway
+Mode:            automatic local Temperature Sensor BLE read + internet gateway
 Cloud role:      normal synchronized batch trigger
 Battery:         not used for station battery analytics
 ```
@@ -50,7 +50,7 @@ Meshtastic ID:   !5e021e35
 Hardware:        RAK4631 / WisBlock
 Coordinates:     38.60727, -111.73972
 Elevation:       11,600 ft
-Mode:            Heltec-triggered remote HOBO READ polling
+Mode:            Heltec-triggered remote Temperature Sensor READ polling
 Battery:         device/battery telemetry accepted and graphed when received
 ```
 
@@ -62,10 +62,10 @@ Short name:      SWRP
 Node number:     1949224949
 Meshtastic ID:   !742ecff5
 Hardware:        RAK WisBlock 4631
-Sensor:          HOBO over BLE
+Sensor:          Temperature Sensor over BLE
 Coordinates:     38.54279, -110.49269
 Elevation:       6,000 ft
-Mode:            automatic remote HOBO telemetry
+Mode:            automatic remote Temperature Sensor telemetry
 Battery:         device/battery telemetry accepted and graphed when received
 ```
 
@@ -77,10 +77,10 @@ Short name:      SEED
 Node number:     2650172798
 Meshtastic ID:   !9df66d7e
 Hardware:        Seeed XIAO nRF52840 + Wio-SX1262 (XIAO_NRF52_KIT)
-Sensor:          HOBO MX2201 over BLE
+Sensor:          Temperature Sensor over BLE
 Coordinates:     38.52008, -111.48206
 Elevation:       10,600 ft
-Mode:            automatic remote HOBO telemetry
+Mode:            automatic remote Temperature Sensor telemetry
 Battery:         device/battery telemetry accepted and graphed when received
 ```
 
@@ -104,7 +104,7 @@ Thousand Lake Mountain telemetry -------------------> held remote queue --+
 Fishlake timed READ result ------> held remote queue --+
 remote device/battery telemetry -> held remote queue --+
                                                         |
-Home HOBO -> BLE -> Moab -----------------------+--> one HTTPS batch
+Home Temperature Sensor -> BLE -> Moab -----------------------+--> one HTTPS batch
                                                              |
                                                              v
                                                         Vercel /api/ingest
@@ -116,7 +116,7 @@ Home HOBO -> BLE -> Moab -----------------------+--> one HTTPS batch
                                                            dashboard
 ```
 
-The **local Home HOBO environmental reading is the normal cloud batch trigger**. No remote station is a required trigger for another station.
+The **local Home Temperature Sensor environmental reading is the normal cloud batch trigger**. No remote station is a required trigger for another station.
 
 If Home does not generate a successful trigger, the gateway performs a **70-minute safety flush** of held readings so Hidden Valley, Swell, Fishlake, and Thousand Lake Mountain cannot become stranded behind a failed local sensor. Failed batches are retried and remote observation timestamps/RF metadata are retained.
 
@@ -170,10 +170,10 @@ Current Heltec gateway branch:
 cca-heltec-sensor-gateway
 ```
 
-Current universal RAK/Seeed HOBO branch:
+Current universal RAK/Seeed Temperature Sensor branch:
 
 ```text
-hobo-mx2001-mx2201-mx2203
+See the firmware repository for the current temperature-sensor branch.
 ```
 
 The Heltec V4 production build preserves Wi-Fi Unified OTA. Routine updates use the regular `firmware-heltec-v4-*.bin`; do not use a factory image and do not erase NVS/configuration for a normal OTA update.

@@ -34,7 +34,7 @@
   if (detailGrid && !document.getElementById('swHigh')) {
     detailGrid.insertAdjacentHTML('beforeend', `
       <article class="panel station-detail sw-detail">
-        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>It's a Swell Day</h2><p>RAK WisBlock 4631 · MX2201 · location pending</p></div><span class="station-badge sw">SWRP</span></div>
+        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>It's a Swell Day</h2><p>RAK WisBlock 4631 · Temperature Sensor · location pending</p></div><span class="station-badge sw">SWRP</span></div>
         <div class="detail-metrics">
           <div><span>24h high</span><strong id="swHigh">—</strong></div>
           <div><span>24h low</span><strong id="swLow">—</strong></div>
@@ -43,7 +43,7 @@
           <div><span>Packet reliability</span><strong id="swReliability">—</strong><small id="swReliabilityDetail">—</small></div>
           <div><span>Longest gap</span><strong id="swGap">—</strong></div>
         </div>
-        <div class="path-note"><strong>Sensor path</strong><span>MX2201 → BLE → It's a Swell Day RAK → LoRa mesh → Moab → internet</span></div>
+        <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → It's a Swell Day RAK → LoRa mesh → Moab → internet</span></div>
       </article>`);
   }
 

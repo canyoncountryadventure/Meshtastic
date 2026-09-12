@@ -42,7 +42,7 @@
   if (detailGrid && !document.getElementById('seedHigh')) {
     detailGrid.insertAdjacentHTML('beforeend', `
       <article class="panel station-detail seed-detail">
-        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Thousand Lake Mountain</h2><p>38.52008, -111.48206 · 10,600 ft · XIAO nRF52840 + Wio-SX1262 · HOBO MX2203</p></div><span class="station-badge seed">TLRP</span></div>
+        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Thousand Lake Mountain</h2><p>38.52008, -111.48206 · 10,600 ft · XIAO nRF52840 + Wio-SX1262 · Temperature Sensor</p></div><span class="station-badge seed">TLRP</span></div>
         <div class="detail-metrics">
           <div><span>24h high</span><strong id="seedHigh">—</strong></div>
           <div><span>24h low</span><strong id="seedLow">—</strong></div>
@@ -51,7 +51,7 @@
           <div><span>Packet reliability</span><strong id="seedReliability">—</strong><small id="seedReliabilityDetail">—</small></div>
           <div><span>Longest gap</span><strong id="seedGap">—</strong></div>
         </div>
-        <div class="path-note"><strong>Sensor path</strong><span>HOBO MX2203 → BLE → Thousand Lake Mountain XIAO → LoRa mesh → Moab → internet</span></div>
+        <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Thousand Lake Mountain XIAO → LoRa mesh → Moab → internet</span></div>
       </article>`);
   }
 
