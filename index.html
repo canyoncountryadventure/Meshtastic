@@ -28,8 +28,8 @@
     <div class="hero-intro">
       <div class="eyebrow">Live station comparison</div>
       <h1>Meshtastic Command Dashboard</h1>
-      <p>Hidden Valley, Fishlake Hightop, It's a Swell Day, and Seed (aka Moab) report through the LoRa mesh. Heltec Home reads its local Temperature Sensor directly over BLE and serves as the normal hourly cloud-batch trigger.</p>
-      <div class="pipeline"><strong>Data path</strong><span>Temperature sensors → Meshtastic / Heltec → Home-triggered HTTPS batch → Vercel ingest → Neon history → dashboard</span></div>
+      <p>Hidden Valley, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain report through the LoRa mesh. Moab reads its local Temperature Sensor directly over BLE and serves as the normal hourly cloud-batch trigger.</p>
+      <div class="pipeline"><strong>Data path</strong><span>Temperature sensors → Meshtastic / Heltec → Moab-triggered HTTPS batch → Vercel ingest → Neon history → dashboard</span></div>
     </div>
     <div class="station-hero-grid">
       <article class="station-hero hv-card">
@@ -39,7 +39,7 @@
         <div class="station-state offline" id="hvState">No temperature yet</div>
       </article>
       <article class="station-hero home-card">
-        <div class="station-heading"><span class="station-dot home"></span><div><strong>Heltec Home</strong><small>Heltec V4 · Home · !a35a4bf4</small></div></div>
+        <div class="station-heading"><span class="station-dot home"></span><div><strong>Moab</strong><small>Heltec V4 · Moab · !a35a4bf4</small></div></div>
         <div class="big-temp"><span id="homeTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="homeUpdated">Waiting for temperature</span><span>Local Temperature via BLE</span></div>
         <div class="station-state offline" id="homeState">No temperature yet</div>
@@ -68,7 +68,7 @@
       <div><h2>Temperature comparison</h2><p id="tempChartCount">Waiting for station data</p></div>
       <button type="button" class="expand-btn" data-expand="tempChart" data-title="Temperature comparison">Expand</button>
     </div>
-    <div class="legend"><span><i class="legend-swatch hv"></i>Hidden Valley</span><span><i class="legend-swatch home"></i>Heltec Home</span></div>
+    <div class="legend"><span><i class="legend-swatch hv"></i>Hidden Valley</span><span><i class="legend-swatch home"></i>Moab</span></div>
     <div class="chart xlarge" id="tempChart"><div class="empty">Waiting for temperature telemetry.</div></div>
   </section>
 
@@ -83,11 +83,11 @@
         <div><span>Packet reliability</span><strong id="hvReliability">—</strong><small id="hvReliabilityDetail">—</small></div>
         <div><span>Longest gap</span><strong id="hvGap">—</strong></div>
       </div>
-      <div class="path-note"><strong>Sensor path</strong><span>Temp Sensor → BLE → Hidden Valley RAK4631 → LoRa mesh → Heltec Home → synchronized cloud batch</span></div>
+      <div class="path-note"><strong>Sensor path</strong><span>Temp Sensor → BLE → Hidden Valley RAK4631 → LoRa mesh → Moab → synchronized cloud batch</span></div>
     </article>
 
     <article class="panel station-detail home-detail">
-      <div class="panel-head station-panel-head"><div><span class="eyebrow">Local direct station / gateway clock</span><h2>Heltec Home</h2><p>Approx. Hollyoak Ln × Mill Creek Dr · ~4,080 ft</p></div><span class="station-badge home">HOME</span></div>
+      <div class="panel-head station-panel-head"><div><span class="eyebrow">Local direct station / gateway clock</span><h2>Moab</h2><p>Approx. Hollyoak Ln × Mill Creek Dr · ~4,080 ft</p></div><span class="station-badge home">MOAB</span></div>
       <div class="detail-metrics">
         <div><span>24h high</span><strong id="homeHigh">—</strong></div>
         <div><span>24h low</span><strong id="homeLow">—</strong></div>
@@ -96,7 +96,7 @@
         <div><span>Packet reliability</span><strong id="homeReliability">—</strong><small id="homeReliabilityDetail">—</small></div>
         <div><span>Longest gap</span><strong id="homeGap">—</strong></div>
       </div>
-      <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Heltec Home → Home reading flushes held permanent-station data to Vercel/Neon · 70 min safety fallback</span></div>
+      <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Moab → Home reading flushes held permanent-station data to Vercel/Neon · 70 min safety fallback</span></div>
     </article>
   </section>
 
@@ -137,7 +137,7 @@
     <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
-  <footer><span>Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop + It's a Swell Day + Seed (aka Moab) · Home-triggered cloud batching with independent safety flush</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day + Thousand Lake Mountain · Moab-triggered cloud batching with independent safety flush</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>

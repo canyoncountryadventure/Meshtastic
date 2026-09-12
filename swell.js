@@ -43,7 +43,7 @@
           <div><span>Packet reliability</span><strong id="swReliability">—</strong><small id="swReliabilityDetail">—</small></div>
           <div><span>Longest gap</span><strong id="swGap">—</strong></div>
         </div>
-        <div class="path-note"><strong>Sensor path</strong><span>MX2201 → BLE → It's a Swell Day RAK → LoRa mesh → Heltec Home → internet</span></div>
+        <div class="path-note"><strong>Sensor path</strong><span>MX2201 → BLE → It's a Swell Day RAK → LoRa mesh → Moab → internet</span></div>
       </article>`);
   }
 
@@ -68,11 +68,11 @@
 
   // Introductory copy is owned by index.html; station modules must not overwrite it.
   const mapText = document.querySelector('.map-panel .panel-head p');
-  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, and approximate Heltec Home locations · It's a Swell Day location pending";
+  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, and approximate Moab locations · It's a Swell Day location pending";
   const recentText = document.querySelector('.recent-panel .panel-head p');
   if (recentText) recentText.textContent = 'Combined history from the permanent temperature stations.';
   const footer = document.querySelector('footer span:first-child');
-  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop + It's a Swell Day · refreshes only on demand to conserve Neon compute";
+  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day · refreshes only on demand to conserve Neon compute";
 
   const swRows = () => state.readings.filter(r => num(r?.node_num) === SWELL.node);
   const swTempRows = () => swRows().filter(r => tempF(r) !== null && r.telemetry_type === 'environment').sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
@@ -244,11 +244,11 @@
     const sw = swTempRows().map(r => ({x:new Date(r.observed_at).getTime(), y:tempF(r), iso:r.observed_at}));
     renderLineChart(target, [
       {name:'Hidden Valley', color:STATIONS.hv.color, points:hv},
-      {name:'Heltec Home', color:STATIONS.home.color, points:home},
+      {name:'Moab', color:STATIONS.home.color, points:home},
       {name:'Fishlake Hightop', color:STATIONS.fl.color, points:fl},
       {name:SWELL.name, color:SWELL.color, points:sw},
     ], {axisLabel:'Temperature °F', tooltipValue:v=>`${v.toFixed(1)} °F`, strokeWidth:3.3, pointRadius:3.5, empty:'Waiting for temperature telemetry.'});
-    setText('tempChartCount', `${hv.length} Hidden Valley · ${home.length} Heltec Home · ${fl.length} Fishlake · ${sw.length} Swell readings`);
+    setText('tempChartCount', `${hv.length} Hidden Valley · ${home.length} Moab · ${fl.length} Fishlake · ${sw.length} Swell readings`);
   };
 
   renderRecent = function() {

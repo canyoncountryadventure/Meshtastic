@@ -1,6 +1,6 @@
 # Meshtastic Environmental Network
 
-Production Vercel + Neon dashboard for five permanent temperature stations: **Hidden Valley Repeater**, **Heltec Home**, **Fishlake Hightop**, **It's a Swell Day**, and **Seed (aka Moab)**.
+Production Vercel + Neon dashboard for five permanent temperature stations: **Hidden Valley Repeater**, **Moab**, **Fishlake Hightop**, **It's a Swell Day**, and **Thousand Lake Mountain**.
 
 Production dashboard:
 
@@ -28,10 +28,10 @@ Battery:         device/battery telemetry stored and graphed
 
 **Identity warning:** `!55a55ce8 / 1436900584` is not Hidden Valley and is not accepted as a production live station. A historical manual HOBO workbook backfill was previously stored under that old number before the identity error was discovered. The dashboard recognizes only those verified manual-backfill rows when reconstructing Hidden Valley temperature history; it does not attribute RF or battery metadata from that node to Hidden Valley.
 
-### Heltec Home
+### Moab
 
 ```text
-Meshtastic name: Heltec Home
+Meshtastic name: Moab
 Node number:     2740603892
 Meshtastic ID:   !a35a4bf4
 Hardware:        Heltec V4 OLED
@@ -69,10 +69,10 @@ Mode:            automatic remote HOBO telemetry
 Battery:         device/battery telemetry accepted and graphed when received
 ```
 
-### Seed (aka Moab)
+### Thousand Lake Mountain
 
 ```text
-Meshtastic name: Seed
+Meshtastic name: Thousand Lake Mountain
 Short name:      SEED
 Node number:     2650172798
 Meshtastic ID:   !9df66d7e
@@ -100,11 +100,11 @@ Logical Meshtastic channel index and the underlying LoRa RF slot/frequency are s
 ```text
 Hidden Valley telemetry ---------> held remote queue --+
 It's a Swell Day telemetry ------> held remote queue --+
-Seed telemetry -------------------> held remote queue --+
+Thousand Lake Mountain telemetry -------------------> held remote queue --+
 Fishlake timed READ result ------> held remote queue --+
 remote device/battery telemetry -> held remote queue --+
                                                         |
-Home HOBO -> BLE -> Heltec Home -----------------------+--> one HTTPS batch
+Home HOBO -> BLE -> Moab -----------------------+--> one HTTPS batch
                                                              |
                                                              v
                                                         Vercel /api/ingest
@@ -118,7 +118,7 @@ Home HOBO -> BLE -> Heltec Home -----------------------+--> one HTTPS batch
 
 The **local Home HOBO environmental reading is the normal cloud batch trigger**. No remote station is a required trigger for another station.
 
-If Home does not generate a successful trigger, the gateway performs a **70-minute safety flush** of held readings so Hidden Valley, Swell, Fishlake, and Seed cannot become stranded behind a failed local sensor. Failed batches are retried and remote observation timestamps/RF metadata are retained.
+If Home does not generate a successful trigger, the gateway performs a **70-minute safety flush** of held readings so Hidden Valley, Swell, Fishlake, and Thousand Lake Mountain cannot become stranded behind a failed local sensor. Failed batches are retried and remote observation timestamps/RF metadata are retained.
 
 The gateway remote hold queue is 48 readings. The Vercel ingest endpoint accepts batches up to 64 readings so a full hold queue plus the Home trigger fits safely.
 
@@ -133,8 +133,8 @@ The map currently includes:
 - Hidden Valley at 38.53880, -109.54090 · 5,800 ft
 - Fishlake Hightop at 38.60727, -111.73972 · 11,600 ft
 - It's a Swell Day at 38.54279, -110.49269 · 6,000 ft
-- Seed (aka Moab) at 38.553861, -109.524222 · 5,100 ft
-- approximate Heltec Home location
+- Thousand Lake Mountain at 38.553861, -109.524222 · 5,100 ft
+- approximate Moab location
 
 ## Cloud filtering and row model
 
@@ -144,10 +144,10 @@ Configured live nodes:
 
 ```text
 3044869407  Hidden Valley Repeater  !b57d051f
-2740603892  Heltec Home             !a35a4bf4
+2740603892  Moab             !a35a4bf4
 1577197109  Fishlake Hightop        !5e021e35
 1949224949  It's a Swell Day        !742ecff5
-2650172798  Seed (aka Moab)         !9df66d7e
+2650172798  Thousand Lake Mountain         !9df66d7e
 ```
 
 Temperature is the primary environmental record. Remote-station device/battery telemetry is merged with the nearby environmental cycle when possible so temperature, battery, voltage, and radio metadata can be presented together.

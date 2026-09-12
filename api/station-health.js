@@ -2,10 +2,10 @@ import { getSql } from './db.js';
 
 const STATIONS = [
   { node: 3044869407, name: 'Hidden Valley', battery: true },
-  { node: 2740603892, name: 'Heltec Home', battery: false },
+  { node: 2740603892, name: 'Moab', battery: false },
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
   { node: 1949224949, name: "It's a Swell Day", battery: true },
-  { node: 2650172798, name: 'Seed (aka Moab)', battery: true },
+  { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
 ];
 
 const EXPECTED_INTERVAL_MINUTES = 60;

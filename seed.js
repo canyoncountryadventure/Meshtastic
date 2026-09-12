@@ -2,9 +2,9 @@
   const SEED = {
     node: 2650172798,
     id: '!9df66d7e',
-    name: 'Seed (aka Moab)',
-    fullName: 'Seed (aka Moab)',
-    short: 'SEED',
+    name: 'Thousand Lake Mountain',
+    fullName: 'Thousand Lake Mountain',
+    short: 'TLRP',
     color: '#f5d05f',
     coords: [38.553861, -109.524222],
     elevationFt: 5100,
@@ -31,7 +31,7 @@
   if (heroGrid && !document.getElementById('seedTemp')) {
     heroGrid.insertAdjacentHTML('beforeend', `
       <article class="station-hero seed-card">
-        <div class="station-heading"><span class="station-dot seed"></span><div><strong>Seed <small>(aka Moab)</small></strong><small>XIAO nRF52 Kit · SEED · !9df66d7e</small></div></div>
+        <div class="station-heading"><span class="station-dot seed"></span><div><strong>Thousand Lake Mountain</strong><small>XIAO nRF52 Kit · TLRP · !9df66d7e</small></div></div>
         <div class="big-temp"><span id="seedTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="seedUpdated">Waiting for temperature</span><span id="seedHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="seedState">No temperature yet</div>
@@ -42,7 +42,7 @@
   if (detailGrid && !document.getElementById('seedHigh')) {
     detailGrid.insertAdjacentHTML('beforeend', `
       <article class="panel station-detail seed-detail">
-        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Seed <small>(aka Moab)</small></h2><p>38.553861, -109.524222 · 5,100 ft · XIAO nRF52840 + Wio-SX1262 · HOBO MX2201</p></div><span class="station-badge seed">SEED</span></div>
+        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Thousand Lake Mountain</h2><p>38.553861, -109.524222 · 5,100 ft · XIAO nRF52840 + Wio-SX1262 · HOBO MX2203</p></div><span class="station-badge seed">TLRP</span></div>
         <div class="detail-metrics">
           <div><span>24h high</span><strong id="seedHigh">—</strong></div>
           <div><span>24h low</span><strong id="seedLow">—</strong></div>
@@ -51,7 +51,7 @@
           <div><span>Packet reliability</span><strong id="seedReliability">—</strong><small id="seedReliabilityDetail">—</small></div>
           <div><span>Longest gap</span><strong id="seedGap">—</strong></div>
         </div>
-        <div class="path-note"><strong>Sensor path</strong><span>HOBO MX2201 → BLE → Seed XIAO → LoRa mesh → Heltec Home → internet</span></div>
+        <div class="path-note"><strong>Sensor path</strong><span>HOBO MX2203 → BLE → Thousand Lake Mountain XIAO → LoRa mesh → Moab → internet</span></div>
       </article>`);
   }
 
@@ -59,26 +59,26 @@
   if (chartGrid && !document.getElementById('seedBatteryChart')) {
     chartGrid.insertAdjacentHTML('beforeend', `
       <article class="panel seed-battery-panel">
-        <div class="panel-head"><div><h2>Seed battery</h2><p id="seedBatteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" id="seedBatteryExpand">Expand</button></div>
+        <div class="panel-head"><div><h2>Thousand Lake Mountain battery</h2><p id="seedBatteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" id="seedBatteryExpand">Expand</button></div>
         <div class="battery-summary">
           <div><span>Latest</span><strong id="seedBatteryNow">—</strong><small id="seedBatteryNowDetail">—</small></div>
           <div><span>Voltage change</span><strong id="seedBatteryChange">—</strong><small id="seedBatteryChangeDetail">selected window</small></div>
           <div><span>Solar activity</span><strong id="seedSolarHours">—</strong><small id="seedSolarDetail">estimated from voltage rise</small></div>
         </div>
-        <div class="chart" id="seedBatteryChart"><div class="empty">Waiting for Seed battery telemetry.</div></div>
+        <div class="chart" id="seedBatteryChart"><div class="empty">Waiting for Thousand Lake Mountain battery telemetry.</div></div>
       </article>`);
   }
 
   const legend = document.querySelector('.temp-comparison-panel .legend');
   if (legend && !legend.querySelector('.legend-swatch.seed')) {
-    legend.insertAdjacentHTML('beforeend', '<span><i class="legend-swatch seed"></i>Seed (aka Moab)</span>');
+    legend.insertAdjacentHTML('beforeend', '<span><i class="legend-swatch seed"></i>Thousand Lake Mountain</span>');
   }
   const recentText = document.querySelector('.recent-panel .panel-head p');
   if (recentText) recentText.textContent = 'Combined history from all five permanent temperature stations.';
   const mapText = document.querySelector('.map-panel .panel-head p');
-  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, It's a Swell Day, Seed (aka Moab), and approximate Heltec Home locations";
+  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, It's a Swell Day, Thousand Lake Mountain, and approximate Moab locations";
   const footer = document.querySelector('footer span:first-child');
-  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop + It's a Swell Day + Seed (aka Moab)";
+  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day + Thousand Lake Mountain";
 
   function addSeedMarkerToMainMap() {
     if (!window.L || !state.map || window.__seedMainMapMarker) return;
@@ -159,15 +159,15 @@
     }
     setText('seedSolarHours', volts.length < 2 ? '—' : `${solar.toFixed(1)} hr`);
     setText('seedSolarDetail', volts.length < 2 ? 'need at least 2 readings' : rises ? `${rises} rising-voltage interval${rises === 1 ? '' : 's'}` : 'no clear voltage rise yet');
-    setText('seedBatteryChartCount', volts.length ? `${volts.length} voltage samples · Seed (aka Moab)` : 'Battery telemetry pending');
-    renderLineChart(target, [{name:'Seed (aka Moab) voltage', color:SEED.color, points:volts.map(r => ({x:new Date(batteryTime(r)).getTime(), y:batteryV(r), iso:batteryTime(r)}))}], {axisLabel:'Battery V', tooltipValue:v=>`${v.toFixed(3)} V`, empty:'Waiting for Seed battery telemetry.', pointRadius:3});
+    setText('seedBatteryChartCount', volts.length ? `${volts.length} voltage samples · Thousand Lake Mountain` : 'Battery telemetry pending');
+    renderLineChart(target, [{name:'Thousand Lake Mountain voltage', color:SEED.color, points:volts.map(r => ({x:new Date(batteryTime(r)).getTime(), y:batteryV(r), iso:batteryTime(r)}))}], {axisLabel:'Battery V', tooltipValue:v=>`${v.toFixed(3)} V`, empty:'Waiting for Thousand Lake Mountain battery telemetry.', pointRadius:3});
   }
 
   document.getElementById('seedBatteryExpand')?.addEventListener('click', () => {
     const dialog = document.getElementById('expandDialog'), title = document.getElementById('expandTitle');
     const chart = document.getElementById('expandedChart'), mapEl = document.getElementById('expandedMap');
     if (!dialog || !title || !chart || !mapEl) return;
-    title.textContent = 'Seed battery'; mapEl.hidden = true; chart.hidden = false; dialog.showModal();
+    title.textContent = 'Thousand Lake Mountain battery'; mapEl.hidden = true; chart.hidden = false; dialog.showModal();
     setTimeout(() => renderBattery(chart), 40);
   });
 
@@ -208,10 +208,10 @@
 
   renderTemperatureChart = function(target = document.getElementById('tempChart')) {
     const series = [
-      {name:'Hidden Valley',color:STATIONS.hv.color,rows:tempRows('hv')}, {name:'Heltec Home',color:STATIONS.home.color,rows:tempRows('home')},
+      {name:'Hidden Valley',color:STATIONS.hv.color,rows:tempRows('hv')}, {name:'Moab',color:STATIONS.home.color,rows:tempRows('home')},
       {name:'Fishlake Hightop',color:STATIONS.fl.color,rows:tempRows('fl')},
       {name:"It's a Swell Day",color:'#57b7ff',rows:state.readings.filter(r=>num(r?.node_num)===1949224949&&r.telemetry_type==='environment'&&tempF(r)!==null)},
-      {name:'Seed (aka Moab)',color:SEED.color,rows:seedTempRows()},
+      {name:'Thousand Lake Mountain',color:SEED.color,rows:seedTempRows()},
     ].map(s=>({...s,points:s.rows.map(r=>({x:new Date(r.observed_at).getTime(),y:tempF(r),iso:r.observed_at}))}));
     renderLineChart(target, series.map(({name,color,points})=>({name,color,points})), {axisLabel:'Temperature °F',tooltipValue:v=>`${v.toFixed(1)} °F`,strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for temperature telemetry.'});
     setText('tempChartCount', series.map(s=>`${s.points.length} ${s.name}`).join(' · ')+' readings');

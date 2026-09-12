@@ -54,7 +54,7 @@
           <div><span>Packet reliability</span><strong id="flReliability">—</strong><small id="flReliabilityDetail">—</small></div>
           <div><span>Longest gap</span><strong id="flGap">—</strong></div>
         </div>
-        <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Fishlake Hightop RAK → LoRa mesh → Heltec Home → internet</span></div>
+        <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Fishlake Hightop RAK → LoRa mesh → Moab → internet</span></div>
       </article>`);
   }
 
@@ -84,11 +84,11 @@
   const reporting = document.getElementById('stationsReporting');
   if (reporting && reporting.textContent.trim() === '0 / 2') reporting.textContent = '0 / 3';
   const mapText = document.querySelector('.map-panel .panel-head p');
-  if (mapText) mapText.textContent = 'Hidden Valley, Fishlake Hightop, and approximate Heltec Home locations';
+  if (mapText) mapText.textContent = 'Hidden Valley, Fishlake Hightop, and approximate Moab locations';
   const recentText = document.querySelector('.recent-panel .panel-head p');
   if (recentText) recentText.textContent = 'Combined history from all three permanent temperature stations.';
   const footer = document.querySelector('footer span:first-child');
-  if (footer) footer.textContent = 'Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop · refreshes only on demand to conserve Neon compute';
+  if (footer) footer.textContent = 'Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop · refreshes only on demand to conserve Neon compute';
 
   function addFishlakeMarkerToMainMap() {
     if (!window.L || !state.map) return;
@@ -285,10 +285,10 @@
     const fl = flTempRows().map(r => ({x:new Date(r.observed_at).getTime(), y:tempF(r), iso:r.observed_at}));
     renderLineChart(target, [
       {name:'Hidden Valley', color:STATIONS.hv.color, points:hv},
-      {name:'Heltec Home', color:STATIONS.home.color, points:home},
+      {name:'Moab', color:STATIONS.home.color, points:home},
       {name:FISHLAKE.name, color:FISHLAKE.color, points:fl},
     ], {axisLabel:'Temperature °F', tooltipValue:v=>`${v.toFixed(1)} °F`, strokeWidth:3.3, pointRadius:3.5, empty:'Waiting for temperature telemetry.'});
-    setText('tempChartCount', `${hv.length} Hidden Valley · ${home.length} Heltec Home · ${fl.length} Fishlake readings`);
+    setText('tempChartCount', `${hv.length} Hidden Valley · ${home.length} Moab · ${fl.length} Fishlake readings`);
   };
 
   renderRecent = function() {

@@ -18,18 +18,18 @@
 
   // Introductory copy and pipeline are owned by index.html.
   const footer = document.querySelector('footer span:first-child');
-  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Heltec Home + Fishlake Hightop + It's a Swell Day · Home-triggered cloud batching with independent safety flush";
+  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day · Moab-triggered cloud batching with independent safety flush";
 
   const flPath = document.querySelector('.fl-detail .path-note span');
-  if (flPath) flPath.textContent = 'Temperature Sensor → BLE → Fishlake Hightop RAK → LoRa mesh → Heltec Home → synchronized cloud batch';
+  if (flPath) flPath.textContent = 'Temperature Sensor → BLE → Fishlake Hightop RAK → LoRa mesh → Moab → synchronized cloud batch';
   const swPath = document.querySelector('.sw-detail .path-note span');
-  if (swPath) swPath.textContent = "Temperature Sensor → BLE → It's a Swell Day RAK → LoRa mesh → Heltec Home → synchronized cloud batch";
+  if (swPath) swPath.textContent = "Temperature Sensor → BLE → It's a Swell Day RAK → LoRa mesh → Moab → synchronized cloud batch";
 
   const detailText = document.querySelector('.sw-detail .station-panel-head p');
   if (detailText) detailText.textContent = '38.54279, -110.49269 · 6,000 ft · RAK WisBlock 4631 · MX2201';
 
   const mapText = document.querySelector('.map-panel .panel-head p');
-  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, It's a Swell Day, and approximate Heltec Home locations";
+  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, It's a Swell Day, and approximate Moab locations";
 
   function allCoords() {
     return Object.values(STATIONS).map(s => s?.coords).filter(c => Array.isArray(c) && c.length === 2);

@@ -4,7 +4,7 @@ const STATIONS = {
     color: '#55d9b7', coords: [38.53880, -109.54090], elevationFt: 5800, battery: true,
   },
   home: {
-    key: 'home', node: 2740603892, name: 'Heltec Home', fullName: 'Heltec Home', short: 'Home',
+    key: 'home', node: 2740603892, name: 'Moab', fullName: 'Moab', short: 'Moab',
     color: '#ff9a67', coords: [38.54898, -109.52236], elevationFt: 4080, battery: false,
   },
 };
@@ -142,8 +142,8 @@ function hideTooltip(container){container.querySelector('.chart-tooltip')?.remov
 function renderTemperatureChart(target=$('tempChart')){
   const hv=tempRows('hv').map(r=>({x:new Date(r.observed_at).getTime(),y:tempF(r),iso:r.observed_at}));
   const home=tempRows('home').map(r=>({x:new Date(r.observed_at).getTime(),y:tempF(r),iso:r.observed_at}));
-  renderLineChart(target,[{name:'Hidden Valley',color:STATIONS.hv.color,points:hv},{name:'Heltec Home',color:STATIONS.home.color,points:home}],{axisLabel:'Temperature °F',tooltipValue:v=>`${v.toFixed(1)} °F`,strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for temperature telemetry.'});
-  setText('tempChartCount',`${hv.length} Hidden Valley · ${home.length} Heltec Home readings`);
+  renderLineChart(target,[{name:'Hidden Valley',color:STATIONS.hv.color,points:hv},{name:'Moab',color:STATIONS.home.color,points:home}],{axisLabel:'Temperature °F',tooltipValue:v=>`${v.toFixed(1)} °F`,strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for temperature telemetry.'});
+  setText('tempChartCount',`${hv.length} Hidden Valley · ${home.length} Moab readings`);
 }
 function renderBattery(target=$('batteryChart')){
   const dr=hvDeviceRows(),latest=dr[0]||null;
