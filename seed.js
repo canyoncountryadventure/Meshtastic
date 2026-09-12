@@ -70,6 +70,18 @@
   }
 
   const legend = document.querySelector('.temp-comparison-panel .legend');
+  if (chartGrid && !document.getElementById('seedRfChart')) {
+    chartGrid.insertAdjacentHTML('beforeend', `
+      <article class="panel">
+        <div class="panel-head"><div><h2>Thousand Lake Mountain radio link</h2><p id="seedRfChartCount">RF metadata pending</p></div><button type="button" class="expand-btn" id="seedRfExpand">Expand</button></div>
+        <div class="battery-summary">
+          <div><span>Latest RSSI</span><strong id="seedLatestRssi" class="rf-value">—</strong><small id="seedLatestSnr">SNR —</small></div>
+          <div><span>Average RSSI</span><strong id="seedAvgRssi" class="rf-value">—</strong><small id="seedBestRssi">best —</small></div>
+          <div><span>Mesh route</span><strong id="seedRouteNow">—</strong><small id="seedRouteDetail">hop metadata</small></div>
+        </div>
+        <div class="chart" id="seedRfChart"><div class="empty">Waiting for Thousand Lake Mountain RF metadata.</div></div>
+      </article>`);
+  }
   if (legend && !legend.querySelector('.legend-swatch.seed')) {
     legend.insertAdjacentHTML('beforeend', '<span><i class="legend-swatch seed"></i>Thousand Lake Mountain</span>');
   }
@@ -171,6 +183,33 @@
     setTimeout(() => renderBattery(chart), 40);
   });
 
+  function renderSeedRf(target = document.getElementById('seedRfChart')) {
+    if (!target) return;
+    const rows = seedTempRows().filter(r => rssi(r) !== null);
+    const latest = rows[0] || null;
+    const vals = rows.map(rssi).filter(Number.isFinite), avg = mean(vals);
+    const best = vals.length ? Math.max(...vals) : null;
+    const rv = latest ? rssi(latest) : null, sv = latest ? snr(latest) : null, hp = latest ? hops(latest) : null;
+    setText('seedLatestRssi', rv === null ? '—' : `${Math.round(rv)} dBm`);
+    applyRf('seedLatestRssi', rv);
+    setText('seedLatestSnr', `SNR ${sv === null ? '—' : sv.toFixed(1) + ' dB'}`);
+    setText('seedAvgRssi', avg === null ? '—' : `${avg.toFixed(0)} dBm`);
+    applyRf('seedAvgRssi', avg);
+    setText('seedBestRssi', best === null ? 'best —' : `best ${best.toFixed(0)} dBm`);
+    setText('seedRouteNow', hp === 0 ? 'Direct' : hp === 1 ? '1 relay' : hp !== null ? `${Math.round(hp)} relays` : '—');
+    setText('seedRouteDetail', hp === null ? 'hop metadata unavailable' : `${Math.round(hp)} hop${hp === 1 ? '' : 's'} away`);
+    setText('seedRfChartCount', rows.length ? `${rows.length} Thousand Lake Mountain RF samples` : 'RF metadata pending');
+    renderLineChart(target, [{name:'RSSI', color:'#63b7ff', points:[...rows].reverse().map(r => ({x:new Date(r.observed_at).getTime(), y:rssi(r), iso:r.observed_at}))}], {axisLabel:'RSSI dBm', tooltipValue:v=>`${Math.round(v)} dBm`, empty:'Waiting for Thousand Lake Mountain RF metadata.', pointRadius:3});
+  }
+
+  document.getElementById('seedRfExpand')?.addEventListener('click', () => {
+    const dialog = document.getElementById('expandDialog'), title = document.getElementById('expandTitle');
+    const chart = document.getElementById('expandedChart'), mapEl = document.getElementById('expandedMap');
+    if (!dialog || !title || !chart || !mapEl) return;
+    title.textContent = 'Thousand Lake Mountain radio link'; mapEl.hidden = true; chart.hidden = false; dialog.showModal();
+    setTimeout(() => renderSeedRf(chart), 40);
+  });
+
   const previousSummary = renderSummary;
   renderSummary = function() {
     previousSummary();
@@ -186,7 +225,7 @@
     const device = seedDeviceRows()[0] || null;
     const p = device ? batteryPct(device) : null, v = device ? batteryV(device) : null;
     setText('seedHeroBattery', p !== null ? `Battery ${Math.round(p)}%` : v !== null ? `${v.toFixed(3)} V` : 'Battery —');
-    fillStats(); renderBattery();
+    fillStats(); renderBattery(); renderSeedRf();
 
     const stations = [
       {station:STATIONS.hv,reading:latestTemp('hv')}, {station:STATIONS.home,reading:latestTemp('home')},
