@@ -1,10 +1,10 @@
 const STATIONS = [
-  {id:'pack-upper', creek:'pack', creekName:'Pack Creek', reach:'Upper', site:'PC-01', elev:7150, coords:[38.474,-109.333], color:'#52d6b0', stage:1.18, temp:52.7, ph:8.12, ec:438, do:9.1, delta:0.02},
-  {id:'pack-lower', creek:'pack', creekName:'Pack Creek', reach:'Lower', site:'PC-02', elev:4250, coords:[38.515,-109.488], color:'#4c9ce8', stage:1.42, temp:59.4, ph:8.24, ec:612, do:8.3, delta:-0.01},
-  {id:'mill-upper', creek:'mill', creekName:'Mill Creek', reach:'Upper', site:'MC-01', elev:6820, coords:[38.530,-109.384], color:'#52d6b0', stage:1.09, temp:50.8, ph:7.96, ec:356, do:9.5, delta:0.01},
-  {id:'mill-lower', creek:'mill', creekName:'Mill Creek', reach:'Lower', site:'MC-02', elev:4100, coords:[38.568,-109.536], color:'#4c9ce8', stage:1.36, temp:57.9, ph:8.18, ec:528, do:8.6, delta:0.03},
-  {id:'castle-upper', creek:'castle', creekName:'Castle Creek', reach:'Upper', site:'CC-01', elev:7480, coords:[38.583,-109.278], color:'#52d6b0', stage:0.94, temp:48.6, ph:7.88, ec:294, do:9.8, delta:-0.01},
-  {id:'castle-lower', creek:'castle', creekName:'Castle Creek', reach:'Lower', site:'CC-02', elev:4210, coords:[38.648,-109.397], color:'#4c9ce8', stage:1.27, temp:56.2, ph:8.06, ec:471, do:8.9, delta:0.01},
+  {id:'pack-upper', creek:'pack', creekName:'Pack Creek', reach:'Upper', site:'PC-01', elev:7150, coords:[38.53420,-109.49344], color:'#52d6b0', stage:1.18, temp:52.7, ph:8.12, ec:438, do:9.1, delta:0.02},
+  {id:'pack-lower', creek:'pack', creekName:'Pack Creek', reach:'Lower', site:'PC-02', elev:4250, coords:[38.57045,-109.55412], color:'#4c9ce8', stage:1.42, temp:59.4, ph:8.24, ec:612, do:8.3, delta:-0.01},
+  {id:'mill-upper', creek:'mill', creekName:'Mill Creek', reach:'Upper', site:'MC-01', elev:6820, coords:[38.56209,-109.51863], color:'#52d6b0', stage:1.09, temp:50.8, ph:7.96, ec:356, do:9.5, delta:0.01},
+  {id:'mill-lower', creek:'mill', creekName:'Mill Creek', reach:'Lower', site:'MC-02', elev:4100, coords:[38.57182,-109.55326], color:'#4c9ce8', stage:1.36, temp:57.9, ph:8.18, ec:528, do:8.6, delta:0.03},
+  {id:'castle-upper', creek:'castle', creekName:'Castle Creek', reach:'Upper', site:'CC-01', elev:7480, coords:[38.59836,-109.27558], color:'#52d6b0', stage:0.94, temp:48.6, ph:7.88, ec:294, do:9.8, delta:-0.01},
+  {id:'castle-lower', creek:'castle', creekName:'Castle Creek', reach:'Lower', site:'CC-02', elev:4210, coords:[38.65039,-109.41507], color:'#4c9ce8', stage:1.27, temp:56.2, ph:8.06, ec:471, do:8.9, delta:0.01},
 ];
 
 const METRICS = {
