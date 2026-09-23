@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07161b">
+  <meta name="description" content="Live watershed conditions from six remote monitoring stations in Grand County, Utah.">
+  <title>Moab Watershed Monitoring Network</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/watershed.css?v=20260923-1">
+</head>
+<body>
+  <header class="site-header">
+    <a class="identity" href="/watershed" aria-label="Moab Watershed Monitoring Network home">
+      <span class="identity-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48"><path d="M7 34c7-1 9-8 16-9 7-1 10 5 18 3"/><path d="M7 40c7-1 10-7 17-8 7-1 10 4 17 2"/><path d="M14 21 24 7l10 14"/><path d="m20 15 4 5 4-5"/></svg>
+      </span>
+      <span><strong>Moab Watershed Network</strong><small>Remote surface-water monitoring</small></span>
+    </a>
+    <div class="header-actions">
+      <span class="live-status"><i></i>Network online</span>
+      <button class="icon-button" id="refreshButton" type="button" aria-label="Refresh station readings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5"/><path d="M18.2 15a7 7 0 1 1-.6-7.3L20 11"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="network-heading">
+      <div>
+        <span class="kicker">Grand County, Utah</span>
+        <h1>Current watershed conditions</h1>
+        <p>Continuous stage and water-quality observations from upper and lower monitoring stations on Pack Creek, Mill Creek, and Castle Creek.</p>
+      </div>
+      <div class="updated-block"><span>Last network update</span><strong id="networkUpdate">—</strong><small>Mountain Time</small></div>
+    </section>
+
+    <section class="network-summary" aria-label="Network summary">
+      <article><span class="summary-icon blue"><svg viewBox="0 0 24 24"><path d="M12 3v18M7 8l5-5 5 5"/></svg></span><div><small>Stations reporting</small><strong>6 <em>/ 6</em></strong></div><b>100%</b></article>
+      <article><span class="summary-icon cyan"><svg viewBox="0 0 24 24"><path d="M12 3C8 8 5 11 5 15a7 7 0 0 0 14 0c0-4-3-7-7-12Z"/></svg></span><div><small>Highest stage</small><strong id="highestStage">—</strong></div><b id="highestStageSite">—</b></article>
+      <article><span class="summary-icon amber"><svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01"/><path d="m10.3 4.2-7 12A2 2 0 0 0 5 19h14a2 2 0 0 0 1.7-2.8l-7-12a2 2 0 0 0-3.4 0Z"/></svg></span><div><small>Active advisories</small><strong>0</strong></div><b>Normal</b></article>
+      <article><span class="summary-icon green"><svg viewBox="0 0 24 24"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg></span><div><small>Network health</small><strong>99.2%</strong></div><b>30 days</b></article>
+    </section>
+
+    <section class="workspace-grid">
+      <article class="panel map-panel">
+        <div class="panel-header">
+          <div><span class="kicker">Network extent</span><h2>Station locations</h2></div>
+          <div class="map-legend"><span><i class="upper"></i>Upper</span><span><i class="lower"></i>Lower</span></div>
+        </div>
+        <div id="stationMap" class="station-map" aria-label="Map of watershed monitoring stations"></div>
+      </article>
+
+      <article class="panel conditions-panel">
+        <div class="panel-header">
+          <div><span class="kicker">Latest observations</span><h2>Network conditions</h2></div>
+          <span class="quality-badge"><i></i>All values in range</span>
+        </div>
+        <div class="condition-list" id="conditionList"></div>
+      </article>
+    </section>
+
+    <section class="station-section">
+      <div class="section-heading">
+        <div><span class="kicker">Station observations</span><h2>Upper and lower watershed stations</h2></div>
+        <div class="station-filters" role="group" aria-label="Filter stations">
+          <button class="active" data-filter="all" type="button">All creeks</button>
+          <button data-filter="pack" type="button">Pack</button>
+          <button data-filter="mill" type="button">Mill</button>
+          <button data-filter="castle" type="button">Castle</button>
+        </div>
+      </div>
+      <div class="station-grid" id="stationGrid"></div>
+    </section>
+
+    <section class="panel trend-panel">
+      <div class="panel-header trend-header">
+        <div><span class="kicker">24-hour record</span><h2 id="trendTitle">Pack Creek · Stage</h2><p id="trendSubtitle">Upper and lower station comparison</p></div>
+        <div class="trend-controls">
+          <label>Watershed<select id="creekSelect"><option value="pack">Pack Creek</option><option value="mill">Mill Creek</option><option value="castle">Castle Creek</option></select></label>
+          <div class="metric-tabs" id="metricTabs" role="group" aria-label="Chart metric">
+            <button class="active" data-metric="stage" type="button">Stage</button>
+            <button data-metric="temp" type="button">Temp</button>
+            <button data-metric="ph" type="button">pH</button>
+            <button data-metric="ec" type="button">EC</button>
+            <button data-metric="do" type="button">DO</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend"><span><i class="upper"></i>Upper station</span><span><i class="lower"></i>Lower station</span></div>
+      <div class="trend-chart" id="trendChart"></div>
+    </section>
+
+    <section class="panel observations-panel">
+      <div class="panel-header"><div><span class="kicker">Field record</span><h2>Recent observations</h2></div><button class="text-button" type="button">Export CSV <svg viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 19h14"/></svg></button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Station</th><th>Observed</th><th>Stage</th><th>Water temp.</th><th>pH</th><th>EC</th><th>Dissolved oxygen</th><th>Status</th></tr></thead>
+          <tbody id="observationRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer><div><strong>Moab Watershed Monitoring Network</strong><span>Low-power radio telemetry for remote watershed intelligence</span></div><div><span>Data interval: 15 minutes</span><span>Quality control: automated</span></div></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/watershed.js?v=20260923-1"></script>
+</body>
+</html>

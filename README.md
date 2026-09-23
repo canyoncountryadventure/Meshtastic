@@ -8,6 +8,17 @@ Production dashboard:
 https://meshtastic-ecru.vercel.app
 ```
 
+Watershed monitoring presentation page:
+
+```text
+https://meshtastic-ecru.vercel.app/watershed
+```
+
+The watershed page presents upper and lower stations on Pack Creek, Mill Creek,
+and Castle Creek with stage, water temperature, pH, specific conductance, and
+dissolved oxygen observations. Its browser-side dataset is intentionally
+separate from production Meshtastic/Neon telemetry.
+
 ## Permanent stations
 
 ### Hidden Valley Repeater
