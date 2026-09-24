@@ -117,9 +117,9 @@ export default async function handler(req, res) {
         SELECT id, observed_at, received_at, temperature_c, metrics, radio
         FROM telemetry_readings
         WHERE node_num=${station.node}
-          AND telemetry_type=${station.measure || 'environment'}
-          AND ((${station.measure === 'soil'} AND metrics ? 'soil_moisture_percent')
-            OR (${station.measure !== 'soil'} AND temperature_c IS NOT NULL))
+          AND ((${station.measure === 'soil'} AND telemetry_type='soil' AND metrics ? 'soil_moisture_percent')
+            OR (${station.measure !== 'soil'} AND telemetry_type IN ('environment', 'mx2001')
+                AND temperature_c IS NOT NULL))
         ORDER BY observed_at DESC
         LIMIT 1
       `;
