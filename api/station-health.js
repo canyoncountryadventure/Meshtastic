@@ -1,11 +1,14 @@
 import { getSql } from './db.js';
 
 const STATIONS = [
-  { node: 3044869407, name: 'Hidden Valley', battery: true },
+  { node: 1252758033, name: 'Hidden Valley', battery: true },
   { node: 2740603892, name: 'Moab', battery: false },
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
   { node: 1949224949, name: "It's a Swell Day", battery: true },
   { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
+  { node: 4241345683, name: 'Pack Creek', battery: true, stage: true },
+  { node: 2004386937, name: 'Wingate Moisture', battery: true, measure: 'soil' },
+  { node: 3388602087, name: 'Cliff Sensor', battery: true },
 ];
 
 const EXPECTED_INTERVAL_MINUTES = 60;
@@ -34,7 +37,12 @@ function batteryFields(device) {
   };
 }
 
-function resultFor(station, environment, device) {
+function resultFor(station, environment, device, stage) {
+  const stageFields = station.stage ? {
+    water_level_ft: stage?.metrics?.water_level_ft ?? null,
+    stage_observed_at: stage?.observed_at ?? null,
+    stage_calibrated: stage?.metrics?.stage_calibrated ?? (stage?.telemetry_type === 'mx2001' ? true : null),
+  } : {};
   if (!environment) {
     const latest = station.battery && device ? {
       id: null,
@@ -42,6 +50,7 @@ function resultFor(station, environment, device) {
       received_at: null,
       temperature_f: null,
       ...batteryFields(device),
+      ...stageFields,
       rssi: device.radio?.rssi ?? null,
       snr: device.radio?.snr ?? null,
       hops_away: device.radio?.hops_away ?? null,
@@ -51,7 +60,7 @@ function resultFor(station, environment, device) {
       node_num: station.node,
       healthy: false,
       alert: true,
-      reason: 'no_temperature_reading',
+      reason: station.measure === 'soil' ? 'no_soil_reading' : 'no_temperature_reading',
       expected_interval_minutes: EXPECTED_INTERVAL_MINUTES,
       alert_after_minutes: ALERT_AFTER_MINUTES,
       latest,
@@ -65,6 +74,8 @@ function resultFor(station, environment, device) {
     observed_at: environment.observed_at,
     received_at: environment.received_at,
     temperature_f: environment.temperature_c === null ? null : Number((environment.temperature_c * 9 / 5 + 32).toFixed(1)),
+    ...(station.measure === 'soil' ? { soil_moisture_percent: metric(environment, 'soil_moisture_percent') } : {}),
+    ...stageFields,
   };
 
   if (station.battery) {
@@ -106,8 +117,9 @@ export default async function handler(req, res) {
         SELECT id, observed_at, received_at, temperature_c, metrics, radio
         FROM telemetry_readings
         WHERE node_num=${station.node}
-          AND telemetry_type='environment'
-          AND temperature_c IS NOT NULL
+          AND telemetry_type=${station.measure || 'environment'}
+          AND ((${station.measure === 'soil'} AND metrics ? 'soil_moisture_percent')
+            OR (${station.measure !== 'soil'} AND temperature_c IS NOT NULL))
         ORDER BY observed_at DESC
         LIMIT 1
       `;
@@ -125,7 +137,20 @@ export default async function handler(req, res) {
         device = deviceRows[0] || null;
       }
 
-      results.push(resultFor(station, environmentRows[0] || null, device));
+      let stage = null;
+      if (station.stage) {
+        const stageRows = await sql`
+          SELECT observed_at, telemetry_type, metrics
+          FROM telemetry_readings
+          WHERE node_num=${station.node}
+            AND telemetry_type IN ('water_distance', 'mx2001')
+            AND (metrics ? 'water_level_ft')
+          ORDER BY observed_at DESC
+          LIMIT 1
+        `;
+        stage = stageRows[0] || null;
+      }
+      results.push(resultFor(station, environmentRows[0] || null, device, stage));
     }
 
     res.setHeader('Cache-Control', 'no-store');
