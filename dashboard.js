@@ -51,7 +51,7 @@ function rowMatchesStation(r,s){
   return num(r?.node_num) === s.node;
 }
 function stationRows(key){const s=STATIONS[key];return state.readings.filter(r=>rowMatchesStation(r,s));}
-function tempRows(key){return stationRows(key).filter(r=>tempF(r)!==null && r.telemetry_type==='environment').sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));}
+function tempRows(key){return stationRows(key).filter(r=>tempF(r)!==null && (r.telemetry_type==='environment' || r.telemetry_type==='mx2001')).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));}
 function hvDeviceRows(){return stationRows('hv').filter(r=>num(r?.node_num)===STATIONS.hv.node&&(batteryV(r)!==null||batteryPct(r)!==null)).sort((a,b)=>new Date(batteryTime(b))-new Date(batteryTime(a)));}
 function latestTemp(key){return tempRows(key)[0]||null;}
 
