@@ -68,7 +68,9 @@ function resultFor(station, environment, device, stage) {
   }
 
   const ageMinutes = Math.max(0, (Date.now() - new Date(environment.observed_at).getTime()) / 60000);
-  const alert = ageMinutes >= ALERT_AFTER_MINUTES;
+  const stageAgeMinutes = stage ? Math.max(0, (Date.now() - new Date(stage.observed_at).getTime()) / 60000) : null;
+  const stageAlert = Boolean(station.stage && (stageAgeMinutes === null || stageAgeMinutes >= ALERT_AFTER_MINUTES));
+  const alert = ageMinutes >= ALERT_AFTER_MINUTES || stageAlert;
   const latest = {
     id: environment.id,
     observed_at: environment.observed_at,
@@ -90,7 +92,9 @@ function resultFor(station, environment, device, stage) {
     node_num: station.node,
     healthy: !alert,
     alert,
-    reason: alert ? 'three_hourly_readings_missed' : 'reporting_normally',
+    reason: stageAlert ? (stage ? 'stage_reading_stale' : 'no_stage_reading') :
+      alert ? (station.measure === 'soil' ? 'soil_readings_missed' : 'three_hourly_readings_missed') : 'reporting_normally',
+    ...(station.stage ? { stage_healthy: !stageAlert, stage_age_minutes: stageAgeMinutes === null ? null : Number(stageAgeMinutes.toFixed(1)) } : {}),
     expected_interval_minutes: EXPECTED_INTERVAL_MINUTES,
     alert_after_minutes: ALERT_AFTER_MINUTES,
     age_minutes: Number(ageMinutes.toFixed(1)),
