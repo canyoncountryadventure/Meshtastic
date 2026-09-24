@@ -28,7 +28,7 @@
     if (!el) return;
     const fresh = r && ageHours(r.observed_at) <= STALE_AFTER_HOURS;
     el.className = 'station-state ' + (fresh && requirementsMet ? 'online' : r ? 'stale' : 'offline');
-    el.textContent = !r ? 'No readings yet' : !requirementsMet ? 'Awaiting both temperature and stage' :
+    el.textContent = !r ? 'No readings yet' : !requirementsMet ? 'Awaiting current temperature and stage' :
       fresh ? 'Reporting normally' : 'Stale · ' + ageText(r.observed_at);
   };
 
@@ -146,6 +146,9 @@
       const freshest = active.sort((a,b)=>new Date(b.reading.observed_at)-new Date(a.reading.observed_at))[0];
       setText('freshestStation',freshest.name);
       setText('freshestDetail',ageText(freshest.reading.observed_at));
+    } else {
+      setText('freshestStation','—');
+      setText('freshestDetail','No current station readings');
     }
     // Pack Creek requires both temperature and stage for its complete station status.
     const goodPack = pt && ps && ageHours(pt.observed_at) <= STALE_AFTER_HOURS &&
@@ -207,6 +210,24 @@
     }).join('');
   };
 
+  const recentDescription = document.querySelector('.recent-panel .panel-head p');
+  if (recentDescription) recentDescription.textContent =
+    'Temperature history from seven stations. Creek stage and Wingate soil moisture appear in their dedicated graphs.';
+  const legend = document.querySelector('.temp-comparison-panel .legend');
+  if (legend) legend.insertAdjacentHTML('beforeend',
+    '<span><i class="legend-swatch" style="background:#66b9ff"></i>Pack Creek</span>' +
+    '<span><i class="legend-swatch" style="background:#c3a0fb"></i>Cliff Sensor</span>');
+  const footer = document.querySelector('footer > span:first-child');
+  if (footer) footer.textContent =
+    'Meshtastic environmental network · Hidden Valley · Pack Creek · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain';
+  document.querySelectorAll('.path-note span').forEach(el => {
+    if (el.textContent.includes('synchronized cloud batch'))
+      el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');
+    if (el.textContent.includes('Home reading flushes held permanent-station data'))
+      el.textContent = 'Local HOBO temperature → Heltec BLE → immediate HTTPS ingest to Vercel / Neon';
+    if (el.textContent.includes('70 min safety fallback'))
+      el.textContent = el.textContent.replace('70 min safety fallback','immediate HTTPS forwarding');
+  });
   const mapDescription = document.querySelector('.map-panel .panel-head p');
   if (mapDescription) mapDescription.textContent =
     'Mapped locations are shown where coordinates are confirmed. Pack Creek, Wingate Moisture and Cliff Sensor are not positioned until their site coordinates are supplied.';
