@@ -28,12 +28,12 @@
     <div class="hero-intro">
       <div class="eyebrow">Live station comparison</div>
       <h1>Meshtastic Command Dashboard</h1>
-      <p>Hidden Valley, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain report through the LoRa mesh. Moab reads its local Temperature Sensor directly over BLE and serves as the normal hourly cloud-batch trigger.</p>
-      <div class="pipeline"><strong>Data path</strong><span>Temperature sensors → Meshtastic / Heltec → Moab-triggered HTTPS batch → Vercel ingest → Neon history → dashboard</span></div>
+      <p>Hidden Valley, Pack Creek, Wingate Moisture, Cliff Sensor, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
+      <div class="pipeline"><strong>Data path</strong><span>Field temperature, creek stage and soil moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
     </div>
     <div class="station-hero-grid">
       <article class="station-hero hv-card">
-        <div class="station-heading"><span class="station-dot hv"></span><div><strong>Hidden Valley</strong><small>RAK4631 · HVRP · !b57d051f</small></div></div>
+        <div class="station-heading"><span class="station-dot hv"></span><div><strong>Hidden Valley</strong><small>RAK4631 · 9211 · !4aab9211</small></div></div>
         <div class="big-temp"><span id="hvTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="hvUpdated">Waiting for temperature</span><span id="hvHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="hvState">No temperature yet</div>
@@ -51,7 +51,7 @@
     <article class="metric-card accent"><span>Temperature spread</span><strong id="tempSpread">—</strong><small id="tempSpreadDetail">difference between stations</small></article>
     <article class="metric-card"><span>Warmest now</span><strong id="warmestStation">—</strong><small id="warmestDetail">latest readings</small></article>
     <article class="metric-card"><span>Freshest station</span><strong id="freshestStation">—</strong><small id="freshestDetail">most recent packet</small></article>
-    <article class="metric-card"><span>Stations reporting</span><strong id="stationsReporting">0 / 5</strong><small>healthy within 3 hr 15 min</small></article>
+    <article class="metric-card"><span>Stations reporting</span><strong id="stationsReporting">0 / 8</strong><small>healthy within 3 hr 15 min</small></article>
   </section>
 
   <section class="panel control-panel">
@@ -74,7 +74,7 @@
 
   <section class="station-detail-grid">
     <article class="panel station-detail hv-detail">
-      <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Hidden Valley</h2><p>38.53880, -109.54090 · 5,800 ft · !b57d051f</p></div><span class="station-badge hv">HVRP</span></div>
+      <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Hidden Valley</h2><p>38.53880, -109.54090 · 5,800 ft · !4aab9211</p></div><span class="station-badge hv">HVRP</span></div>
       <div class="detail-metrics">
         <div><span>24h high</span><strong id="hvHigh">—</strong></div>
         <div><span>24h low</span><strong id="hvLow">—</strong></div>
@@ -83,7 +83,7 @@
         <div><span>Packet reliability</span><strong id="hvReliability">—</strong><small id="hvReliabilityDetail">—</small></div>
         <div><span>Longest gap</span><strong id="hvGap">—</strong></div>
       </div>
-      <div class="path-note"><strong>Sensor path</strong><span>Temp Sensor → BLE → Hidden Valley RAK4631 → LoRa mesh → Moab → synchronized cloud batch</span></div>
+      <div class="path-note"><strong>Sensor path</strong><span>HOBO temperature → BLE → Hidden Valley RAK4631 → LoRa mesh → Moab → HTTPS ingest</span></div>
     </article>
 
     <article class="panel station-detail home-detail">
@@ -133,11 +133,11 @@
   </section>
 
   <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Recent readings</h2><p>Combined history from all five permanent temperature stations.</p></div></div>
+    <div class="panel-head"><div><h2>Recent readings</h2><p>Temperature history from the monitored stations; soil moisture and creek stage appear separately below.</p></div></div>
     <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
-  <footer><span>Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day + Thousand Lake Mountain · Moab-triggered cloud batching with independent safety flush</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Meshtastic environmental network · Hidden Valley · Pack Creek · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
@@ -157,6 +157,7 @@
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
+<script src="/network-sensors.js?v=20260923-multisensor-1"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;
