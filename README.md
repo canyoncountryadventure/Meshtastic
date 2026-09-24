@@ -1,200 +1,53 @@
 # Meshtastic Environmental Network
 
-Production Vercel + Neon dashboard for five permanent temperature stations: **Hidden Valley Repeater**, **Moab**, **Fishlake Hightop**, **It's a Swell Day**, and **Thousand Lake Mountain**.
+Production [dashboard](https://meshtastic-ecru.vercel.app/) and Vercel/Neon ingest for the authorized mesh sensor nodes. Device identity is the **unsigned Meshtastic node number**; the Heltec forwards only approved node IDs and packet types. Canonical public display names are assigned by the Vercel API and dashboard, not the field-node short name or Heltec firmware.
 
-Production dashboard:
+## Active station identities
 
-```text
-https://meshtastic-ecru.vercel.app
-```
+| Display name | Node ID | Decimal node number | Data |
+|---|---|---:|---|
+| Hidden Valley | !4aab9211 | 1252758033 | HOBO temperature (MX2001; stage may be present in the source packet but is not displayed for this station) |
+| Pack Creek | !fccdcc93 | 4241345683 | Temperature and water level/stage |
+| Wingate Moisture | !77788479 | 2004386937 | Soil moisture (%) and ADC10; **not** temperature or PIR |
+| Cliff Sensor | !c9f9f6e7 | 3388602087 | HOBO temperature |
+| Moab (Heltec) | !a35a4bf4 | 2740603892 | Local HOBO BLE temperature and gateway |
+| Fishlake Hightop | !5e021e35 | 1577197109 | HOBO temperature |
+| It's a Swell Day | !742ecff5 | 1949224949 | HOBO temperature |
+| Thousand Lake Mountain | !9df66d7e | 2650172798 | HOBO temperature |
 
-Watershed monitoring presentation page:
+The retired Hidden Valley **!b57d051f / 3044869407** is removed from the live Heltec allowlist, ingest allowlist, dashboard, and station-health checks. Existing historical rows are retained in Neon for audit purposes but are not merged into the replacement station's charts, battery statistics, or RF history.
 
-```text
-https://meshtastic-ecru.vercel.app/watershed
-```
+## Packet path
 
-The watershed page presents upper and lower stations on Pack Creek, Mill Creek,
-and Castle Creek with stage, water temperature, pH, specific conductance, and
-dissolved oxygen observations. Its browser-side dataset is intentionally
-separate from production Meshtastic/Neon telemetry.
+Field-node measurements → Meshtastic LoRa mesh → Heltec Gateway v2 → HTTPS POST to \`/api/ingest\` → Neon \`telemetry_readings\` → \`/api/readings\` → dashboard.
 
-## Permanent stations
+The Heltec accepts these source packets **only from approved nodes**:
 
-### Hidden Valley Repeater
+- HOBO standard environmental temperature (\`TELEMETRY_APP\`) and MX2001 custom \`MX\` stage/temperature packets.
+- Device/battery telemetry.
+- RAK SEN0308 soil raw \`SM\` version 1: 8 bytes, moisture %, ADC10, sequence. The soil firmware additionally broadcasts standard soil-moisture telemetry; the gateway stores the raw \`SM\` packet to avoid duplicating each measurement.
+- Water-distance \`DS\` version 1: 24 bytes including raw distance, calibrated-stage validity, stage in millimeters, and sequence. **An uncalibrated or invalid stage is not presented as a measured creek level.**
+- Legacy \`RK\` moisture/PIR packets from the previously approved nodes, where present.
 
-```text
-Meshtastic name: Hidden Valley Repeater
-Short name:      HVRP
-Node number:     3044869407
-Meshtastic ID:   !b57d051f
-Hardware:        RAK WisBlock 4631
-Sensor:          Temperature Sensor over BLE
-Coordinates:     38.53880, -109.54090
-Elevation:       5,800 ft
-Mode:            automatic remote Temperature Sensor telemetry
-Temperature Sensor interval:   3600 sec at last field check
-Battery:         device/battery telemetry stored and graphed
-```
+The Heltec does not have to be renamed to track the field-node names. It uploads the numeric \`from\` identifier and sensor values; Vercel assigns \`station_name\` from its authoritative mapping.
 
-**Identity warning:** `!55a55ce8 / 1436900584` is not Hidden Valley and is not accepted as a production live station. A historical manual Temperature Sensor workbook backfill was previously stored under that old number before the identity error was discovered. The dashboard recognizes only those verified manual-backfill rows when reconstructing Hidden Valley temperature history; it does not attribute RF or battery metadata from that node to Hidden Valley.
+The current Heltec branch is [Heltec-Gateway-v2](https://github.com/canyoncountryadventure/firmware/tree/Heltec-Gateway-v2). It is built by the GitHub Actions workflow [Build Heltec Gateway v2](https://github.com/canyoncountryadventure/firmware/actions/workflows/build_cca_heltec_gateway.yml). A completed successful run publishes \`downloads/Heltec-Gateway-v2.zip\` on the firmware repository's \`field-self-recovery\` branch. **Do not flash a binary from an older run** expecting it to have the new station allowlist.
 
-### Moab
-
-```text
-Meshtastic name: Moab
-Node number:     2740603892
-Meshtastic ID:   !a35a4bf4
-Hardware:        Heltec V4 OLED
-Mode:            automatic local Temperature Sensor BLE read + internet gateway
-Cloud role:      normal synchronized batch trigger
-Battery:         not used for station battery analytics
-```
-
-### Fishlake Hightop
-
-```text
-Meshtastic name: Fishlake Hightop
-Short name:      FLHT
-Node number:     1577197109
-Meshtastic ID:   !5e021e35
-Hardware:        RAK4631 / WisBlock
-Coordinates:     38.60727, -111.73972
-Elevation:       11,600 ft
-Mode:            Heltec-triggered remote Temperature Sensor READ polling
-Battery:         device/battery telemetry accepted and graphed when received
-```
-
-### It's a Swell Day
-
-```text
-Meshtastic name: It's a Swell Day
-Short name:      SWRP
-Node number:     1949224949
-Meshtastic ID:   !742ecff5
-Hardware:        RAK WisBlock 4631
-Sensor:          Temperature Sensor over BLE
-Coordinates:     38.54279, -110.49269
-Elevation:       6,000 ft
-Mode:            automatic remote Temperature Sensor telemetry
-Battery:         device/battery telemetry accepted and graphed when received
-```
-
-### Thousand Lake Mountain
-
-```text
-Meshtastic name: Thousand Lake Mountain
-Short name:      SEED
-Node number:     2650172798
-Meshtastic ID:   !9df66d7e
-Hardware:        Seeed XIAO nRF52840 + Wio-SX1262 (XIAO_NRF52_KIT)
-Sensor:          Temperature Sensor over BLE
-Coordinates:     38.52008, -111.48206
-Elevation:       10,600 ft
-Mode:            automatic remote Temperature Sensor telemetry
-Battery:         device/battery telemetry accepted and graphed when received
-```
-
-## Messaging channels
-
-Production channel order is:
-
-```text
-channel 0: LayMesh
-channel 1: LongFast
-```
-
-Logical Meshtastic channel index and the underlying LoRa RF slot/frequency are separate settings. Matching LayMesh/LongFast channel order and PSKs does not by itself prove two radios are tuned to the same RF frequency.
-
-## Data and batching path
-
-```text
-Hidden Valley telemetry ---------> held remote queue --+
-It's a Swell Day telemetry ------> held remote queue --+
-Thousand Lake Mountain telemetry -------------------> held remote queue --+
-Fishlake timed READ result ------> held remote queue --+
-remote device/battery telemetry -> held remote queue --+
-                                                        |
-Home Temperature Sensor -> BLE -> Moab -----------------------+--> one HTTPS batch
-                                                             |
-                                                             v
-                                                        Vercel /api/ingest
-                                                             |
-                                                             v
-                                                        Neon PostgreSQL
-                                                             |
-                                                             v
-                                                           dashboard
-```
-
-The **local Home Temperature Sensor environmental reading is the normal cloud batch trigger**. No remote station is a required trigger for another station.
-
-If Home does not generate a successful trigger, the gateway performs a **70-minute safety flush** of held readings so Hidden Valley, Swell, Fishlake, and Thousand Lake Mountain cannot become stranded behind a failed local sensor. Failed batches are retried and remote observation timestamps/RF metadata are retained.
-
-The gateway remote hold queue is 48 readings. The Vercel ingest endpoint accepts batches up to 64 readings so a full hold queue plus the Home trigger fits safely.
+The production gateway build injects \`HOBO_HTTP_GATEWAY_INGEST_KEY\` from the GitHub Actions secret. Keep that secret out of source control. For a normal Wi-Fi Unified OTA update, use the regular non-factory Heltec V4 application image; do not erase Meshtastic NVS and do not use the factory image.
 
 ## Dashboard behavior
 
-The production dashboard compares all five permanent stations and includes temperature history, 12-hour trends, selected-window high/low/average, packet reliability, recent readings, RSSI/SNR and route metadata for remote stations, battery/device telemetry, and an interactive map.
+The existing five stations remain visible, with the replacement Hidden Valley mapped exclusively to !4aab9211. Pack Creek has separate temperature and stage values, Wingate Moisture displays only soil moisture, and Cliff Sensor displays temperature. The temperature comparison includes the seven temperature-capable stations, while soil moisture and calibrated stage have dedicated graphs. The historical view depends on the selected time window. A reading that has not reached Neon is displayed as unavailable, not simulated or inferred.
 
-The default history window is **30 days**, rather than 24 hours, so a temporary ingest outage or an older Fishlake reading does not make existing station history appear deleted. The current-health badges still use the latest observation time and mark stale stations appropriately.
+Known existing map coordinates are preserved. Precise locations for Pack Creek1, Wingate Moisture, and Cliff Sensor must be confirmed before they are added to the station map; no location is inferred from an informal node name.
 
-The map currently includes:
+The [watershed presentation page](https://meshtastic-ecru.vercel.app/watershed) is separate from the live telemetry dashboard; its example upper/lower creek dataset is not production sensor data.
 
-- Hidden Valley at 38.53880, -109.54090 · 5,800 ft
-- Fishlake Hightop at 38.60727, -111.73972 · 11,600 ft
-- It's a Swell Day at 38.54279, -110.49269 · 6,000 ft
-- Thousand Lake Mountain at 38.52008, -111.48206 · 10,600 ft
-- approximate Moab location
+## Verification
 
-## Cloud filtering and row model
+After installing the updated Heltec binary, check:
 
-Production ingest accepts only configured permanent station nodes and ignores unrelated public Meshtastic environmental/device telemetry before database work.
-
-Configured live nodes:
-
-```text
-3044869407  Hidden Valley Repeater  !b57d051f
-2740603892  Moab             !a35a4bf4
-1577197109  Fishlake Hightop        !5e021e35
-1949224949  It's a Swell Day        !742ecff5
-2650172798  Thousand Lake Mountain         !9df66d7e
-```
-
-Temperature is the primary environmental record. Remote-station device/battery telemetry is merged with the nearby environmental cycle when possible so temperature, battery, voltage, and radio metadata can be presented together.
-
-Neon:
-
-```text
-Project: MeshtasticDB
-Database: neondb
-Table: public.telemetry_readings
-```
-
-## Firmware
-
-Gateway and field-node firmware are maintained in `canyoncountryadventure/firmware`.
-
-Current Heltec gateway branch:
-
-```text
-cca-heltec-sensor-gateway
-```
-
-Current universal RAK/Seeed Temperature Sensor branch:
-
-```text
-See the firmware repository for the current temperature-sensor branch.
-```
-
-The Heltec V4 production build preserves Wi-Fi Unified OTA. Routine updates use the regular `firmware-heltec-v4-*.bin`; do not use a factory image and do not erase NVS/configuration for a normal OTA update.
-
-## Rock-moisture experiment separation
-
-The Navajo sandstone moisture experiment is **not part of production `main`**. Its final pre-repurpose state is preserved on:
-
-```text
-archive/rock-moisture-2026-08-27
-```
-
-Rock calibration/runtime files remain separate from the permanent environmental network.
+1. A new Hidden Valley measurement is accepted under !4aab9211; the retired ID is rejected.
+2. Pack Creek temperature and calibrated stage reach \`/api/readings\` as \`environment\`/\`mx2001\` and \`water_distance\` as appropriate.
+3. Soil's \`SM\` packet becomes a single \`soil\` record containing \`soil_moisture_percent\`; Cliff Sensor temperature becomes an \`environment\` or \`mx2001\` record.
+4. \`/api/station-health\` shows the eight configured stations; the dashboard labels reflect those node IDs.
