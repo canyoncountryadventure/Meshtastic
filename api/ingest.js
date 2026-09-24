@@ -1,14 +1,17 @@
 import { getSql } from './db.js';
 
 const KNOWN_STATIONS = new Map([
-  [3044869407, 'Hidden Valley'],
+  [1252758033, 'Hidden Valley'], // !4aab9211, replacement radio
   [2740603892, 'Moab'],
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "It's a Swell Day"],
   [2650172798, 'Thousand Lake Mountain'],
+  [4241345683, 'Pack Creek'], // !fccdcc93, temperature and stage
+  [2004386937, 'Wingate Moisture'], // !77788479, soil moisture
+  [3388602087, 'Cliff Sensor'], // !c9f9f6e7, temperature
 ]);
 
-const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test']);
+const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);
 const MAX_BATCH_SIZE = 64;
 
 function parseJson(value) {
@@ -66,6 +69,8 @@ function telemetryType(body) {
   if (body.type === 'device') return 'device';
   if (body.type === 'mx2001') return 'mx2001';
   if (body.type === 'rock_test') return 'rock_test';
+  if (body.type === 'soil') return 'soil';
+  if (body.type === 'water_distance') return 'water_distance';
   return 'environment';
 }
 
@@ -109,6 +114,16 @@ function validate(body) {
 
   if (body.type === 'telemetry' && temperatureC(body) === null) {
     throw new Error('Telemetry packet has no temperature');
+  }
+  // Type-specific validity: a soil node is not a temperature sensor; the
+  // ultrasonic Pack Creek stage is only valid following field calibration.
+  if (body.type === 'soil' &&
+      (nodeNum !== 2004386937 || !Number.isFinite(Number(body.payload.soil_moisture_percent)) ||
+       Number(body.payload.soil_moisture_percent) < 0 || Number(body.payload.soil_moisture_percent) > 100)) {
+    throw new Error('Invalid soil moisture reading or source node');
+  }
+  if (body.type === 'water_distance' && nodeNum !== 4241345683) {
+    throw new Error('Water-distance packets are only approved for Pack Creek');
   }
 
   return nodeNum;
