@@ -74,7 +74,7 @@
 
   <section class="station-detail-grid">
     <article class="panel station-detail hv-detail">
-      <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Hidden Valley</h2><p>38.53880, -109.54090 · 5,800 ft · !4aab9211</p></div><span class="station-badge hv">HVRP</span></div>
+      <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Hidden Valley</h2><p>38.53880, -109.54090 · 5,800 ft · !4aab9211</p></div><span class="station-badge hv">9211</span></div>
       <div class="detail-metrics">
         <div><span>24h high</span><strong id="hvHigh">—</strong></div>
         <div><span>24h low</span><strong id="hvLow">—</strong></div>
@@ -96,7 +96,7 @@
         <div><span>Packet reliability</span><strong id="homeReliability">—</strong><small id="homeReliabilityDetail">—</small></div>
         <div><span>Longest gap</span><strong id="homeGap">—</strong></div>
       </div>
-      <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Moab → Home reading flushes held permanent-station data to Vercel/Neon · 70 min safety fallback</span></div>
+      <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Moab Heltec → immediate HTTPS ingest → Vercel / Neon</span></div>
     </article>
   </section>
 
@@ -152,12 +152,12 @@
   };
 })();
 </script>
-<script src="/dashboard.js?v=20260909-hv-identity-fix"></script>
+<script src="/dashboard.js?v=20260923-nodeids-2"></script>
 <script src="/fishlake.js?v=20260910-preserve-copy"></script>
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260923-multisensor-1"></script>
+<script src="/network-sensors.js?v=20260923-multisensor-2"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;
