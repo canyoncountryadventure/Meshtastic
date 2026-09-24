@@ -1,6 +1,6 @@
 const STATIONS = {
   hv: {
-    key: 'hv', node: 3044869407, name: 'Hidden Valley', fullName: 'Hidden Valley Repeater', short: 'HVRP',
+    key: 'hv', node: 1252758033, name: 'Hidden Valley', fullName: 'Hidden Valley', short: '9211',
     color: '#55d9b7', coords: [38.53880, -109.54090], elevationFt: 5800, battery: true,
   },
   home: {
@@ -45,15 +45,10 @@ function ageText(iso){
 }
 function fmtTime(iso){return new Date(iso).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
 function fmtAxis(ms,span){const d=new Date(ms);return span>3*86400000?d.toLocaleDateString([],{month:'short',day:'numeric'}):d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}
-function isLegacyHiddenValleyBackfill(r){
-  return num(r?.node_num)===1436900584 &&
-    metric(r,'source')==='hobo_manual_backfill' &&
-    String(metric(r,'logger_serial') ?? '')==='22231149';
-}
 function rowMatchesStation(r,s){
-  const n=num(r?.node_num);
-  if(n===s.node)return true;
-  return s.key==='hv' && isLegacyHiddenValleyBackfill(r);
+  // Hardware replacement: never mix old Hidden Valley or manual backfill
+  // with !4aab9211, including battery, RSSI and historical temperatures.
+  return num(r?.node_num) === s.node;
 }
 function stationRows(key){const s=STATIONS[key];return state.readings.filter(r=>rowMatchesStation(r,s));}
 function tempRows(key){return stationRows(key).filter(r=>tempF(r)!==null && r.telemetry_type==='environment').sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));}
