@@ -1,4 +1,9 @@
 import { getSql } from './db.js';
+import {
+  calculateDischarge,
+  ensureDatabaseReady,
+  getActiveRatingCurves,
+} from './rating-curves.js';
 
 const STATIONS = [
   { node: 1252758033, name: 'Hidden Valley', battery: true },
@@ -37,9 +42,13 @@ function batteryFields(device) {
   };
 }
 
-function resultFor(station, environment, device, stage) {
+function resultFor(station, environment, device, stage, curve) {
+  const stageValue = stage?.metrics?.water_level_ft ?? null;
+  const discharge = stage?.telemetry_type === 'water_distance' && stage?.metrics?.stage_calibrated !== false ?
+    calculateDischarge(stageValue, curve) : null;
   const stageFields = station.stage ? {
-    water_level_ft: stage?.metrics?.water_level_ft ?? null,
+    water_level_ft: stageValue,
+    discharge_cfs: discharge,
     stage_observed_at: stage?.observed_at ?? null,
     stage_calibrated: stage?.metrics?.stage_calibrated ?? (stage?.telemetry_type === 'mx2001' ? true : null),
   } : {};
@@ -111,6 +120,9 @@ export default async function handler(req, res) {
 
   try {
     const sql = getSql();
+    await ensureDatabaseReady(sql);
+    const curves = await getActiveRatingCurves(sql);
+    const curveByNode = new Map(curves.map(curve => [Number(curve.node_num), curve]));
     const wanted = req.query.node ? Number(req.query.node) : null;
     const configs = Number.isFinite(wanted) ? STATIONS.filter(s => s.node === wanted) : STATIONS;
     if (!configs.length) return res.status(404).json({ ok: false, error: 'Unknown station' });
@@ -147,14 +159,21 @@ export default async function handler(req, res) {
           SELECT observed_at, telemetry_type, metrics
           FROM telemetry_readings
           WHERE node_num=${station.node}
-            AND telemetry_type IN ('water_distance', 'mx2001')
+            AND telemetry_type='water_distance'
             AND (metrics ? 'water_level_ft')
+            AND COALESCE((metrics->>'stage_calibrated')::boolean, TRUE)
           ORDER BY observed_at DESC
           LIMIT 1
         `;
         stage = stageRows[0] || null;
       }
-      results.push(resultFor(station, environmentRows[0] || null, device, stage));
+      results.push(resultFor(
+        station,
+        environmentRows[0] || null,
+        device,
+        stage,
+        curveByNode.get(station.node),
+      ));
     }
 
     res.setHeader('Cache-Control', 'no-store');

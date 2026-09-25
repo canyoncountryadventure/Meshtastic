@@ -28,6 +28,8 @@
     metric(r, 'water_level_ft') !== null);
   const asPercent = r => r ? Math.round(Number(metric(r, 'soil_moisture_percent'))) + '%' : '—';
   const asStage = r => r ? Number(metric(r, 'water_level_ft')).toFixed(2) + ' ft' : '—';
+  const asDischarge = r => r && Number.isFinite(Number(r.discharge_cfs)) ?
+    Number(r.discharge_cfs).toFixed(2) + ' cfs' : '—';
   const asTemp = r => r ? tempF(r).toFixed(1) + ' °F' : '—';
   const freshness = r => r ? 'Updated ' + ageText(r.observed_at) : 'Waiting for readings';
   const addStatus = (el, r, requirementsMet = true) => {
@@ -68,7 +70,7 @@
     '<article class="station-hero extra-station" style="--accent:#66b9ff">' +
       '<div class="station-heading"><span class="station-dot" style="background:#66b9ff"></span><div>' +
       '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · temperature and stage</small></div></div>' +
-      '<div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Water level: <strong id="packStage">—</strong> <span style="color:var(--muted);font-size:12px">SEN0313</span></div>' +
+      '<div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Water level: <strong id="packStage">—</strong> · Flow: <strong id="packFlow">—</strong> <span style="color:var(--muted);font-size:12px">SEN0313</span></div>' +
       '<div class="station-meta" id="packUpdated">Waiting for readings</div><div class="station-state offline" id="packState">No readings yet</div>' +
       '<details class="sensor-details"><summary>Sensor details</summary><div class="sensor-details-grid">' +
         '<div class="sensor-details-block"><strong>Primary Stage Sensor — SEN0313</strong>' +
@@ -99,7 +101,8 @@
       '<div class="panel-head"><div><h2>Creek stage and soil moisture</h2>' +
       '<p>Live values and selected-window history; unavailable or uncalibrated stage is not shown as zero.</p></div></div>' +
       '<div class="extra-grid">' +
-        '<article class="extra-metric"><h3>Pack Creek · water level</h3><strong id="packStageDetail">—</strong>' +
+        '<article class="extra-metric"><h3>Pack Creek · stage and discharge</h3><strong id="packStageDetail">—</strong>' +
+          '<div class="extra-secondary">Flow: <strong id="packFlowDetail">—</strong></div>' +
           '<p id="packStageTime">Waiting for calibrated stage</p><div class="extra-chart chart" id="packStageChart"></div></article>' +
         '<article class="extra-metric"><h3>Wingate Moisture · soil moisture</h3><strong id="soilMoistureDetail">—</strong>' +
           '<p id="soilMoistureTime">Waiting for soil readings</p><div class="extra-chart chart" id="soilMoistureChart"></div></article>' +
@@ -119,6 +122,7 @@
     const ct = temperatureRows(EXTRA.cliff.node)[0] || null;
     setText('packTemp', asTemp(pt));
     setText('packStage', asStage(ps));
+    setText('packFlow', asDischarge(ps));
     setText('packUpdated', pt && ps ? 'Temp ' + ageText(pt.observed_at) + ' · Stage ' + ageText(ps.observed_at) : freshness(pt || ps));
     addStatus(document.getElementById('packState'), pt || ps, Boolean(pt && ps &&
       ageHours(pt.observed_at) <= STALE_AFTER_HOURS && ageHours(ps.observed_at) <= STALE_AFTER_HOURS));
@@ -131,6 +135,7 @@
     addStatus(document.getElementById('cliffState'), ct);
 
     setText('packStageDetail', asStage(ps));
+    setText('packFlowDetail', asDischarge(ps));
     setText('packStageTime', ps ? freshness(ps) + ' · authoritative SEN0313 stage' : 'Waiting for calibrated SEN0313 stage');
     setText('packDetailStage', asStage(ps));
     setText('packDetailDistance', ps && Number.isFinite(Number(metric(ps, 'distance_mm'))) ?
