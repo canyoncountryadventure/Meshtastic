@@ -134,7 +134,7 @@ async function resetPackCreekTestData(sql) {
         ${PACK_CREEK_RESET_MIGRATION},
         jsonb_build_object(
           'expected_deleted_rows', 59,
-          'preserved_from_utc', ${PACK_CREEK_RESET_CUTOFF},
+          'preserved_from_utc', ${PACK_CREEK_RESET_CUTOFF}::text,
           'reason', 'Removed pre-installation Pack Creek test telemetry'
         )
       )
