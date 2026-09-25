@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#071319"/>
 <title>Autonomous Watershed Awareness and Knowledge Engine (AWAKE)</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="/dashboard.css?v=20260909-gateway-fix"/>
+<link rel="stylesheet" href="/dashboard.css?v=20260925-dashboard-redesign"/>
 </head>
 <body>
 <main class="shell">
@@ -56,20 +56,61 @@
 
   <section class="panel control-panel">
     <div class="panel-head chart-head">
-      <div><h2>History window</h2><p>Use the same time window across every graph and station metric. Seven days is the default so an outage never makes existing history look deleted.</p></div>
+      <div><h2>History window</h2><p>One time window controls the environmental graphs and station metrics.</p></div>
       <div class="tabs" id="tabs">
         <button data-hours="12">12H</button><button data-hours="24">24H</button><button data-hours="72">3D</button><button data-hours="168" class="active">7D</button><button data-hours="720">30D</button>
       </div>
     </div>
   </section>
 
-  <section class="panel temp-comparison-panel">
+  <section class="panel temp-comparison-panel primary-monitor-panel">
     <div class="panel-head">
-      <div><h2>Temperature comparison</h2><p id="tempChartCount">Waiting for station data</p></div>
-      <button type="button" class="expand-btn" data-expand="tempChart" data-title="Temperature comparison">Expand</button>
+      <div><span class="eyebrow">Network environment</span><h2>Temperature</h2><p id="tempChartCount">Waiting for station data</p></div>
+      <button type="button" class="expand-btn" data-expand="tempChart" data-title="Temperature">Expand</button>
     </div>
     <div class="legend"><span><i class="legend-swatch hv"></i>Hidden Valley</span><span><i class="legend-swatch home"></i>Moab</span></div>
     <div class="chart xlarge" id="tempChart"><div class="empty">Waiting for temperature telemetry.</div></div>
+  </section>
+
+  <section class="panel primary-monitor-panel pack-monitor-panel">
+    <div class="panel-head monitor-head">
+      <div>
+        <span class="eyebrow">Pack Creek · PC1</span>
+        <h2>Pack Creek flow</h2>
+        <p id="packChartCount">Waiting for calibrated stage telemetry</p>
+      </div>
+      <div class="monitor-actions">
+        <div class="tabs compact-tabs" id="packChartMode" role="group" aria-label="Pack Creek chart metric">
+          <button type="button" id="packModeFlow" class="active">Flow (CFS)</button>
+          <button type="button" id="packModeStage">Stage (ft)</button>
+        </div>
+        <button type="button" class="expand-btn" id="packChartExpand">Expand</button>
+      </div>
+    </div>
+    <div class="monitor-summary">
+      <div><span>Current flow</span><strong id="packFlowDetail">—</strong><small>rating curve output</small></div>
+      <div><span>Current stage</span><strong id="packStageDetail">—</strong><small>authoritative SEN0313</small></div>
+      <div><span>Water temperature</span><strong id="packTempDetailMain">—</strong><small>HOBO MX2001</small></div>
+      <div><span>Last stage packet</span><strong id="packStageAge">—</strong><small id="packRatingStatus">waiting for data</small></div>
+    </div>
+    <div class="chart xlarge" id="packStageChart"><div class="empty">Waiting for Pack Creek stage telemetry.</div></div>
+  </section>
+
+  <section class="panel primary-monitor-panel soil-monitor-panel">
+    <div class="panel-head monitor-head">
+      <div>
+        <span class="eyebrow">Wingate Moisture</span>
+        <h2>Soil moisture</h2>
+        <p id="soilChartCount">Waiting for soil readings</p>
+      </div>
+      <button type="button" class="expand-btn" id="soilChartExpand">Expand</button>
+    </div>
+    <div class="monitor-summary">
+      <div><span>Current moisture</span><strong id="soilMoistureDetail">—</strong><small>volumetric proxy</small></div>
+      <div><span>ADC10</span><strong id="soilAdcDetail">—</strong><small>raw sensor signal</small></div>
+      <div><span>Last packet</span><strong id="soilAgeDetail">—</strong><small id="soilMoistureTime">waiting for data</small></div>
+    </div>
+    <div class="chart xlarge" id="soilMoistureChart"><div class="empty">Waiting for soil moisture telemetry.</div></div>
   </section>
 
   <section class="station-detail-grid">
@@ -100,27 +141,8 @@
     </article>
   </section>
 
-  <section class="charts two-col">
-    <article class="panel">
-      <div class="panel-head"><div><h2>Hidden Valley battery</h2><p id="batteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" data-expand="batteryChart" data-title="Hidden Valley battery">Expand</button></div>
-      <div class="battery-summary">
-        <div><span>Latest</span><strong id="batteryNow">—</strong><small id="batteryNowDetail">—</small></div>
-        <div><span>Voltage change</span><strong id="batteryChange">—</strong><small id="batteryChangeDetail">selected window</small></div>
-        <div><span>Solar activity</span><strong id="solarHours">—</strong><small id="solarDetail">estimated from voltage rise</small></div>
-      </div>
-      <div class="chart" id="batteryChart"><div class="empty">Waiting for Hidden Valley battery telemetry.</div></div>
-    </article>
+  <section id="fishlakeHealthCharts" class="fishlake-health-grid" aria-label="Fishlake power and radio health"></section>
 
-    <article class="panel">
-      <div class="panel-head"><div><h2>Hidden Valley radio link</h2><p id="rfChartCount">RF metadata pending</p></div><button type="button" class="expand-btn" data-expand="rfChart" data-title="Hidden Valley radio link">Expand</button></div>
-      <div class="battery-summary">
-        <div><span>Latest RSSI</span><strong id="latestRssi" class="rf-value">—</strong><small id="latestSnr">SNR —</small></div>
-        <div><span>Average RSSI</span><strong id="avgRssi" class="rf-value">—</strong><small id="bestRssi">best —</small></div>
-        <div><span>Mesh route</span><strong id="routeNow">—</strong><small id="routeDetail">hop metadata</small></div>
-      </div>
-      <div class="chart" id="rfChart"><div class="empty">Waiting for Hidden Valley RF metadata.</div></div>
-    </article>
-  </section>
 
   <section class="panel map-panel">
     <div class="panel-head">
@@ -133,11 +155,11 @@
   </section>
 
   <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Recent readings</h2><p>Temperature history from the monitored stations; soil moisture and creek stage appear separately below.</p></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Temp °F</th><th class="right">Battery</th><th class="right">Voltage</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="8">Waiting for telemetry.</td></tr></tbody></table></div>
+    <div class="panel-head"><div><h2>Recent readings</h2><p>Temperature history from monitored stations. Battery and voltage are intentionally omitted here; Fishlake power has its own graph.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Temp °F</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="6">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
-  <footer><span>Meshtastic environmental network · Hidden Valley · Pack Creek · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Meshtastic environmental network · Pack Creek · Hidden Valley · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
@@ -152,12 +174,12 @@
   };
 })();
 </script>
-<script src="/dashboard.js?v=20260923-nodeids-2"></script>
-<script src="/fishlake.js?v=20260910-preserve-copy"></script>
+<script src="/dashboard.js?v=20260925-dashboard-redesign"></script>
+<script src="/fishlake.js?v=20260925-fishlake-health"></script>
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260923-multisensor-2"></script>
+<script src="/network-sensors.js?v=20260925-primary-monitors"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;
