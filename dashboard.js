@@ -141,6 +141,7 @@ function renderTemperatureChart(target=$('tempChart')){
   setText('tempChartCount',`${hv.length} Hidden Valley · ${home.length} Moab readings`);
 }
 function renderBattery(target=$('batteryChart')){
+  if(!target)return;
   const dr=hvDeviceRows(),latest=dr[0]||null;
   if(latest){const p=batteryPct(latest),v=batteryV(latest);setText('batteryNow',p!==null?`${Math.round(p)}%`:v!==null?`${v.toFixed(3)} V`:'—');setText('batteryNowDetail',[v!==null?`${v.toFixed(3)} V`:null,ageText(batteryTime(latest))].filter(Boolean).join(' · '));}else{setText('batteryNow','—');setText('batteryNowDetail','battery telemetry pending');}
   const vals=dr.filter(r=>batteryV(r)!==null).sort((a,b)=>new Date(batteryTime(a))-new Date(batteryTime(b)));
@@ -153,6 +154,7 @@ function renderBattery(target=$('batteryChart')){
 function rfClass(v){if(!Number.isFinite(v))return'';if(v>=-110)return'rf-strong';if(v>=-122)return'rf-fair';return'rf-weak';}
 function applyRf(id,v){const el=$(id);if(!el)return;el.classList.remove('rf-strong','rf-fair','rf-weak');const c=rfClass(v);if(c)el.classList.add(c);}
 function renderRf(target=$('rfChart')){
+  if(!target)return;
   const rows=tempRows('hv').filter(r=>num(r?.node_num)===STATIONS.hv.node&&rssi(r)!==null);const latest=rows[0]||null;const vals=rows.map(rssi).filter(Number.isFinite);const avg=mean(vals),best=vals.length?Math.max(...vals):null;
   if(latest){const rv=rssi(latest),sv=snr(latest),hp=hops(latest);setText('latestRssi',`${Math.round(rv)} dBm`);applyRf('latestRssi',rv);setText('latestSnr',`SNR ${sv===null?'—':sv.toFixed(1)+' dB'}`);setText('routeNow',hp===0?'Direct':hp===1?'1 relay':hp!==null?`${Math.round(hp)} relays`:'—');setText('routeDetail',hp===null?'hop metadata unavailable':`${Math.round(hp)} hop${hp===1?'':'s'} away`);}else{setText('latestRssi','—');setText('latestSnr','SNR —');setText('routeNow','—');setText('routeDetail','hop metadata');}
   setText('avgRssi',avg===null?'—':`${avg.toFixed(0)} dBm`);applyRf('avgRssi',avg);setText('bestRssi',best===null?'best —':`best ${best.toFixed(0)} dBm`);setText('rfChartCount',rows.length?`${rows.length} Hidden Valley RF samples`:'RF metadata pending');
