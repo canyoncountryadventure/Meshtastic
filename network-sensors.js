@@ -13,13 +13,19 @@
   const rowsFor = node => state.readings.filter(r => sameNode(r, node)).sort(byTime);
   const hasTemperature = r => r && TEMPERATURE_TYPES.has(r.telemetry_type) && tempF(r) !== null;
   const temperatureRows = node => rowsFor(node).filter(hasTemperature);
+  const packTemperatureRows = () => rowsFor(EXTRA.pack.node).filter(r =>
+    r.telemetry_type === 'mx2001' && tempF(r) !== null);
   const soilRows = () => rowsFor(EXTRA.soil.node).filter(r => r.telemetry_type === 'soil' &&
     Number.isFinite(Number(metric(r, 'soil_moisture_percent'))));
   const stageRows = () => rowsFor(EXTRA.pack.node).filter(r =>
-    (r.telemetry_type === 'mx2001' || r.telemetry_type === 'water_distance') &&
+    r.telemetry_type === 'water_distance' &&
     Number.isFinite(Number(metric(r, 'water_level_ft'))) &&
     metric(r, 'water_level_ft') !== null &&
     metric(r, 'stage_calibrated') !== false);
+  const hoboStageRows = () => rowsFor(EXTRA.pack.node).filter(r =>
+    r.telemetry_type === 'mx2001' &&
+    Number.isFinite(Number(metric(r, 'water_level_ft'))) &&
+    metric(r, 'water_level_ft') !== null);
   const asPercent = r => r ? Math.round(Number(metric(r, 'soil_moisture_percent'))) + '%' : '—';
   const asStage = r => r ? Number(metric(r, 'water_level_ft')).toFixed(2) + ' ft' : '—';
   const asTemp = r => r ? tempF(r).toFixed(1) + ' °F' : '—';
@@ -43,7 +49,18 @@
     '.extra-metric h3{font-size:17px;margin:0 0 8px}.extra-metric strong{font-size:32px}' +
     '.extra-metric p{color:var(--muted);font-size:13px;margin:8px 0}' +
     '.extra-chart{height:240px;margin-top:12px;position:relative;overflow:hidden}' +
-    '@media(max-width:680px){.station-hero-grid{grid-template-columns:1fr}.extra-grid{grid-template-columns:1fr}}';
+    '.sensor-details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}' +
+    '.sensor-details summary{cursor:pointer;color:#bcd2da;font-size:13px;font-weight:700;list-style:none}' +
+    '.sensor-details summary::-webkit-details-marker{display:none}' +
+    '.sensor-details summary:after{content:" +";color:var(--muted)}' +
+    '.sensor-details[open] summary:after{content:" −"}' +
+    '.sensor-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}' +
+    '.sensor-details-block{background:#0a1b23;border:1px solid var(--line);border-radius:10px;padding:11px}' +
+    '.sensor-details-block strong{display:block;font-size:13px;margin-bottom:8px}' +
+    '.sensor-details-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:5px 0}' +
+    '.sensor-details-row b{color:#dcebef;font-weight:700;text-align:right}' +
+    '.sensor-comparison{grid-column:1/-1}' +
+    '@media(max-width:680px){.station-hero-grid{grid-template-columns:1fr}.extra-grid{grid-template-columns:1fr}.sensor-details-grid{grid-template-columns:1fr}}';
   document.head.appendChild(css);
 
   const hero = document.querySelector('.station-hero-grid');
@@ -51,8 +68,20 @@
     '<article class="station-hero extra-station" style="--accent:#66b9ff">' +
       '<div class="station-heading"><span class="station-dot" style="background:#66b9ff"></span><div>' +
       '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · temperature and stage</small></div></div>' +
-      '<div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Water level: <strong id="packStage">—</strong></div>' +
-      '<div class="station-meta" id="packUpdated">Waiting for readings</div><div class="station-state offline" id="packState">No readings yet</div></article>' +
+      '<div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Water level: <strong id="packStage">—</strong> <span style="color:var(--muted);font-size:12px">SEN0313</span></div>' +
+      '<div class="station-meta" id="packUpdated">Waiting for readings</div><div class="station-state offline" id="packState">No readings yet</div>' +
+      '<details class="sensor-details"><summary>Sensor details</summary><div class="sensor-details-grid">' +
+        '<div class="sensor-details-block"><strong>Primary Stage Sensor — SEN0313</strong>' +
+          '<div class="sensor-details-row"><span>Stage</span><b id="packDetailStage">—</b></div>' +
+          '<div class="sensor-details-row"><span>Distance</span><b id="packDetailDistance">—</b></div>' +
+          '<div class="sensor-details-row"><span>Status</span><b id="packDetailCal">—</b></div></div>' +
+        '<div class="sensor-details-block"><strong>HOBO MX2001</strong>' +
+          '<div class="sensor-details-row"><span>Temperature</span><b id="packDetailTemp">—</b></div>' +
+          '<div class="sensor-details-row"><span>Stage</span><b id="packDetailHoboStage">—</b></div>' +
+          '<div class="sensor-details-row"><span>BLE RSSI</span><b id="packDetailBle">—</b></div></div>' +
+        '<div class="sensor-details-block sensor-comparison"><strong>Sensor Comparison</strong>' +
+          '<div class="sensor-details-row"><span>Stage difference</span><b id="packDetailDifference">—</b></div></div>' +
+      '</div></details></article>' +
     '<article class="station-hero extra-station" style="--accent:#d9b873">' +
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
       '<strong>Wingate Moisture</strong><small>Soil · !77788479 · soil moisture only</small></div></div>' +
@@ -83,8 +112,9 @@
   const earlierSummary = renderSummary;
   renderSummary = function() {
     earlierSummary();
-    const pt = temperatureRows(EXTRA.pack.node)[0] || null;
+    const pt = packTemperatureRows()[0] || null;
     const ps = stageRows()[0] || null;
+    const hs = hoboStageRows()[0] || null;
     const sm = soilRows()[0] || null;
     const ct = temperatureRows(EXTRA.cliff.node)[0] || null;
     setText('packTemp', asTemp(pt));
@@ -101,7 +131,19 @@
     addStatus(document.getElementById('cliffState'), ct);
 
     setText('packStageDetail', asStage(ps));
-    setText('packStageTime', freshness(ps));
+    setText('packStageTime', ps ? freshness(ps) + ' · authoritative SEN0313 stage' : 'Waiting for calibrated SEN0313 stage');
+    setText('packDetailStage', asStage(ps));
+    setText('packDetailDistance', ps && Number.isFinite(Number(metric(ps, 'distance_mm'))) ?
+      (Number(metric(ps, 'distance_mm')) / 304.8).toFixed(2) + ' ft' : '—');
+    setText('packDetailCal', ps ? (metric(ps, 'stage_calibrated') === false ? 'Not calibrated' : 'Calibrated') : '—');
+    setText('packDetailTemp', asTemp(pt));
+    setText('packDetailHoboStage', asStage(hs));
+    setText('packDetailBle', hs && Number.isFinite(Number(metric(hs, 'ble_rssi_dbm'))) ?
+      Math.round(Number(metric(hs, 'ble_rssi_dbm'))) + ' dBm' : '—');
+    const primaryStage = ps ? Number(metric(ps, 'water_level_ft')) : null;
+    const hoboStage = hs ? Number(metric(hs, 'water_level_ft')) : null;
+    setText('packDetailDifference', Number.isFinite(primaryStage) && Number.isFinite(hoboStage) ?
+      Math.abs(primaryStage - hoboStage).toFixed(2) + ' ft' : '—');
     setText('soilMoistureDetail', asPercent(sm));
     setText('soilMoistureTime', freshness(sm));
     setText('cliffTempDetail', asTemp(ct));
@@ -172,7 +214,7 @@
     const stations = Object.values(STATIONS).map(s => ({
       name:s.name,color:s.color,rows:temperatureRows(s.node)
     })).concat([
-      {name:EXTRA.pack.name,color:EXTRA.pack.color,rows:temperatureRows(EXTRA.pack.node)},
+      {name:EXTRA.pack.name,color:EXTRA.pack.color,rows:packTemperatureRows()},
       {name:EXTRA.cliff.name,color:EXTRA.cliff.color,rows:temperatureRows(EXTRA.cliff.node)}
     ]);
     renderLineChart(target,stations.map(s => ({
