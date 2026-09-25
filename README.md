@@ -19,7 +19,7 @@ The retired Hidden Valley **!b57d051f / 3044869407** is removed from the live He
 
 ## Packet path
 
-Field-node measurements → Meshtastic LoRa mesh → Heltec Gateway v2 → HTTPS POST to \`/api/ingest\` → Neon \`telemetry_readings\` → \`/api/readings\` → dashboard.
+Field-node measurements → Meshtastic LoRa mesh → Heltec Gateway v2 → HTTPS POST to \`/api/ingest\` → Neon \`telemetry_readings\` → \`/api/readings\` → dashboard. Pack Creek calibrated SEN0313 stage is converted to discharge with the active versioned rating curve stored in Neon.
 
 The Heltec accepts these source packets **only from approved nodes**:
 
@@ -37,7 +37,9 @@ The production gateway build injects \`HOBO_HTTP_GATEWAY_INGEST_KEY\` from the G
 
 ## Dashboard behavior
 
-The existing five stations remain visible, with the replacement Hidden Valley mapped exclusively to !4aab9211. Pack Creek has separate temperature and stage values, Wingate Moisture displays only soil moisture, and Cliff Sensor displays temperature. The temperature comparison includes the seven temperature-capable stations, while soil moisture and calibrated stage have dedicated graphs. The historical view depends on the selected time window. A reading that has not reached Neon is displayed as unavailable, not simulated or inferred.
+The existing five stations remain visible, with the replacement Hidden Valley mapped exclusively to !4aab9211. Pack Creek has separate temperature, stage, and calculated discharge values, Wingate Moisture displays only soil moisture, and Cliff Sensor displays temperature. The temperature comparison includes the seven temperature-capable stations, while soil moisture and calibrated stage have dedicated graphs. The historical view depends on the selected time window. A reading that has not reached Neon is displayed as unavailable, not simulated or inferred.
+
+Pack Creek rating curve version 1 is \`Q = 6.07187614 × (H − 0.22259098)^1.04237977\`, where \`H\` is calibrated stage in feet and \`Q\` is discharge in cubic feet per second. Its measured stage range is 0.2444–0.6904 ft; API responses identify values outside that range as extrapolated.
 
 Known existing map coordinates are preserved. Precise locations for Pack Creek1, Wingate Moisture, and Cliff Sensor must be confirmed before they are added to the station map; no location is inferred from an informal node name.
 

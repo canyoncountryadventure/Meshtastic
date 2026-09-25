@@ -1,4 +1,5 @@
 import { getSql } from './db.js';
+import { ensureDatabaseReady, getActiveRatingCurves, rateReadings } from './rating-curves.js';
 
 function clampInt(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10);
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
 
   try {
     const sql = getSql();
+    await ensureDatabaseReady(sql);
     let rows;
 
     if (bucketMinutes > 0 && node !== null) {
@@ -81,11 +83,21 @@ export default async function handler(req, res) {
       `;
     }
 
+    const curves = await getActiveRatingCurves(sql, node);
+    rows = rateReadings(rows, curves);
+
     // Short edge cache prevents repeated clicks/page reloads from waking Neon repeatedly.
     // Browser itself still revalidates; Vercel serves identical requests from edge for 60 seconds.
     res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
     res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=60');
-    return res.status(200).json({ ok: true, hours, node, bucket_minutes: bucketMinutes, readings: rows });
+    return res.status(200).json({
+      ok: true,
+      hours,
+      node,
+      bucket_minutes: bucketMinutes,
+      readings: rows,
+      rating_curves: curves,
+    });
   } catch (error) {
     console.error('Telemetry query failed', error);
     return res.status(500).json({ ok: false, error: 'Database query failed' });

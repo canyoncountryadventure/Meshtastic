@@ -1,4 +1,5 @@
 import { getSql } from './db.js';
+import { ensureDatabaseReady } from './rating-curves.js';
 
 const KNOWN_STATIONS = new Map([
   [1252758033, 'Hidden Valley'], // !4aab9211, replacement radio
@@ -167,6 +168,7 @@ export default async function handler(req, res) {
 
   try {
     const sql = getSql();
+    await ensureDatabaseReady(sql);
     const readings = [];
     for (const body of bodies) {
       readings.push(await insertReading(sql, parseJson(body)));
