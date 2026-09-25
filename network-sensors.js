@@ -8,6 +8,7 @@
     cliff: { node: 3388602087, name: 'Cliff Sensor', id: '!c9f9f6e7', color: '#c3a0fb' },
   };
   const TEMPERATURE_TYPES = new Set(['environment', 'mx2001']);
+  let packChartMetric = 'flow';
   const sameNode = (r, node) => Number(r && r.node_num) === node;
   const byTime = (a, b) => new Date(b.observed_at) - new Date(a.observed_at);
   const rowsFor = node => state.readings.filter(r => sameNode(r, node)).sort(byTime);
@@ -41,36 +42,45 @@
   };
 
   const css = document.createElement('style');
-  css.textContent =
-    '.station-hero-grid{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}' +
-    '.extra-station{border-top:3px solid var(--accent,#66b9ff)}' +
-    '.extra-reading{font-size:clamp(35px,4vw,60px);font-weight:800;letter-spacing:-.04em;margin:12px 0 8px}' +
-    '.extra-secondary{font-size:15px;color:#c1d7df;margin-bottom:10px}' +
-    '.extra-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px}' +
-    '.extra-metric{padding:18px;border:1px solid var(--line);border-radius:14px;background:#0c2029}' +
-    '.extra-metric h3{font-size:17px;margin:0 0 8px}.extra-metric strong{font-size:32px}' +
-    '.extra-metric p{color:var(--muted);font-size:13px;margin:8px 0}' +
-    '.extra-chart{height:240px;margin-top:12px;position:relative;overflow:hidden}' +
-    '.sensor-details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}' +
-    '.sensor-details summary{cursor:pointer;color:#bcd2da;font-size:13px;font-weight:700;list-style:none}' +
-    '.sensor-details summary::-webkit-details-marker{display:none}' +
-    '.sensor-details summary:after{content:" +";color:var(--muted)}' +
-    '.sensor-details[open] summary:after{content:" −"}' +
-    '.sensor-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}' +
-    '.sensor-details-block{background:#0a1b23;border:1px solid var(--line);border-radius:10px;padding:11px}' +
-    '.sensor-details-block strong{display:block;font-size:13px;margin-bottom:8px}' +
-    '.sensor-details-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:5px 0}' +
-    '.sensor-details-row b{color:#dcebef;font-weight:700;text-align:right}' +
-    '.sensor-comparison{grid-column:1/-1}' +
-    '@media(max-width:680px){.station-hero-grid{grid-template-columns:1fr}.extra-grid{grid-template-columns:1fr}.sensor-details-grid{grid-template-columns:1fr}}';
+  css.textContent = `
+    .station-hero-grid{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+    .extra-station{border-top:3px solid var(--accent,#66b9ff)}
+    .extra-reading{font-size:clamp(35px,4vw,60px);font-weight:800;letter-spacing:-.04em;margin:12px 0 8px}
+    .extra-secondary{font-size:15px;color:#c1d7df;margin-bottom:10px}
+    .sensor-details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+    .sensor-details summary{cursor:pointer;color:#bcd2da;font-size:13px;font-weight:700;list-style:none}
+    .sensor-details summary::-webkit-details-marker{display:none}
+    .sensor-details summary:after{content:" +";color:var(--muted)}
+    .sensor-details[open] summary:after{content:" −"}
+    .sensor-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    .sensor-details-block{background:#0a1b23;border:1px solid var(--line);border-radius:10px;padding:11px}
+    .sensor-details-block strong{display:block;font-size:13px;margin-bottom:8px}
+    .sensor-details-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:5px 0}
+    .sensor-details-row b{color:#dcebef;font-weight:700;text-align:right}
+    .sensor-comparison{grid-column:1/-1}
+    .primary-monitor-panel{overflow:hidden}
+    .primary-monitor-panel .chart.xlarge{height:440px}
+    .monitor-head{align-items:flex-end}
+    .monitor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .compact-tabs{gap:4px}.compact-tabs button{padding:7px 9px;font-size:12px}
+    .monitor-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
+    .monitor-summary>div{background:#091a20;border:1px solid #1b3740;border-radius:11px;padding:12px}
+    .monitor-summary span{display:block;color:#88a4aa;font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
+    .monitor-summary strong{display:block;font-size:22px;margin-top:6px}
+    .monitor-summary small{display:block;color:var(--muted);margin-top:5px}
+    .pack-monitor-panel{border-color:rgba(102,185,255,.28)}
+    .soil-monitor-panel{border-color:rgba(217,184,115,.28)}
+    @media(max-width:1000px){.monitor-summary{grid-template-columns:1fr 1fr}.monitor-head{align-items:flex-start;flex-direction:column}.monitor-actions{justify-content:flex-start}.primary-monitor-panel .chart.xlarge{height:380px}}
+    @media(max-width:680px){.station-hero-grid{grid-template-columns:1fr}.sensor-details-grid{grid-template-columns:1fr}.monitor-summary{grid-template-columns:1fr 1fr}.primary-monitor-panel .chart.xlarge{height:330px}}
+  `;
   document.head.appendChild(css);
 
   const hero = document.querySelector('.station-hero-grid');
-  if (hero) hero.insertAdjacentHTML('beforeend',
+  if (hero) hero.insertAdjacentHTML('afterbegin',
     '<article class="station-hero extra-station" style="--accent:#66b9ff">' +
       '<div class="station-heading"><span class="station-dot" style="background:#66b9ff"></span><div>' +
-      '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · temperature and stage</small></div></div>' +
-      '<div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Water level: <strong id="packStage">—</strong> · Flow: <strong id="packFlow">—</strong> <span style="color:var(--muted);font-size:12px">SEN0313</span></div>' +
+      '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · temperature + stage + flow</small></div></div>' +
+      '<div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Stage: <strong id="packStage">—</strong> · Flow: <strong id="packFlow">—</strong></div>' +
       '<div class="station-meta" id="packUpdated">Waiting for readings</div><div class="station-state offline" id="packState">No readings yet</div>' +
       '<details class="sensor-details"><summary>Sensor details</summary><div class="sensor-details-grid">' +
         '<div class="sensor-details-block"><strong>Primary Stage Sensor — SEN0313</strong>' +
@@ -95,23 +105,54 @@
       '<div class="extra-reading" id="cliffTemp">—</div><div class="extra-secondary">HOBO temperature</div>' +
       '<div class="station-meta" id="cliffUpdated">Waiting for readings</div><div class="station-state offline" id="cliffState">No readings yet</div></article>');
 
-  const detail = document.querySelector('.station-detail-grid');
-  if (detail) detail.insertAdjacentHTML('afterend',
-    '<section class="panel" id="extraSensorPanel" style="margin-top:16px">' +
-      '<div class="panel-head"><div><h2>Creek stage and soil moisture</h2>' +
-      '<p>Live values and selected-window history; unavailable or uncalibrated stage is not shown as zero.</p></div></div>' +
-      '<div class="extra-grid">' +
-        '<article class="extra-metric"><h3>Pack Creek · stage and discharge</h3><strong id="packStageDetail">—</strong>' +
-          '<div class="extra-secondary">Flow: <strong id="packFlowDetail">—</strong></div>' +
-          '<p id="packStageTime">Waiting for calibrated stage</p><div class="extra-chart chart" id="packStageChart"></div></article>' +
-        '<article class="extra-metric"><h3>Wingate Moisture · soil moisture</h3><strong id="soilMoistureDetail">—</strong>' +
-          '<p id="soilMoistureTime">Waiting for soil readings</p><div class="extra-chart chart" id="soilMoistureChart"></div></article>' +
-        '<article class="extra-metric"><h3>Cliff Sensor · temperature</h3><strong id="cliffTempDetail">—</strong>' +
-          '<p id="cliffTempTime">Waiting for temperature</p><div class="extra-chart chart" id="cliffTempChart"></div></article>' +
-      '</div></section>');
+  function packPoints(metricName){
+    if(metricName==='stage'){
+      return stageRows().map(r=>({x:new Date(r.observed_at).getTime(),y:Number(metric(r,'water_level_ft')),iso:r.observed_at}));
+    }
+    return stageRows().filter(r=>Number.isFinite(Number(r.discharge_cfs))).map(r=>({x:new Date(r.observed_at).getTime(),y:Number(r.discharge_cfs),iso:r.observed_at}));
+  }
 
-  // Existing scripts implement the five earlier stations; keep their graphs and
-  // add only the new data families here, using the same /api/readings history.
+  function renderPackChart(target=document.getElementById('packStageChart')){
+    if(!target)return;
+    const flowMode=packChartMetric==='flow';
+    const points=packPoints(flowMode?'flow':'stage');
+    renderLineChart(target,[{name:flowMode?'Pack Creek flow':'Pack Creek stage',color:EXTRA.pack.color,points}],
+      flowMode
+        ? {axisLabel:'Discharge (cfs)',tooltipValue:v=>v.toFixed(2)+' cfs',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for rated Pack Creek flow.'}
+        : {axisLabel:'Water level (ft)',tooltipValue:v=>v.toFixed(3)+' ft',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for calibrated Pack Creek stage.'});
+    setText('packChartCount',points.length?points.length+' '+(flowMode?'rated flow':'stage')+' samples · selected window':'Waiting for '+(flowMode?'rated flow':'calibrated stage')+' telemetry');
+  }
+
+  function renderSoilChart(target=document.getElementById('soilMoistureChart')){
+    if(!target)return;
+    const points=soilRows().map(r=>({x:new Date(r.observed_at).getTime(),y:Number(metric(r,'soil_moisture_percent')),iso:r.observed_at}));
+    renderLineChart(target,[{name:'Wingate soil moisture',color:EXTRA.soil.color,points}],
+      {axisLabel:'Soil moisture (%)',tooltipValue:v=>v.toFixed(1)+'%',strokeWidth:3.3,pointRadius:3.5,yMin:0,yMax:100,empty:'Waiting for soil moisture telemetry.'});
+    setText('soilChartCount',points.length?points.length+' soil moisture samples · selected window':'Waiting for soil readings');
+  }
+
+  function openExpanded(titleText,renderer){
+    const dialog=document.getElementById('expandDialog'),title=document.getElementById('expandTitle'),chart=document.getElementById('expandedChart'),mapEl=document.getElementById('expandedMap');
+    if(!dialog||!title||!chart||!mapEl)return;
+    title.textContent=titleText;mapEl.hidden=true;chart.hidden=false;dialog.showModal();
+    setTimeout(()=>renderer(chart),40);
+  }
+
+  document.getElementById('packModeFlow')?.addEventListener('click',()=>{
+    packChartMetric='flow';
+    document.getElementById('packModeFlow')?.classList.add('active');
+    document.getElementById('packModeStage')?.classList.remove('active');
+    renderPackChart();
+  });
+  document.getElementById('packModeStage')?.addEventListener('click',()=>{
+    packChartMetric='stage';
+    document.getElementById('packModeStage')?.classList.add('active');
+    document.getElementById('packModeFlow')?.classList.remove('active');
+    renderPackChart();
+  });
+  document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart));
+  document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Wingate soil moisture',renderSoilChart));
+
   const earlierSummary = renderSummary;
   renderSummary = function() {
     earlierSummary();
@@ -136,7 +177,9 @@
 
     setText('packStageDetail', asStage(ps));
     setText('packFlowDetail', asDischarge(ps));
-    setText('packStageTime', ps ? freshness(ps) + ' · authoritative SEN0313 stage' : 'Waiting for calibrated SEN0313 stage');
+    setText('packTempDetailMain', asTemp(pt));
+    setText('packStageAge', ps ? ageText(ps.observed_at) : '—');
+    setText('packRatingStatus', ps ? (ps.discharge_rating_status === 'within_measured_range' ? 'within measured rating range' : ps.discharge_rating_status === 'extrapolated_high' ? 'above measured rating range' : ps.discharge_rating_status === 'extrapolated_low' ? 'below measured rating range' : 'rating curve applied') : 'waiting for data');
     setText('packDetailStage', asStage(ps));
     setText('packDetailDistance', ps && Number.isFinite(Number(metric(ps, 'distance_mm'))) ?
       (Number(metric(ps, 'distance_mm')) / 304.8).toFixed(2) + ' ft' : '—');
@@ -150,24 +193,11 @@
     setText('packDetailDifference', Number.isFinite(primaryStage) && Number.isFinite(hoboStage) ?
       Math.abs(primaryStage - hoboStage).toFixed(2) + ' ft' : '—');
     setText('soilMoistureDetail', asPercent(sm));
+    setText('soilAdcDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
+    setText('soilAgeDetail', sm ? ageText(sm.observed_at) : '—');
     setText('soilMoistureTime', freshness(sm));
-    setText('cliffTempDetail', asTemp(ct));
-    setText('cliffTempTime', freshness(ct));
-    const stage = stageRows().map(r => ({x:new Date(r.observed_at).getTime(),
-      y:Number(metric(r,'water_level_ft')),iso:r.observed_at}));
-    const soil = soilRows().map(r => ({x:new Date(r.observed_at).getTime(),
-      y:Number(metric(r,'soil_moisture_percent')),iso:r.observed_at}));
-    const cliff = temperatureRows(EXTRA.cliff.node).map(r => ({x:new Date(r.observed_at).getTime(),
-      y:tempF(r),iso:r.observed_at}));
-    const packChart = document.getElementById('packStageChart');
-    const soilChart = document.getElementById('soilMoistureChart');
-    const cliffChart = document.getElementById('cliffTempChart');
-    if (packChart) renderLineChart(packChart,[{name:'Pack Creek stage',color:EXTRA.pack.color,points:stage}],
-      {axisLabel:'Water level (ft)',empty:'Waiting for calibrated water level.'});
-    if (soilChart) renderLineChart(soilChart,[{name:'Wingate moisture',color:EXTRA.soil.color,points:soil}],
-      {axisLabel:'Soil moisture (%)',empty:'Waiting for soil readings.'});
-    if (cliffChart) renderLineChart(cliffChart,[{name:'Cliff temperature',color:EXTRA.cliff.color,points:cliff}],
-      {axisLabel:'Temperature (°F)',empty:'Waiting for temperature.'});
+    renderPackChart();
+    renderSoilChart();
 
     const main = Object.values(STATIONS).map(s => ({
       name:s.name, reading:temperatureRows(s.node)[0] || null
@@ -241,17 +271,14 @@
     const tbody=document.getElementById('recent');
     if (!tbody) return;
     if (!rows.length) {
-      tbody.innerHTML='<tr><td colspan="8">Waiting for temperature telemetry.</td></tr>';
+      tbody.innerHTML='<tr><td colspan="6">Waiting for temperature telemetry.</td></tr>';
       return;
     }
     tbody.innerHTML=rows.map(r => {
       const remote=Number(r.node_num)!==STATIONS.home.node;
-      const p=remote?batteryPct(r):null,v=remote?batteryV(r):null;
       const rv=remote?rssi(r):null,sv=remote?snr(r):null,h=remote?hops(r):null;
       return '<tr><td>'+esc(fmtTime(r.observed_at))+'</td><td>'+esc(names.get(Number(r.node_num)))+
         '</td><td class="right">'+tempF(r).toFixed(1)+'</td><td class="right">'+
-        (p===null?'—':Math.round(p)+'%')+'</td><td class="right">'+
-        (v===null?'—':v.toFixed(3))+'</td><td class="right">'+
         (rv===null?'—':Math.round(rv))+'</td><td class="right">'+
         (sv===null?'—':sv.toFixed(1))+'</td><td class="right">'+
         (h===null?'—':Math.round(h))+'</td></tr>';
@@ -260,7 +287,7 @@
 
   const recentDescription = document.querySelector('.recent-panel .panel-head p');
   if (recentDescription) recentDescription.textContent =
-    'Temperature history from seven stations. Creek stage and Wingate soil moisture appear in their dedicated graphs.';
+    'Temperature history from seven stations. Battery and voltage are intentionally omitted here; Fishlake power and RF have dedicated graphs.';
   const legend = document.querySelector('.temp-comparison-panel .legend');
   if (legend) legend.insertAdjacentHTML('beforeend',
     '<span><i class="legend-swatch" style="background:#66b9ff"></i>Pack Creek</span>' +
