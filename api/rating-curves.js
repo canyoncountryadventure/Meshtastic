@@ -3,6 +3,8 @@ const PACK_CREEK_NAME = 'Pack Creek';
 const PACK_CREEK_CURVE_VERSION = 1;
 const PACK_CREEK_RESET_CUTOFF = '2026-09-25T21:43:23.000Z';
 const PACK_CREEK_RESET_MIGRATION = '20260925_pack_creek_reset_v1';
+const WINGATE_SOIL_NODE = 2004386937;
+const WINGATE_SOIL_DELETE_MIGRATION = '20260925_wingate_delete_soil_3018_3008_v1';
 
 let databaseReadyPromise;
 
@@ -152,10 +154,57 @@ async function resetPackCreekTestData(sql) {
   `;
 }
 
+async function deleteRequestedWingateSoilPoints(sql) {
+  return sql`
+    WITH claimed AS (
+      INSERT INTO app_migrations (migration_key, details)
+      VALUES (
+        ${WINGATE_SOIL_DELETE_MIGRATION},
+        jsonb_build_object(
+          'reason', 'User requested deletion of the two newest Wingate soil-moisture points present at request time',
+          'requested_ids', jsonb_build_array(3018, 3008)
+        )
+      )
+      ON CONFLICT (migration_key) DO NOTHING
+      RETURNING migration_key
+    ),
+    deleted AS (
+      DELETE FROM telemetry_readings
+      WHERE node_num = ${WINGATE_SOIL_NODE}
+        AND telemetry_type = 'soil'
+        AND id IN (3018, 3008)
+        AND EXISTS (SELECT 1 FROM claimed)
+      RETURNING id, observed_at, metrics
+    ),
+    recorded AS (
+      UPDATE app_migrations
+      SET details = details || jsonb_build_object(
+        'deleted_rows', (SELECT COUNT(*) FROM deleted),
+        'deleted_points', COALESCE(
+          (SELECT jsonb_agg(jsonb_build_object(
+            'id', id,
+            'observed_at', observed_at,
+            'soil_moisture_percent', metrics->'soil_moisture_percent',
+            'soil_adc10', metrics->'soil_adc10'
+          ) ORDER BY observed_at DESC) FROM deleted),
+          '[]'::jsonb
+        )
+      )
+      WHERE migration_key = ${WINGATE_SOIL_DELETE_MIGRATION}
+        AND EXISTS (SELECT 1 FROM claimed)
+      RETURNING migration_key
+    )
+    SELECT id, observed_at, metrics
+    FROM deleted
+    ORDER BY observed_at DESC
+  `;
+}
+
 async function prepareDatabase(sql) {
   await prepareRatingCurveTables(sql);
   await storePackCreekCurve(sql);
   await resetPackCreekTestData(sql);
+  await deleteRequestedWingateSoilPoints(sql);
 }
 
 export function ensureDatabaseReady(sql) {

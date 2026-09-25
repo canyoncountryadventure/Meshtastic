@@ -9,6 +9,11 @@
   };
   const TEMPERATURE_TYPES = new Set(['environment', 'mx2001']);
   let packChartMetric = 'flow';
+  const selectedAirTemperatureNodes = new Set([
+    STATIONS.hv?.node,
+    STATIONS.home?.node,
+    STATIONS.fl?.node,
+  ].filter(v => Number.isFinite(Number(v))).map(Number));
   const sameNode = (r, node) => Number(r && r.node_num) === node;
   const byTime = (a, b) => new Date(b.observed_at) - new Date(a.observed_at);
   const rowsFor = node => state.readings.filter(r => sameNode(r, node)).sort(byTime);
@@ -70,6 +75,12 @@
     .monitor-summary small{display:block;color:var(--muted);margin-top:5px}
     .pack-monitor-panel{border-color:rgba(102,185,255,.28)}
     .soil-monitor-panel{border-color:rgba(217,184,115,.28)}
+    .reading-kicker{margin-top:12px;color:#86a4ab;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.11em}
+    .temp-station-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 2px 12px}
+    .temp-filter-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid #24434d;background:#0a1a20;color:#8ea8ae;border-radius:999px;padding:8px 11px;cursor:pointer;font-size:12px;font-weight:750;transition:.15s ease}
+    .temp-filter-btn:hover{border-color:#4e7884;color:#e5f2f3}
+    .temp-filter-btn[aria-pressed="true"]{background:#17343e;border-color:#5b8e9b;color:#fff}
+    .temp-filter-dot{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 12px currentColor}
     @media(max-width:1000px){.monitor-summary{grid-template-columns:1fr 1fr}.monitor-head{align-items:flex-start;flex-direction:column}.monitor-actions{justify-content:flex-start}.primary-monitor-panel .chart.xlarge{height:380px}}
     @media(max-width:680px){.station-hero-grid{grid-template-columns:1fr}.sensor-details-grid{grid-template-columns:1fr}.monitor-summary{grid-template-columns:1fr 1fr}.primary-monitor-panel .chart.xlarge{height:330px}}
   `;
@@ -79,8 +90,8 @@
   if (hero) hero.insertAdjacentHTML('afterbegin',
     '<article class="station-hero extra-station" style="--accent:#66b9ff">' +
       '<div class="station-heading"><span class="station-dot" style="background:#66b9ff"></span><div>' +
-      '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · temperature + stage + flow</small></div></div>' +
-      '<div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Stage: <strong id="packStage">—</strong> · Flow: <strong id="packFlow">—</strong></div>' +
+      '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · water temperature + stage + flow</small></div></div>' +
+      '<div class="reading-kicker">Water temperature</div><div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Stage: <strong id="packStage">—</strong> · Flow: <strong id="packFlow">—</strong></div>' +
       '<div class="station-meta" id="packUpdated">Waiting for readings</div><div class="station-state offline" id="packState">No readings yet</div>' +
       '<details class="sensor-details"><summary>Sensor details</summary><div class="sensor-details-grid">' +
         '<div class="sensor-details-block"><strong>Primary Stage Sensor — SEN0313</strong>' +
@@ -101,7 +112,7 @@
       '<div class="station-meta" id="soilUpdated">Waiting for readings</div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
     '<article class="station-hero extra-station" style="--accent:#c3a0fb">' +
       '<div class="station-heading"><span class="station-dot" style="background:#c3a0fb"></span><div>' +
-      '<strong>Cliff Sensor</strong><small>CCAT · !c9f9f6e7 · temperature</small></div></div>' +
+      '<strong>Cliff Sensor</strong><small>CCAT · !c9f9f6e7 · air temperature</small></div></div>' +
       '<div class="extra-reading" id="cliffTemp">—</div><div class="extra-secondary">HOBO temperature</div>' +
       '<div class="station-meta" id="cliffUpdated">Waiting for readings</div><div class="station-state offline" id="cliffState">No readings yet</div></article>');
 
@@ -199,12 +210,9 @@
     renderPackChart();
     renderSoilChart();
 
-    const main = Object.values(STATIONS).map(s => ({
-      name:s.name, reading:temperatureRows(s.node)[0] || null
-    }));
-    const tempStations = main.concat([
-      {name:EXTRA.pack.name,reading:pt},{name:EXTRA.cliff.name,reading:ct}
-    ]).filter(s => s.reading && ageHours(s.reading.observed_at) <= STALE_AFTER_HOURS);
+    const tempStations = airTemperatureStations().map(s => ({
+      name:s.name, reading:s.rows[0] || null
+    })).filter(s => s.reading && ageHours(s.reading.observed_at) <= STALE_AFTER_HOURS);
     if (tempStations.length >= 2) {
       const sorted = tempStations.map(s => ({name:s.name,value:tempF(s.reading)})).sort((a,b)=>a.value-b.value);
       setText('tempSpread',(sorted[sorted.length-1].value-sorted[0].value).toFixed(1)+'°F');
@@ -217,8 +225,10 @@
       setText('warmestStation',tempStations.length ? tempStations[0].name : '—');
       setText('warmestDetail',tempStations.length ? 'Only station currently reporting' : 'Waiting for temperatures');
     }
-    const active = tempStations.concat(sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ?
-      [{name:EXTRA.soil.name,reading:sm}] : []);
+    const packFreshest = [pt, ps].filter(Boolean).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at))[0] || null;
+    const active = tempStations
+      .concat(packFreshest && ageHours(packFreshest.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.pack.name,reading:packFreshest}] : [])
+      .concat(sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.soil.name,reading:sm}] : []);
     if (active.length) {
       const freshest = active.sort((a,b)=>new Date(b.reading.observed_at)-new Date(a.reading.observed_at))[0];
       setText('freshestStation',freshest.name);
@@ -244,34 +254,67 @@
     }
   };
 
+  function airTemperatureStations() {
+    const stations = Object.values(STATIONS).map(s => ({
+      node:Number(s.node),name:s.name,color:s.color,rows:temperatureRows(s.node)
+    }));
+    stations.push({
+      node:EXTRA.cliff.node,name:EXTRA.cliff.name,color:EXTRA.cliff.color,
+      rows:temperatureRows(EXTRA.cliff.node)
+    });
+    return stations.filter((s,index,all) => Number.isFinite(s.node) &&
+      all.findIndex(other => other.node === s.node) === index);
+  }
+
+  function renderAirTemperatureFilters() {
+    const filter = document.getElementById('airTempStationFilter') ||
+      document.querySelector('.temp-comparison-panel .legend');
+    if (!filter) return;
+    const stations = airTemperatureStations();
+    filter.classList.add('temp-station-filter');
+    filter.innerHTML = stations.map(s =>
+      '<button type="button" class="temp-filter-btn" data-air-node="' + s.node +
+      '" aria-pressed="' + (selectedAirTemperatureNodes.has(s.node) ? 'true' : 'false') + '">' +
+      '<i class="temp-filter-dot" style="background:' + esc(s.color || '#8aa7ad') + '"></i>' +
+      esc(s.name) + '</button>'
+    ).join('');
+    filter.querySelectorAll('[data-air-node]').forEach(button => button.addEventListener('click', () => {
+      const node = Number(button.dataset.airNode);
+      if (selectedAirTemperatureNodes.has(node)) selectedAirTemperatureNodes.delete(node);
+      else selectedAirTemperatureNodes.add(node);
+      button.setAttribute('aria-pressed', selectedAirTemperatureNodes.has(node) ? 'true' : 'false');
+      renderTemperatureChart();
+      const dialog = document.getElementById('expandDialog');
+      const title = document.getElementById('expandTitle');
+      const expanded = document.getElementById('expandedChart');
+      if (dialog?.open && expanded && title?.textContent === 'Air temperature') renderTemperatureChart(expanded);
+    }));
+  }
+
   renderTemperatureChart = function(target = document.getElementById('tempChart')) {
     if (!target) return;
-    const stations = Object.values(STATIONS).map(s => ({
-      name:s.name,color:s.color,rows:temperatureRows(s.node)
-    })).concat([
-      {name:EXTRA.pack.name,color:EXTRA.pack.color,rows:packTemperatureRows()},
-      {name:EXTRA.cliff.name,color:EXTRA.cliff.color,rows:temperatureRows(EXTRA.cliff.node)}
-    ]);
-    renderLineChart(target,stations.map(s => ({
+    const selected = airTemperatureStations().filter(s => selectedAirTemperatureNodes.has(s.node));
+    renderLineChart(target,selected.map(s => ({
       name:s.name,color:s.color,points:s.rows.map(r => ({
         x:new Date(r.observed_at).getTime(),y:tempF(r),iso:r.observed_at
       }))
-    })),{axisLabel:'Temperature °F',tooltipValue:v=>v.toFixed(1)+' °F',
-      strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for temperature telemetry.'});
-    setText('tempChartCount',stations.map(s=>s.rows.length+' '+s.name).join(' · ')+' readings');
+    })),{axisLabel:'Air temperature °F',tooltipValue:v=>v.toFixed(1)+' °F',
+      strokeWidth:3.3,pointRadius:3.5,
+      empty:selected.length ? 'Waiting for air-temperature telemetry.' : 'Select at least one air-temperature station.'});
+    setText('tempChartCount',selected.length
+      ? selected.map(s=>s.rows.length+' '+s.name).join(' · ')+' air-temperature readings'
+      : 'No air-temperature stations selected');
   };
 
   renderRecent = function() {
-    const names = new Map(Object.values(STATIONS).map(s=>[s.node,s.name]));
-    names.set(EXTRA.pack.node,EXTRA.pack.name);
-    names.set(EXTRA.cliff.node,EXTRA.cliff.name);
-    const rows = state.readings.filter(r => names.has(Number(r.node_num)) && hasTemperature(r) &&
-      (Number(r.node_num) !== EXTRA.pack.node || r.telemetry_type === 'mx2001'))
+    const airStations = airTemperatureStations();
+    const names = new Map(airStations.map(s=>[s.node,s.name]));
+    const rows = state.readings.filter(r => names.has(Number(r.node_num)) && hasTemperature(r))
       .sort(byTime).slice(0,50);
     const tbody=document.getElementById('recent');
     if (!tbody) return;
     if (!rows.length) {
-      tbody.innerHTML='<tr><td colspan="6">Waiting for temperature telemetry.</td></tr>';
+      tbody.innerHTML='<tr><td colspan="6">Waiting for air-temperature telemetry.</td></tr>';
       return;
     }
     tbody.innerHTML=rows.map(r => {
@@ -287,11 +330,16 @@
 
   const recentDescription = document.querySelector('.recent-panel .panel-head p');
   if (recentDescription) recentDescription.textContent =
-    'Temperature history from seven stations. Battery and voltage are intentionally omitted here; Fishlake power and RF have dedicated graphs.';
-  const legend = document.querySelector('.temp-comparison-panel .legend');
-  if (legend) legend.insertAdjacentHTML('beforeend',
-    '<span><i class="legend-swatch" style="background:#66b9ff"></i>Pack Creek</span>' +
-    '<span><i class="legend-swatch" style="background:#c3a0fb"></i>Cliff Sensor</span>');
+    'Air-temperature history from monitored air stations. Pack Creek water temperature stays in the Pack Creek monitor.';
+  renderAirTemperatureFilters();
+  document.querySelectorAll('.station-hero .station-heading').forEach(heading => {
+    const name = heading.querySelector('strong')?.textContent?.trim();
+    const small = heading.querySelector('small');
+    if (!small || !name || name === 'Pack Creek' || name === 'Wingate Moisture') return;
+    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day",'Thousand Lake Mountain','Cliff Sensor'].includes(name)) {
+      small.textContent += ' · air temperature';
+    }
+  });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
     'Meshtastic environmental network · Hidden Valley · Pack Creek · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain';

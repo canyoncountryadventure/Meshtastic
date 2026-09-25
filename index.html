@@ -29,17 +29,17 @@
       <div class="eyebrow">Live station comparison</div>
       <h1>Meshtastic Command Dashboard</h1>
       <p>Hidden Valley, Pack Creek, Wingate Moisture, Cliff Sensor, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
-      <div class="pipeline"><strong>Data path</strong><span>Field temperature, creek stage and soil moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
+      <div class="pipeline"><strong>Data path</strong><span>Field air temperature, creek water temperature and stage, and soil moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
     </div>
     <div class="station-hero-grid">
       <article class="station-hero hv-card">
-        <div class="station-heading"><span class="station-dot hv"></span><div><strong>Hidden Valley</strong><small>RAK4631 · 9211 · !4aab9211</small></div></div>
+        <div class="station-heading"><span class="station-dot hv"></span><div><strong>Hidden Valley</strong><small>RAK4631 · 9211 · !4aab9211 · air temperature</small></div></div>
         <div class="big-temp"><span id="hvTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="hvUpdated">Waiting for temperature</span><span id="hvHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="hvState">No temperature yet</div>
       </article>
       <article class="station-hero home-card">
-        <div class="station-heading"><span class="station-dot home"></span><div><strong>Moab</strong><small>Heltec V4 · Moab · !a35a4bf4</small></div></div>
+        <div class="station-heading"><span class="station-dot home"></span><div><strong>Moab</strong><small>Heltec V4 · Moab · !a35a4bf4 · air temperature</small></div></div>
         <div class="big-temp"><span id="homeTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="homeUpdated">Waiting for temperature</span><span>Local Temperature via BLE</span></div>
         <div class="station-state offline" id="homeState">No temperature yet</div>
@@ -48,8 +48,8 @@
   </section>
 
   <section class="quick-grid overview-grid">
-    <article class="metric-card accent"><span>Temperature spread</span><strong id="tempSpread">—</strong><small id="tempSpreadDetail">difference between stations</small></article>
-    <article class="metric-card"><span>Warmest now</span><strong id="warmestStation">—</strong><small id="warmestDetail">latest readings</small></article>
+    <article class="metric-card accent"><span>Air-temperature spread</span><strong id="tempSpread">—</strong><small id="tempSpreadDetail">difference between stations</small></article>
+    <article class="metric-card"><span>Warmest air now</span><strong id="warmestStation">—</strong><small id="warmestDetail">latest readings</small></article>
     <article class="metric-card"><span>Freshest station</span><strong id="freshestStation">—</strong><small id="freshestDetail">most recent packet</small></article>
     <article class="metric-card"><span>Stations reporting</span><strong id="stationsReporting">0 / 8</strong><small>healthy within 3 hr 15 min</small></article>
   </section>
@@ -65,11 +65,11 @@
 
   <section class="panel temp-comparison-panel primary-monitor-panel">
     <div class="panel-head">
-      <div><span class="eyebrow">Network environment</span><h2>Temperature</h2><p id="tempChartCount">Waiting for station data</p></div>
-      <button type="button" class="expand-btn" data-expand="tempChart" data-title="Temperature">Expand</button>
+      <div><span class="eyebrow">Network air conditions</span><h2>Air temperature</h2><p id="tempChartCount">Waiting for station data</p></div>
+      <button type="button" class="expand-btn" data-expand="tempChart" data-title="Air temperature">Expand</button>
     </div>
-    <div class="legend"><span><i class="legend-swatch hv"></i>Hidden Valley</span><span><i class="legend-swatch home"></i>Moab</span></div>
-    <div class="chart xlarge" id="tempChart"><div class="empty">Waiting for temperature telemetry.</div></div>
+    <div class="legend temp-station-filter" id="airTempStationFilter" aria-label="Air-temperature station filters">Loading station filters…</div>
+    <div class="chart xlarge" id="tempChart"><div class="empty">Waiting for air-temperature telemetry.</div></div>
   </section>
 
   <section class="panel primary-monitor-panel pack-monitor-panel">
@@ -155,8 +155,8 @@
   </section>
 
   <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Recent readings</h2><p>Temperature history from monitored stations. Battery and voltage are intentionally omitted here; Fishlake power has its own graph.</p></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Temp °F</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="6">Waiting for telemetry.</td></tr></tbody></table></div>
+    <div class="panel-head"><div><h2>Recent readings</h2><p>Air-temperature history from monitored air stations. Pack Creek water temperature stays in the Pack Creek monitor.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Air temp °F</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="6">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
   <footer><span>Meshtastic environmental network · Pack Creek · Hidden Valley · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
@@ -179,7 +179,7 @@
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260925-primary-monitors"></script>
+<script src="/network-sensors.js?v=20260925-air-temperature-filter"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;
