@@ -22,10 +22,12 @@
     .fl-card{border-color:rgba(181,140,255,.42);background:linear-gradient(160deg,rgba(181,140,255,.16),rgba(13,34,42,.95) 55%)}
     .fl-card:after{background:var(--fl)}
     .station-dot.fl,.legend-swatch.fl{background:var(--fl);box-shadow:0 0 18px rgba(181,140,255,.68)}
-    .fl-detail,.fl-battery-panel{border-color:rgba(181,140,255,.3)}
+    .fl-detail,.fl-health-panel{border-color:rgba(181,140,255,.3)}
+    .fishlake-health-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+    .fl-health-panel{margin-top:0}
     .station-badge.fl{background:var(--fl-soft);color:#dcc9ff}
     .station-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-    @media(max-width:1000px){.station-hero-grid{grid-template-columns:1fr 1fr}.station-detail-grid{grid-template-columns:1fr}}
+    @media(max-width:1000px){.station-hero-grid{grid-template-columns:1fr 1fr}.station-detail-grid{grid-template-columns:1fr}.fishlake-health-grid{grid-template-columns:1fr}}
     @media(max-width:680px){.station-hero-grid{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
@@ -58,21 +60,27 @@
       </article>`);
   }
 
-  const chartGrid = document.querySelector('.charts.two-col');
-  if (chartGrid && !document.getElementById('flBatteryChart')) {
-    const firstPanel = chartGrid.querySelector('article.panel');
-    const html = `
-      <article class="panel fl-battery-panel">
-        <div class="panel-head"><div><h2>Fishlake battery</h2><p id="flBatteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" id="flBatteryExpand">Expand</button></div>
+  const healthGrid = document.getElementById('fishlakeHealthCharts');
+  if (healthGrid && !document.getElementById('flBatteryChart')) {
+    healthGrid.innerHTML = `
+      <article class="panel fl-health-panel">
+        <div class="panel-head"><div><span class="eyebrow">Fishlake Hightop</span><h2>Battery</h2><p id="flBatteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" id="flBatteryExpand">Expand</button></div>
         <div class="battery-summary">
           <div><span>Latest</span><strong id="flBatteryNow">—</strong><small id="flBatteryNowDetail">—</small></div>
           <div><span>Voltage change</span><strong id="flBatteryChange">—</strong><small id="flBatteryChangeDetail">selected window</small></div>
           <div><span>Solar activity</span><strong id="flSolarHours">—</strong><small id="flSolarDetail">estimated from voltage rise</small></div>
         </div>
         <div class="chart" id="flBatteryChart"><div class="empty">Waiting for Fishlake battery telemetry.</div></div>
+      </article>
+      <article class="panel fl-health-panel">
+        <div class="panel-head"><div><span class="eyebrow">Fishlake Hightop</span><h2>Radio link</h2><p id="flRfChartCount">RF metadata pending</p></div><button type="button" class="expand-btn" id="flRfExpand">Expand</button></div>
+        <div class="battery-summary">
+          <div><span>Latest RSSI</span><strong id="flLatestRssi" class="rf-value">—</strong><small id="flLatestSnr">SNR —</small></div>
+          <div><span>Average RSSI</span><strong id="flAvgRssi" class="rf-value">—</strong><small id="flBestRssi">best —</small></div>
+          <div><span>Mesh route</span><strong id="flRouteNow">—</strong><small id="flRouteDetail">hop metadata</small></div>
+        </div>
+        <div class="chart" id="flRfChart"><div class="empty">Waiting for Fishlake RF metadata.</div></div>
       </article>`;
-    if (firstPanel) firstPanel.insertAdjacentHTML('afterend', html);
-    else chartGrid.insertAdjacentHTML('afterbegin', html);
   }
 
   const legend = document.querySelector('.temp-comparison-panel .legend');
@@ -116,6 +124,7 @@
   const flTempRows = () => flRows().filter(r => tempF(r) !== null && r.telemetry_type === 'environment').sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
   const flLatest = () => flTempRows()[0] || null;
   const flDeviceRows = () => flRows().filter(r => batteryV(r) !== null || batteryPct(r) !== null).sort((a,b) => new Date(batteryTime(b)) - new Date(batteryTime(a)));
+  const flRfRows = () => flRows().filter(r => rssi(r) !== null).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
 
   function fillFishlakeStats() {
     const rows = flTempRows();
@@ -200,6 +209,28 @@
     });
   }
 
+  function fishlakeRfClass(v){if(!Number.isFinite(v))return'';if(v>=-110)return'rf-strong';if(v>=-122)return'rf-fair';return'rf-weak';}
+  function applyFishlakeRf(id,v){const el=document.getElementById(id);if(!el)return;el.classList.remove('rf-strong','rf-fair','rf-weak');const c=fishlakeRfClass(v);if(c)el.classList.add(c);}
+  function renderFishlakeRf(target = document.getElementById('flRfChart')) {
+    if (!target) return;
+    const rows=flRfRows(), latest=rows[0]||null, vals=rows.map(rssi).filter(Number.isFinite);
+    const avg=mean(vals), best=vals.length?Math.max(...vals):null;
+    if(latest){
+      const rv=rssi(latest),sv=snr(latest),hp=hops(latest);
+      setText('flLatestRssi',`${Math.round(rv)} dBm`); applyFishlakeRf('flLatestRssi',rv);
+      setText('flLatestSnr',`SNR ${sv===null?'—':sv.toFixed(1)+' dB'}`);
+      setText('flRouteNow',hp===0?'Direct':hp===1?'1 relay':hp!==null?`${Math.round(hp)} relays`:'—');
+      setText('flRouteDetail',hp===null?'hop metadata unavailable':`${Math.round(hp)} hop${hp===1?'':'s'} away`);
+    } else {
+      setText('flLatestRssi','—'); setText('flLatestSnr','SNR —'); setText('flRouteNow','—'); setText('flRouteDetail','hop metadata');
+    }
+    setText('flAvgRssi',avg===null?'—':`${avg.toFixed(0)} dBm`); applyFishlakeRf('flAvgRssi',avg);
+    setText('flBestRssi',best===null?'best —':`best ${best.toFixed(0)} dBm`);
+    setText('flRfChartCount',rows.length?`${rows.length} Fishlake RF samples`:'RF metadata pending');
+    const points=[...rows].reverse().map(r=>({x:new Date(r.observed_at).getTime(),y:rssi(r),iso:r.observed_at}));
+    renderLineChart(target,[{name:'Fishlake RSSI',color:'#63b7ff',points}],{axisLabel:'RSSI dBm',tooltipValue:v=>`${Math.round(v)} dBm`,empty:'Waiting for Fishlake RF metadata.',pointRadius:3});
+  }
+
   const flBatteryExpand = document.getElementById('flBatteryExpand');
   if (flBatteryExpand) {
     flBatteryExpand.addEventListener('click', () => {
@@ -213,6 +244,15 @@
       chart.hidden = false;
       dialog.showModal();
       setTimeout(() => renderFishlakeBattery(chart), 40);
+    });
+  }
+  const flRfExpand = document.getElementById('flRfExpand');
+  if (flRfExpand) {
+    flRfExpand.addEventListener('click', () => {
+      const dialog=document.getElementById('expandDialog'),title=document.getElementById('expandTitle'),chart=document.getElementById('expandedChart'),mapEl=document.getElementById('expandedMap');
+      if(!dialog||!title||!chart||!mapEl)return;
+      title.textContent='Fishlake radio link'; mapEl.hidden=true; chart.hidden=false; dialog.showModal();
+      setTimeout(()=>renderFishlakeRf(chart),40);
     });
   }
 
@@ -240,6 +280,7 @@
     } else setText('flHeroBattery', 'Battery —');
     fillFishlakeStats();
     renderFishlakeBattery();
+    renderFishlakeRf();
 
     const current = [
       { station: STATIONS.hv, reading: latestTemp('hv') },
@@ -295,14 +336,14 @@
     const allowed = new Set([STATIONS.hv.node, STATIONS.home.node, FISHLAKE.node]);
     const rows = state.readings.filter(r => r.telemetry_type === 'environment' && tempF(r) !== null && allowed.has(num(r.node_num))).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at)).slice(0, 50);
     const tbody = document.getElementById('recent');
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8">Waiting for telemetry.</td></tr>'; return; }
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6">Waiting for telemetry.</td></tr>'; return; }
     tbody.innerHTML = rows.map(r => {
       const node = num(r.node_num);
       const key = node === STATIONS.hv.node ? 'hv' : node === STATIONS.home.node ? 'home' : 'fl';
       const station = key === 'hv' ? STATIONS.hv : key === 'home' ? STATIONS.home : FISHLAKE;
       const remote = key !== 'home';
-      const p = remote ? batteryPct(r) : null, v = remote ? batteryV(r) : null, rv = remote ? rssi(r) : null, sv = remote ? snr(r) : null, h = remote ? hops(r) : null;
-      return `<tr><td>${esc(fmtTime(r.observed_at))}</td><td><span class="station-cell"><i class="legend-swatch ${key}"></i>${esc(station.name)}</span></td><td class="right">${tempF(r).toFixed(1)}</td><td class="right">${p===null?'—':Math.round(p)+'%'}</td><td class="right">${v===null?'—':v.toFixed(3)}</td><td class="right">${rv===null?'—':Math.round(rv)}</td><td class="right">${sv===null?'—':sv.toFixed(1)}</td><td class="right">${h===null?'—':Math.round(h)}</td></tr>`;
+      const rv = remote ? rssi(r) : null, sv = remote ? snr(r) : null, h = remote ? hops(r) : null;
+      return `<tr><td>${esc(fmtTime(r.observed_at))}</td><td><span class="station-cell"><i class="legend-swatch ${key}"></i>${esc(station.name)}</span></td><td class="right">${tempF(r).toFixed(1)}</td><td class="right">${rv===null?'—':Math.round(rv)}</td><td class="right">${sv===null?'—':sv.toFixed(1)}</td><td class="right">${h===null?'—':Math.round(h)}</td></tr>`;
     }).join('');
   };
 
