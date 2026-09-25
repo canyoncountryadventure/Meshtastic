@@ -230,7 +230,8 @@
     const names = new Map(Object.values(STATIONS).map(s=>[s.node,s.name]));
     names.set(EXTRA.pack.node,EXTRA.pack.name);
     names.set(EXTRA.cliff.node,EXTRA.cliff.name);
-    const rows = state.readings.filter(r => names.has(Number(r.node_num)) && hasTemperature(r))
+    const rows = state.readings.filter(r => names.has(Number(r.node_num)) && hasTemperature(r) &&
+      (Number(r.node_num) !== EXTRA.pack.node || r.telemetry_type === 'mx2001'))
       .sort(byTime).slice(0,50);
     const tbody=document.getElementById('recent');
     if (!tbody) return;
