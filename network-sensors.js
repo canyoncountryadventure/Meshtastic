@@ -75,8 +75,11 @@
     .sensor-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
     .sensor-details-block{background:#0a1b23;border:1px solid var(--line);border-radius:10px;padding:11px}
     .sensor-details-block strong{display:block;font-size:13px;margin-bottom:8px}
-    .sensor-details-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:5px 0}
+    .sensor-details-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:5px 0;min-width:0}
+    .sensor-details-row span,.sensor-details-row b{min-width:0}
     .sensor-details-row b{color:#dcebef;font-weight:700;text-align:right}
+    .sensor-equation-row{display:grid;grid-template-columns:auto;gap:3px;margin-top:7px}
+    .sensor-equation-row b{text-align:left;font-size:11.5px;line-height:1.35;white-space:normal;overflow-wrap:normal}
     .sensor-comparison{grid-column:1/-1}
     .sensor-agreement{font-weight:800}
     .sensor-agreement.excellent{color:#55d9b7}
@@ -84,7 +87,7 @@
     .sensor-agreement.watch{color:#f3c969}
     .sensor-agreement.investigate{color:#ff8f80}
     .pack-diff-spark-wrap{margin-top:11px;padding-top:10px;border-top:1px solid #17343d}
-    .pack-diff-spark-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:7px}
+    .pack-diff-spark-head{display:flex;justify-content:space-between;gap:5px 10px;align-items:baseline;margin-bottom:7px;flex-wrap:wrap}
     .pack-diff-spark-head span{font-size:11px;color:#88a4aa;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
     .pack-diff-spark-head small{font-size:10px;color:var(--muted)}
     .pack-diff-sparkline{height:74px;width:100%;position:relative;overflow:hidden;border-radius:8px;background:#08171d}
@@ -137,7 +140,7 @@
           '<div class="sensor-details-row"><span>Stage difference</span><b id="packDetailDifference">—</b></div>' +
           '<div class="sensor-details-row"><span>Agreement</span><b id="packDetailAgreement" class="sensor-agreement">—</b></div>' +
           '<div class="sensor-details-row"><span>Authoritative sensor</span><b>SEN0313</b></div>' +
-          '<div class="sensor-details-row"><span>Flow equation</span><b>Q = 6.072(H−0.2226)^1.0424</b></div>' +
+          '<div class="sensor-details-row sensor-equation-row"><span>Flow equation</span><b>Q = 6.072(H−0.2226)^1.0424</b></div>' +
           '<div class="pack-diff-spark-wrap"><div class="pack-diff-spark-head"><span>24h stage difference</span><small>313 stage − 2001 stage</small></div>' +
           '<div id="packDifferenceSparkline" class="pack-diff-sparkline"><div class="pack-diff-spark-empty">Loading 24h comparison…</div></div></div></div>' +
       '</div></details></article>' +
