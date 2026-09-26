@@ -11,6 +11,10 @@
   let packChartMetric = 'flow';
   const packChartSources = new Set(['sen0313']);
   const PACK_RATING = { a: 6.07187614, offset: 0.22259098, b: 1.04237977 };
+  const PACK_DIFF_MATCH_MS = 15 * 60 * 1000;
+  let packDifference24h = [];
+  let packDifferenceFetchedAt = 0;
+  let packDifferenceFetchInFlight = false;
   const selectedAirTemperatureNodes = new Set([
     STATIONS.hv?.node,
     STATIONS.home?.node,
@@ -74,6 +78,18 @@
     .sensor-details-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin:5px 0}
     .sensor-details-row b{color:#dcebef;font-weight:700;text-align:right}
     .sensor-comparison{grid-column:1/-1}
+    .sensor-agreement{font-weight:800}
+    .sensor-agreement.excellent{color:#55d9b7}
+    .sensor-agreement.good{color:#86d7e8}
+    .sensor-agreement.watch{color:#f3c969}
+    .sensor-agreement.investigate{color:#ff8f80}
+    .pack-diff-spark-wrap{margin-top:11px;padding-top:10px;border-top:1px solid #17343d}
+    .pack-diff-spark-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:7px}
+    .pack-diff-spark-head span{font-size:11px;color:#88a4aa;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+    .pack-diff-spark-head small{font-size:10px;color:var(--muted)}
+    .pack-diff-sparkline{height:74px;width:100%;position:relative;overflow:hidden;border-radius:8px;background:#08171d}
+    .pack-diff-sparkline svg{display:block;width:100%;height:100%}
+    .pack-diff-spark-empty{height:74px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
     .primary-monitor-panel{overflow:hidden}
     .primary-monitor-panel .chart.xlarge{height:440px}
     .monitor-head{align-items:flex-end}
@@ -118,7 +134,12 @@
           '<div class="sensor-details-row"><span>Stage</span><b id="packDetailHoboStage">—</b></div>' +
           '<div class="sensor-details-row"><span>BLE RSSI</span><b id="packDetailBle">—</b></div></div>' +
         '<div class="sensor-details-block sensor-comparison"><strong>Sensor Comparison</strong>' +
-          '<div class="sensor-details-row"><span>Stage difference</span><b id="packDetailDifference">—</b></div></div>' +
+          '<div class="sensor-details-row"><span>Stage difference</span><b id="packDetailDifference">—</b></div>' +
+          '<div class="sensor-details-row"><span>Agreement</span><b id="packDetailAgreement" class="sensor-agreement">—</b></div>' +
+          '<div class="sensor-details-row"><span>Authoritative sensor</span><b>SEN0313</b></div>' +
+          '<div class="sensor-details-row"><span>Flow equation</span><b>Q = 6.072(H−0.2226)^1.0424</b></div>' +
+          '<div class="pack-diff-spark-wrap"><div class="pack-diff-spark-head"><span>24h stage difference</span><small>313 stage − 2001 stage</small></div>' +
+          '<div id="packDifferenceSparkline" class="pack-diff-sparkline"><div class="pack-diff-spark-empty">Loading 24h comparison…</div></div></div></div>' +
       '</div></details></article>' +
     '<article class="station-hero extra-station" style="--accent:#d9b873">' +
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
@@ -150,6 +171,86 @@
       const y=metricName==='stage'?stage:packStageToFlow(stage);
       return {x:new Date(r.observed_at).getTime(),y,iso:r.observed_at};
     }).filter(p=>Number.isFinite(p.y));
+  }
+
+  function packAgreement(absDiffFt){
+    if(!Number.isFinite(absDiffFt)) return {label:'—',cls:''};
+    if(absDiffFt<=0.02)return {label:'Excellent',cls:'excellent'};
+    if(absDiffFt<=0.05)return {label:'Good',cls:'good'};
+    if(absDiffFt<=0.10)return {label:'Watch',cls:'watch'};
+    return {label:'Investigate',cls:'investigate'};
+  }
+
+  function pairPackStageDifferences(rows){
+    const primary=rows.filter(r=>Number(r.node_num)===EXTRA.pack.node&&r.telemetry_type==='water_distance'&&
+      Number.isFinite(Number(metric(r,'water_level_ft')))&&metric(r,'stage_calibrated')!==false)
+      .map(r=>({t:new Date(r.observed_at).getTime(),stage:Number(metric(r,'water_level_ft')),iso:r.observed_at}))
+      .filter(p=>Number.isFinite(p.t)).sort((a,b)=>a.t-b.t);
+    const hobo=rows.filter(r=>Number(r.node_num)===EXTRA.pack.node&&r.telemetry_type==='mx2001'&&
+      Number.isFinite(Number(metric(r,'water_level_ft'))))
+      .map(r=>({t:new Date(r.observed_at).getTime(),stage:Number(metric(r,'water_level_ft')),iso:r.observed_at}))
+      .filter(p=>Number.isFinite(p.t)).sort((a,b)=>a.t-b.t);
+    if(!primary.length||!hobo.length)return [];
+    const paired=[];
+    let j=0;
+    for(const p of primary){
+      while(j+1<hobo.length&&Math.abs(hobo[j+1].t-p.t)<=Math.abs(hobo[j].t-p.t))j++;
+      const h=hobo[j];
+      if(h&&Math.abs(h.t-p.t)<=PACK_DIFF_MATCH_MS)paired.push({x:p.t,y:p.stage-h.stage,iso:p.iso});
+    }
+    return paired;
+  }
+
+  function renderPackDifferenceSparkline(){
+    const target=document.getElementById('packDifferenceSparkline');
+    if(!target)return;
+    const points=packDifference24h.filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)).sort((a,b)=>a.x-b.x);
+    if(!points.length){
+      target.innerHTML='<div class="pack-diff-spark-empty">No matched 24h stage pairs yet.</div>';
+      return;
+    }
+    target.innerHTML='';
+    const w=420,h=74,padX=5,padY=9;
+    const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
+    let xmin=Math.min(...xs),xmax=Math.max(...xs);
+    let ymin=Math.min(...ys,0),ymax=Math.max(...ys,0);
+    if(xmax===xmin)xmax=xmin+1;
+    const yPad=Math.max(0.005,(ymax-ymin)*0.18);
+    ymin-=yPad;ymax+=yPad;
+    const x=v=>padX+(v-xmin)/(xmax-xmin)*(w-padX*2);
+    const y=v=>padY+(ymax-v)/(ymax-ymin)*(h-padY*2);
+    const svg=svgEl('svg',{viewBox:`0 0 ${w} ${h}`,preserveAspectRatio:'none','aria-label':'24 hour SEN0313 minus MX2001 stage difference'});
+    svg.appendChild(svgEl('line',{x1:padX,x2:w-padX,y1:y(0),y2:y(0),stroke:'#31505a','stroke-width':1,'stroke-dasharray':'4 4'}));
+    const poly=points.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');
+    svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:'#66b9ff','stroke-width':2.5,'stroke-linecap':'round','stroke-linejoin':'round'}));
+    const last=points.at(-1);
+    svg.appendChild(svgEl('circle',{cx:x(last.x),cy:y(last.y),r:3.2,fill:'#66b9ff',stroke:'#08171d','stroke-width':1.2}));
+    target.appendChild(svg);
+    target.title=`${points.length} matched readings · latest signed difference ${last.y>=0?'+':''}${last.y.toFixed(3)} ft`;
+  }
+
+  async function refreshPackDifference24h(force=false){
+    const now=Date.now();
+    if(packDifferenceFetchInFlight)return;
+    if(!force&&packDifferenceFetchedAt&&now-packDifferenceFetchedAt<60000){
+      renderPackDifferenceSparkline();
+      return;
+    }
+    packDifferenceFetchInFlight=true;
+    try{
+      const res=await fetch(`/api/readings?hours=24&node=${EXTRA.pack.node}&limit=5000`,{cache:'no-store'});
+      const data=await res.json();
+      if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);
+      packDifference24h=pairPackStageDifferences(Array.isArray(data.readings)?data.readings:[]);
+      packDifferenceFetchedAt=Date.now();
+      renderPackDifferenceSparkline();
+    }catch(err){
+      console.error('Pack Creek 24h difference fetch failed',err);
+      const target=document.getElementById('packDifferenceSparkline');
+      if(target&&!packDifference24h.length)target.innerHTML='<div class="pack-diff-spark-empty">24h comparison unavailable.</div>';
+    }finally{
+      packDifferenceFetchInFlight=false;
+    }
   }
 
   function renderPackChart(target=document.getElementById('packStageChart')){
@@ -260,8 +361,15 @@
       Math.round(Number(metric(hs, 'ble_rssi_dbm'))) + ' dBm' : '—');
     const primaryStage = ps ? Number(metric(ps, 'water_level_ft')) : null;
     const hoboStage = hs ? Number(metric(hs, 'water_level_ft')) : null;
-    setText('packDetailDifference', Number.isFinite(primaryStage) && Number.isFinite(hoboStage) ?
-      Math.abs(primaryStage - hoboStage).toFixed(2) + ' ft' : '—');
+    const stageDifferenceFt = Number.isFinite(primaryStage) && Number.isFinite(hoboStage) ?
+      Math.abs(primaryStage - hoboStage) : null;
+    setText('packDetailDifference', Number.isFinite(stageDifferenceFt) ?
+      stageDifferenceFt.toFixed(2) + ' ft (' + (stageDifferenceFt * 12).toFixed(2) + ' in)' : '—');
+    const agreement = packAgreement(stageDifferenceFt);
+    setText('packDetailAgreement', agreement.label);
+    const agreementEl=document.getElementById('packDetailAgreement');
+    if(agreementEl)agreementEl.className='sensor-agreement '+agreement.cls;
+    refreshPackDifference24h();
     setText('soilMoistureDetail', asPercent(sm));
     setText('soilAdcDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
     setText('soilAgeDetail', sm ? ageText(sm.observed_at) : '—');
