@@ -83,8 +83,6 @@
     .monitor-summary strong{display:block;font-size:22px;margin-top:6px}
     .monitor-summary small{display:block;color:var(--muted);margin-top:5px}
     .pack-monitor-panel{border-color:rgba(102,185,255,.28)}
-    .pack-battery-panel{border-color:rgba(102,185,255,.28)}
-    .pack-battery-panel .chart{height:310px}
     .soil-monitor-panel{border-color:rgba(217,184,115,.28)}
     .reading-kicker{margin-top:12px;color:#86a4ab;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.11em}
     .temp-station-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 2px 12px}
@@ -127,24 +125,6 @@
       '<div class="extra-reading" id="cliffTemp">—</div><div class="extra-secondary">HOBO temperature</div>' +
       '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No readings yet</div></article>');
 
-  const packMonitorPanel = document.querySelector('.pack-monitor-panel');
-  if (packMonitorPanel && !document.getElementById('packBatteryChart')) {
-    packMonitorPanel.insertAdjacentHTML('afterend', `
-      <section class="panel pack-battery-panel">
-        <div class="panel-head">
-          <div><span class="eyebrow">Pack Creek · power system</span><h2>Battery</h2><p id="packBatteryChartCount">Battery telemetry pending</p></div>
-          <button type="button" class="expand-btn" id="packBatteryExpand">Expand</button>
-        </div>
-        <div class="battery-summary">
-          <div><span>Latest</span><strong id="packBatteryNow">—</strong><small id="packBatteryNowDetail">—</small></div>
-          <div><span>Voltage change</span><strong id="packBatteryChange">—</strong><small id="packBatteryChangeDetail">selected window</small></div>
-          <div><span>Power state</span><strong id="packPowerState">—</strong><small id="packPowerStateDetail">DFRobot DFR0559 → USB-C</small></div>
-        </div>
-        <div class="chart" id="packBatteryChart"><div class="empty">Waiting for Pack Creek power telemetry.</div></div>
-        <div class="chart-note">USB-C power causes Meshtastic to report 101 as the external-power sentinel. The graph shows the RAK-reported voltage; it is not a direct DFR0559 battery state-of-charge measurement.</div>
-      </section>`);
-  }
-
   function packPoints(metricName){
     if(metricName==='stage'){
       return stageRows().map(r=>({x:new Date(r.observed_at).getTime(),y:Number(metric(r,'water_level_ft')),iso:r.observed_at}));
@@ -161,46 +141,6 @@
         ? {axisLabel:'Discharge (cfs)',tooltipValue:v=>v.toFixed(2)+' cfs',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for rated Pack Creek flow.'}
         : {axisLabel:'Water level (ft)',tooltipValue:v=>v.toFixed(3)+' ft',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for calibrated Pack Creek stage.'});
     setText('packChartCount',points.length?points.length+' '+(flowMode?'rated flow':'stage')+' samples · selected window':'Waiting for '+(flowMode?'rated flow':'calibrated stage')+' telemetry');
-  }
-
-  function renderPackBattery(target=document.getElementById('packBatteryChart')){
-    if(!target)return;
-    const rows=deviceRows(EXTRA.pack.node);
-    const latest=rows[0]||null;
-    const pct=latest?batteryPct(latest):null;
-    const volts=latest?batteryV(latest):null;
-
-    if(latest){
-      setText('packBatteryNow',pct===101?'External power':pct!==null?Math.round(pct)+'%':volts!==null?volts.toFixed(3)+' V':'—');
-      setText('packBatteryNowDetail',[volts!==null&&volts>0?volts.toFixed(3)+' V':null,ageText(batteryTime(latest))].filter(Boolean).join(' · '));
-      setText('packPowerState',pct===101?'External / USB':pct!==null?'Battery':'Unknown');
-      setText('packPowerStateDetail',pct===101?'DFR0559 5 V output detected on USB-C':'Meshtastic device telemetry');
-    }else{
-      setText('packBatteryNow','—');
-      setText('packBatteryNowDetail','battery telemetry pending');
-      setText('packPowerState','—');
-      setText('packPowerStateDetail','DFRobot DFR0559 → USB-C');
-    }
-
-    const vals=rows.filter(r=>batteryV(r)!==null&&batteryV(r)>0)
-      .sort((a,b)=>new Date(batteryTime(a))-new Date(batteryTime(b)));
-    if(vals.length>=2){
-      const first=batteryV(vals[0]),last=batteryV(vals.at(-1)),change=last-first;
-      setText('packBatteryChange',(change>=0?'+':'')+change.toFixed(3)+' V');
-      setText('packBatteryChangeDetail',first.toFixed(3)+' → '+last.toFixed(3)+' V');
-    }else{
-      setText('packBatteryChange','—');
-      setText('packBatteryChangeDetail','need 2 voltage samples');
-    }
-
-    setText('packBatteryChartCount',vals.length?vals.length+' voltage samples · Pack Creek':'Battery telemetry pending');
-    const points=vals.map(r=>({x:new Date(batteryTime(r)).getTime(),y:batteryV(r),iso:batteryTime(r)}));
-    renderLineChart(target,[{name:'Pack Creek reported voltage',color:EXTRA.pack.color,points}],{
-      axisLabel:'Reported voltage (V)',
-      tooltipValue:v=>v.toFixed(3)+' V',
-      empty:'Waiting for Pack Creek power telemetry.',
-      pointRadius:3
-    });
   }
 
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
@@ -231,7 +171,6 @@
     renderPackChart();
   });
   document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart));
-  document.getElementById('packBatteryExpand')?.addEventListener('click',()=>openExpanded('Pack Creek battery',renderPackBattery));
   document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Wingate soil moisture',renderSoilChart));
 
   const earlierSummary = renderSummary;
@@ -284,7 +223,6 @@
     setText('soilAgeDetail', sm ? ageText(sm.observed_at) : '—');
     setText('soilMoistureTime', freshness(sm));
     renderPackChart();
-    renderPackBattery();
     renderSoilChart();
 
     const tempStations = airTemperatureStations().map(s => ({
