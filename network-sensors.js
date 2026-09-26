@@ -38,6 +38,14 @@
     Number(r.discharge_cfs).toFixed(2) + ' cfs' : '—';
   const asTemp = r => r ? tempF(r).toFixed(1) + ' °F' : '—';
   const freshness = r => r ? 'Updated ' + ageText(r.observed_at) : 'Waiting for readings';
+  const deviceRows = node => rowsFor(node).filter(r => r.telemetry_type === 'device' &&
+    (batteryPct(r) !== null || batteryV(r) !== null));
+  const cardBatteryText = r => {
+    if (!r) return 'Battery —';
+    const pct = batteryPct(r), volts = batteryV(r);
+    if (pct !== null) return 'Battery ' + Math.round(pct) + '%';
+    return volts !== null && volts > 0 ? volts.toFixed(3) + ' V' : 'Battery —';
+  };
   const addStatus = (el, r, requirementsMet = true) => {
     if (!el) return;
     const fresh = r && ageHours(r.observed_at) <= STALE_AFTER_HOURS;
@@ -92,7 +100,7 @@
       '<div class="station-heading"><span class="station-dot" style="background:#66b9ff"></span><div>' +
       '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · water temperature + stage + flow</small></div></div>' +
       '<div class="reading-kicker">Water temperature</div><div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Stage: <strong id="packStage">—</strong> · Flow: <strong id="packFlow">—</strong></div>' +
-      '<div class="station-meta" id="packUpdated">Waiting for readings</div><div class="station-state offline" id="packState">No readings yet</div>' +
+      '<div class="station-meta"><span id="packUpdated">Waiting for readings</span><span id="packHeroBattery">Battery —</span></div><div class="station-state offline" id="packState">No readings yet</div>' +
       '<details class="sensor-details"><summary>Sensor details</summary><div class="sensor-details-grid">' +
         '<div class="sensor-details-block"><strong>Primary Stage Sensor — SEN0313</strong>' +
           '<div class="sensor-details-row"><span>Stage</span><b id="packDetailStage">—</b></div>' +
@@ -109,12 +117,12 @@
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
       '<strong>Wingate Moisture</strong><small>Soil · !77788479 · soil moisture only</small></div></div>' +
       '<div class="extra-reading" id="soilMoisture">—</div><div class="extra-secondary" id="soilAdc">ADC —</div>' +
-      '<div class="station-meta" id="soilUpdated">Waiting for readings</div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
+      '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
     '<article class="station-hero extra-station" style="--accent:#c3a0fb">' +
       '<div class="station-heading"><span class="station-dot" style="background:#c3a0fb"></span><div>' +
       '<strong>Cliff Sensor</strong><small>CCAT · !c9f9f6e7 · air temperature</small></div></div>' +
       '<div class="extra-reading" id="cliffTemp">—</div><div class="extra-secondary">HOBO temperature</div>' +
-      '<div class="station-meta" id="cliffUpdated">Waiting for readings</div><div class="station-state offline" id="cliffState">No readings yet</div></article>');
+      '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No readings yet</div></article>');
 
   function packPoints(metricName){
     if(metricName==='stage'){
@@ -172,18 +180,24 @@
     const hs = hoboStageRows()[0] || null;
     const sm = soilRows()[0] || null;
     const ct = temperatureRows(EXTRA.cliff.node)[0] || null;
+    const packDevice = deviceRows(EXTRA.pack.node)[0] || null;
+    const soilDevice = deviceRows(EXTRA.soil.node)[0] || null;
+    const cliffDevice = deviceRows(EXTRA.cliff.node)[0] || null;
     setText('packTemp', asTemp(pt));
     setText('packStage', asStage(ps));
     setText('packFlow', asDischarge(ps));
     setText('packUpdated', pt && ps ? 'Temp ' + ageText(pt.observed_at) + ' · Stage ' + ageText(ps.observed_at) : freshness(pt || ps));
+    setText('packHeroBattery', cardBatteryText(packDevice));
     addStatus(document.getElementById('packState'), pt || ps, Boolean(pt && ps &&
       ageHours(pt.observed_at) <= STALE_AFTER_HOURS && ageHours(ps.observed_at) <= STALE_AFTER_HOURS));
     setText('soilMoisture', asPercent(sm));
     setText('soilAdc', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : 'ADC —');
     setText('soilUpdated', freshness(sm));
+    setText('soilHeroBattery', cardBatteryText(soilDevice));
     addStatus(document.getElementById('soilState'), sm);
     setText('cliffTemp', asTemp(ct));
     setText('cliffUpdated', freshness(ct));
+    setText('cliffHeroBattery', cardBatteryText(cliffDevice));
     addStatus(document.getElementById('cliffState'), ct);
 
     setText('packStageDetail', asStage(ps));
