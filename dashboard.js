@@ -31,7 +31,9 @@ const rssi = r => num(r?.radio?.rssi);
 const snr = r => num(r?.radio?.snr);
 const hops = r => num(r?.radio?.hops_away);
 const mean = xs => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : null;
-const ageMs = iso => Math.max(0, Date.now() - new Date(iso).getTime());
+const dashboardNow = () => Number.isFinite(state.playbackAt) ? state.playbackAt : Date.now();
+window.dashboardNow = dashboardNow;
+const ageMs = iso => Math.max(0, dashboardNow() - new Date(iso).getTime());
 const ageHours = iso => ageMs(iso) / 3600000;
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -56,7 +58,7 @@ function hvDeviceRows(){return stationRows('hv').filter(r=>num(r?.node_num)===ST
 function latestTemp(key){return tempRows(key)[0]||null;}
 
 function statsFor(key){
-  const rows=tempRows(key); const now=Date.now();
+  const rows=tempRows(key); const now=dashboardNow();
   const last24=rows.filter(r=>now-new Date(r.observed_at).getTime()<=86400000);
   const vals=last24.map(tempF).filter(Number.isFinite);
   const sorted=[...rows].sort((a,b)=>new Date(a.observed_at)-new Date(b.observed_at));
