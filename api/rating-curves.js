@@ -217,6 +217,27 @@ export function ensureDatabaseReady(sql) {
   return databaseReadyPromise;
 }
 
+export async function getRatingCurvePoints(sql, node = null) {
+  if (node === null) {
+    return sql`
+      SELECT node_num, curve_version, measurement_date, measurement_time_local,
+             stage_ft, observed_discharge_cfs, final_discharge_cfs,
+             point_type, included, notes
+      FROM rating_curve_points
+      WHERE included
+      ORDER BY measurement_date ASC, stage_ft ASC
+    `;
+  }
+  return sql`
+    SELECT node_num, curve_version, measurement_date, measurement_time_local,
+           stage_ft, observed_discharge_cfs, final_discharge_cfs,
+           point_type, included, notes
+    FROM rating_curve_points
+    WHERE included AND node_num = ${node}
+    ORDER BY measurement_date ASC, stage_ft ASC
+  `;
+}
+
 export async function getActiveRatingCurves(sql, node = null) {
   if (node === null) {
     return sql`
