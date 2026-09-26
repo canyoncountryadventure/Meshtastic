@@ -84,6 +84,10 @@
           <button type="button" id="packModeFlow" class="active">Flow (CFS)</button>
           <button type="button" id="packModeStage">Stage (ft)</button>
         </div>
+        <div class="pack-source-filter" role="group" aria-label="Pack Creek sensor sources">
+          <button type="button" class="pack-source-btn" id="packSource313" aria-pressed="true"><span class="pack-source-dot" style="background:#66b9ff"></span>SEN0313</button>
+          <button type="button" class="pack-source-btn" id="packSource2001" aria-pressed="false"><span class="pack-source-dot" style="background:#ff9a67"></span>MX2001</button>
+        </div>
         <button type="button" class="expand-btn" id="packChartExpand">Expand</button>
       </div>
     </div>
@@ -179,7 +183,7 @@
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260925-air-temperature-filter"></script>
+<script src="/network-sensors.js?v=20260925-pack-source-toggle"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;

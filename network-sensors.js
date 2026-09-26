@@ -9,6 +9,8 @@
   };
   const TEMPERATURE_TYPES = new Set(['environment', 'mx2001']);
   let packChartMetric = 'flow';
+  const packChartSources = new Set(['sen0313']);
+  const PACK_RATING = { a: 6.07187614, offset: 0.22259098, b: 1.04237977 };
   const selectedAirTemperatureNodes = new Set([
     STATIONS.hv?.node,
     STATIONS.home?.node,
@@ -77,6 +79,10 @@
     .monitor-head{align-items:flex-end}
     .monitor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
     .compact-tabs{gap:4px}.compact-tabs button{padding:7px 9px;font-size:12px}
+    .pack-source-filter{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .pack-source-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #24434d;background:#0a1a20;color:#8ea8ae;border-radius:999px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:750}
+    .pack-source-btn[aria-pressed="true"]{background:#17343e;border-color:#5b8e9b;color:#fff}
+    .pack-source-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
     .monitor-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
     .monitor-summary>div{background:#091a20;border:1px solid #1b3740;border-radius:11px;padding:12px}
     .monitor-summary span{display:block;color:#88a4aa;font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
@@ -125,22 +131,49 @@
       '<div class="extra-reading" id="cliffTemp">—</div><div class="extra-secondary">HOBO temperature</div>' +
       '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No readings yet</div></article>');
 
-  function packPoints(metricName){
+  function packStageToFlow(stageFt){
+    const h=Number(stageFt);
+    if(!Number.isFinite(h) || h<=PACK_RATING.offset)return null;
+    return PACK_RATING.a*Math.pow(h-PACK_RATING.offset,PACK_RATING.b);
+  }
+
+  function pack313Points(metricName){
     if(metricName==='stage'){
       return stageRows().map(r=>({x:new Date(r.observed_at).getTime(),y:Number(metric(r,'water_level_ft')),iso:r.observed_at}));
     }
     return stageRows().filter(r=>Number.isFinite(Number(r.discharge_cfs))).map(r=>({x:new Date(r.observed_at).getTime(),y:Number(r.discharge_cfs),iso:r.observed_at}));
   }
 
+  function pack2001Points(metricName){
+    return hoboStageRows().map(r=>{
+      const stage=Number(metric(r,'water_level_ft'));
+      const y=metricName==='stage'?stage:packStageToFlow(stage);
+      return {x:new Date(r.observed_at).getTime(),y,iso:r.observed_at};
+    }).filter(p=>Number.isFinite(p.y));
+  }
+
   function renderPackChart(target=document.getElementById('packStageChart')){
     if(!target)return;
     const flowMode=packChartMetric==='flow';
-    const points=packPoints(flowMode?'flow':'stage');
-    renderLineChart(target,[{name:flowMode?'Pack Creek flow':'Pack Creek stage',color:EXTRA.pack.color,points}],
+    const metricName=flowMode?'flow':'stage';
+    const series=[];
+    let total=0;
+    if(packChartSources.has('sen0313')){
+      const points=pack313Points(metricName); total+=points.length;
+      series.push({name:flowMode?'SEN0313 rated flow':'SEN0313 stage',color:EXTRA.pack.color,points});
+    }
+    if(packChartSources.has('mx2001')){
+      const points=pack2001Points(metricName); total+=points.length;
+      series.push({name:flowMode?'MX2001 stage-derived flow':'MX2001 stage',color:'#ff9a67',points});
+    }
+    renderLineChart(target,series,
       flowMode
-        ? {axisLabel:'Discharge (cfs)',tooltipValue:v=>v.toFixed(2)+' cfs',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for rated Pack Creek flow.'}
-        : {axisLabel:'Water level (ft)',tooltipValue:v=>v.toFixed(3)+' ft',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for calibrated Pack Creek stage.'});
-    setText('packChartCount',points.length?points.length+' '+(flowMode?'rated flow':'stage')+' samples · selected window':'Waiting for '+(flowMode?'rated flow':'calibrated stage')+' telemetry');
+        ? {axisLabel:'Discharge (cfs)',tooltipValue:v=>v.toFixed(2)+' cfs',strokeWidth:3.3,pointRadius:3.5,empty:'Select a Pack Creek sensor source.'}
+        : {axisLabel:'Water level (ft)',tooltipValue:v=>v.toFixed(3)+' ft',strokeWidth:3.3,pointRadius:3.5,empty:'Select a Pack Creek sensor source.'});
+    const active=[];
+    if(packChartSources.has('sen0313'))active.push('SEN0313');
+    if(packChartSources.has('mx2001'))active.push('MX2001');
+    setText('packChartCount',total?total+' '+(flowMode?'flow':'stage')+' samples · '+active.join(' + '):'Select at least one Pack Creek sensor');
   }
 
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
@@ -170,6 +203,17 @@
     document.getElementById('packModeFlow')?.classList.remove('active');
     renderPackChart();
   });
+  const setPackSource=(source,buttonId)=>{
+    const button=document.getElementById(buttonId);
+    if(!button)return;
+    button.addEventListener('click',()=>{
+      if(packChartSources.has(source))packChartSources.delete(source);else packChartSources.add(source);
+      button.setAttribute('aria-pressed',packChartSources.has(source)?'true':'false');
+      renderPackChart();
+    });
+  };
+  setPackSource('sen0313','packSource313');
+  setPackSource('mx2001','packSource2001');
   document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart));
   document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Wingate soil moisture',renderSoilChart));
 
