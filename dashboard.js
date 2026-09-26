@@ -10,7 +10,7 @@ const STATIONS = {
 };
 const EXPECTED_INTERVAL_HOURS = 1;
 const STALE_AFTER_HOURS = 3.25;
-const state = { hours: 720, readings: [], map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
+const state = { hours: 720, readings: [], allReadings: [], ratingCurves: [], ratingCurvePoints: [], playbackAt: null, map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
 const $ = id => document.getElementById(id);
 
 const num = v => {
@@ -183,8 +183,29 @@ function bindExpand(){
   dialog?.addEventListener('close',()=>{if(state.expandedMap){try{state.expandedMap.remove()}catch{}state.expandedMap=null;}chart.innerHTML='';});
 }
 function renderAll(){renderSummary();renderTemperatureChart();renderRecent();setText('updated',`Refreshed ${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'})}`);}
+function applyPlaybackFilter(){
+  const all=Array.isArray(state.allReadings)?state.allReadings:[];
+  if(!Number.isFinite(state.playbackAt)){state.readings=all;return;}
+  state.readings=all.filter(r=>new Date(r.observed_at).getTime()<=state.playbackAt);
+}
+window.setPlaybackTime = function(timestampMs){
+  state.playbackAt=Number.isFinite(Number(timestampMs))?Number(timestampMs):null;
+  applyPlaybackFilter();
+  renderAll();
+};
+window.getPlaybackTime = function(){ return state.playbackAt; };
+window.isPlaybackMode = function(){ return Number.isFinite(state.playbackAt); };
 async function loadData(){
-  try{const res=await fetch(`/api/readings?hours=${state.hours}&limit=10000`,{cache:'no-store'});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);state.readings=Array.isArray(data.readings)?data.readings:[];renderAll();}
+  try{
+    const res=await fetch(`/api/readings?hours=${state.hours}&limit=10000`,{cache:'no-store'});
+    const data=await res.json();
+    if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);
+    state.allReadings=Array.isArray(data.readings)?data.readings:[];
+    state.ratingCurves=Array.isArray(data.rating_curves)?data.rating_curves:[];
+    state.ratingCurvePoints=Array.isArray(data.rating_curve_points)?data.rating_curve_points:[];
+    applyPlaybackFilter();
+    renderAll();
+  }
   catch(err){console.error(err);setText('networkStatusText','Telemetry API unavailable');$('networkStatus').className='live-pill offline';setText('updated','Refresh failed');}
 }
 function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours)||720;$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadData();});}
