@@ -1,5 +1,5 @@
 import { getSql } from './db.js';
-import { ensureDatabaseReady, getActiveRatingCurves, rateReadings } from './rating-curves.js';
+import { ensureDatabaseReady, getActiveRatingCurves, getRatingCurvePoints, rateReadings } from './rating-curves.js';
 
 function clampInt(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10);
@@ -83,7 +83,10 @@ export default async function handler(req, res) {
       `;
     }
 
-    const curves = await getActiveRatingCurves(sql, node);
+    const [curves, curvePoints] = await Promise.all([
+      getActiveRatingCurves(sql, node),
+      getRatingCurvePoints(sql, node),
+    ]);
     rows = rateReadings(rows, curves);
 
     // Short edge cache prevents repeated clicks/page reloads from waking Neon repeatedly.
@@ -97,6 +100,7 @@ export default async function handler(req, res) {
       bucket_minutes: bucketMinutes,
       readings: rows,
       rating_curves: curves,
+      rating_curve_points: curvePoints,
     });
   } catch (error) {
     console.error('Telemetry query failed', error);
