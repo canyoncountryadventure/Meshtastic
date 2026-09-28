@@ -4,7 +4,7 @@
 
   const EXTRA = {
     pack: { node: 4241345683, name: 'Pack Creek', id: '!fccdcc93', color: '#66b9ff' },
-    soil: { node: 2004386937, name: 'Wingate Moisture', id: '!77788479', color: '#d9b873' },
+    soil: { node: 2004386937, name: 'Rock Moisture', id: '!77788479', color: '#d9b873' },
     cliff: { node: 3388602087, name: 'Cliff Sensor', id: '!c9f9f6e7', color: '#c3a0fb' },
   };
   const TEMPERATURE_TYPES = new Set(['environment', 'mx2001']);
@@ -27,8 +27,17 @@
   const temperatureRows = node => rowsFor(node).filter(hasTemperature);
   const packTemperatureRows = () => rowsFor(EXTRA.pack.node).filter(r =>
     r.telemetry_type === 'mx2001' && tempF(r) !== null);
-  const soilRows = () => rowsFor(EXTRA.soil.node).filter(r => r.telemetry_type === 'soil' &&
-    Number.isFinite(Number(metric(r, 'soil_moisture_percent'))));
+  const soilRows = () => rowsFor(EXTRA.soil.node).filter(r => r.telemetry_type === 'soil');
+  const rockHourlyRows = () => {
+    const buckets = new Map();
+    soilRows().forEach(r => {
+      const adc = Number(metric(r, 'soil_adc10'));
+      if (!Number.isFinite(adc)) return;
+      const hour = Math.floor(new Date(r.observed_at).getTime() / 3600000);
+      if (!buckets.has(hour)) buckets.set(hour, r);
+    });
+    return [...buckets.values()].sort(byTime);
+  };
   const stageRows = () => rowsFor(EXTRA.pack.node).filter(r =>
     r.telemetry_type === 'water_distance' &&
     Number.isFinite(Number(metric(r, 'water_level_ft'))) &&
@@ -167,7 +176,7 @@
       '</div></details></article>' +
     '<article class="station-hero extra-station" style="--accent:#d9b873">' +
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
-      '<strong>Wingate Moisture</strong><small>Soil · !77788479 · soil moisture only</small></div></div>' +
+      '<strong>Rock Moisture</strong><small>Temporary sandstone test · !77788479 · raw ADC10</small></div></div>' +
       '<div class="extra-reading" id="soilMoisture">—</div><div class="extra-secondary" id="soilAdc">ADC —</div>' +
       '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
     '<article class="station-hero extra-station" style="--accent:#c3a0fb">' +
@@ -303,16 +312,15 @@
 
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
     if(!target)return;
-    const points=soilRows().map(r=>({
+    const points=rockHourlyRows().map(r=>({
       x:new Date(r.observed_at).getTime(),
-      y:Number(metric(r,'soil_moisture_percent')),
+      y:Number(metric(r,'soil_adc10')),
       iso:r.observed_at,
-      condition:soilCondition(r),
-      adc10:metric(r,'soil_adc10')
-    }));
-    renderLineChart(target,[{name:'Wingate soil moisture',color:EXTRA.soil.color,points}],
-      {axisLabel:'Soil moisture (%)',tooltipValue:(v,p)=>v.toFixed(1)+'% · '+(p?.condition||'—')+(p?.adc10!=null?' · ADC10 '+p.adc10:''),strokeWidth:3.3,pointRadius:3.5,yMin:0,yMax:100,empty:'Waiting for soil moisture telemetry.'});
-    setText('soilChartCount',points.length?points.length+' soil moisture samples · selected window':'Waiting for soil readings');
+      firmwarePct:metric(r,'soil_moisture_percent')
+    })).reverse();
+    renderLineChart(target,[{name:'Rock moisture ADC10',color:EXTRA.soil.color,points}],
+      {axisLabel:'Rock sensor ADC10 · lower = wetter',tooltipValue:(v,p)=>'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for hourly rock-moisture telemetry.'});
+    setText('soilChartCount',points.length?points.length+' hourly rock-moisture samples · selected window':'Waiting for rock-moisture readings');
   }
 
   function openExpanded(titleText,renderer){
@@ -346,7 +354,7 @@
   setPackSource('sen0313','packSource313');
   setPackSource('mx2001','packSource2001');
   document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart));
-  document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Wingate soil moisture',renderSoilChart));
+  document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture',renderSoilChart));
 
   const earlierSummary = renderSummary;
   renderSummary = function() {
@@ -366,7 +374,7 @@
     setText('packHeroBattery', cardBatteryText(packDevice));
     addStatus(document.getElementById('packState'), pt || ps, Boolean(pt && ps &&
       ageHours(pt.observed_at) <= STALE_AFTER_HOURS && ageHours(ps.observed_at) <= STALE_AFTER_HOURS));
-    setText('soilMoisture', soilDisplay(sm));
+    setText('soilMoisture', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : '—');
     setText('soilAdc', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : 'ADC —');
     setText('soilUpdated', freshness(sm));
     setText('soilHeroBattery', cardBatteryText(soilDevice));
@@ -400,9 +408,9 @@
     const agreementEl=document.getElementById('packDetailAgreement');
     if(agreementEl)agreementEl.className='sensor-agreement '+agreement.cls;
     refreshPackDifference24h();
-    setText('soilMoistureDetail', soilDisplay(sm));
+    setText('soilMoistureDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
     setText('soilAdcDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
-    setText('soilConditionDetail', soilCondition(sm));
+    setText('soilConditionDetail', sm && metric(sm, 'soil_moisture_percent') != null ? Math.round(Number(metric(sm, 'soil_moisture_percent'))) + '%' : '—');
     setText('soilAgeDetail', sm ? ageText(sm.observed_at) : '—');
     setText('soilMoistureTime', freshness(sm));
     renderPackChart();
@@ -533,14 +541,14 @@
   document.querySelectorAll('.station-hero .station-heading').forEach(heading => {
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
-    if (!small || !name || name === 'Pack Creek' || name === 'Wingate Moisture') return;
+    if (!small || !name || name === 'Pack Creek' || name === 'Rock Moisture') return;
     if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day",'Thousand Lake Mountain','Cliff Sensor'].includes(name)) {
       small.textContent += ' · air temperature';
     }
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Pack Creek · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain';
+    'Meshtastic environmental network · Hidden Valley · Pack Creek · Rock Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');
@@ -551,7 +559,7 @@
   });
   const mapDescription = document.querySelector('.map-panel .panel-head p');
   if (mapDescription) mapDescription.textContent =
-    'Mapped locations are shown where coordinates are confirmed. Pack Creek, Wingate Moisture and Cliff Sensor are not positioned until their site coordinates are supplied.';
+    'Mapped locations are shown where coordinates are confirmed. Pack Creek, Rock Moisture and Cliff Sensor are not positioned until their site coordinates are supplied.';
 
   // The original five-station scripts load on startup before this extension.
   // Refresh once so the added stations render immediately with the same API data.
