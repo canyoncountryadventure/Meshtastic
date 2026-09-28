@@ -6,6 +6,7 @@ const PACK_CREEK_RESET_MIGRATION = '20260925_pack_creek_reset_v1';
 const WINGATE_SOIL_NODE = 2004386937;
 const WINGATE_SOIL_DELETE_MIGRATION = '20260925_wingate_delete_soil_3018_3008_v1';
 const DELETE_ALL_SOIL_MIGRATION = '20260928_delete_all_soil_moisture_v1';
+const ROCK_MOISTURE_RESET_MIGRATION = '20260928_rock_moisture_fresh_start_v1';
 
 let databaseReadyPromise;
 
@@ -233,12 +234,46 @@ async function deleteAllExistingSoilMoisture(sql) {
   `;
 }
 
+async function resetSoilHistoryForRockMoisture(sql) {
+  return sql`
+    WITH claimed AS (
+      INSERT INTO app_migrations (migration_key, details)
+      VALUES (
+        ${ROCK_MOISTURE_RESET_MIGRATION},
+        jsonb_build_object(
+          'reason', 'Fresh start for temporary sandstone rock-moisture experiment; future soil telemetry is preserved'
+        )
+      )
+      ON CONFLICT (migration_key) DO NOTHING
+      RETURNING migration_key
+    ),
+    deleted AS (
+      DELETE FROM telemetry_readings
+      WHERE telemetry_type = 'soil'
+        AND EXISTS (SELECT 1 FROM claimed)
+      RETURNING id
+    ),
+    recorded AS (
+      UPDATE app_migrations
+      SET details = details || jsonb_build_object(
+        'deleted_rows', (SELECT COUNT(*) FROM deleted),
+        'reset_completed_at', NOW()
+      )
+      WHERE migration_key = ${ROCK_MOISTURE_RESET_MIGRATION}
+        AND EXISTS (SELECT 1 FROM claimed)
+      RETURNING migration_key
+    )
+    SELECT COUNT(*)::integer AS deleted_rows FROM deleted
+  `;
+}
+
 async function prepareDatabase(sql) {
   await prepareRatingCurveTables(sql);
   await storePackCreekCurve(sql);
   await resetPackCreekTestData(sql);
   await deleteRequestedWingateSoilPoints(sql);
   await deleteAllExistingSoilMoisture(sql);
+  await resetSoilHistoryForRockMoisture(sql);
 }
 
 export function ensureDatabaseReady(sql) {
