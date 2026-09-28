@@ -39,6 +39,27 @@
     Number.isFinite(Number(metric(r, 'water_level_ft'))) &&
     metric(r, 'water_level_ft') !== null);
   const asPercent = r => r ? Math.round(Number(metric(r, 'soil_moisture_percent'))) + '%' : '—';
+  const soilCondition = r => {
+    if (!r) return '—';
+    const adc = Number(metric(r, 'soil_adc10'));
+    if (Number.isFinite(adc)) {
+      if (adc <= 425) return 'SOAKED';
+      if (adc <= 525) return 'WET';
+      if (adc <= 625) return 'GOOD';
+      if (adc <= 690) return 'GETTING DRY';
+      if (adc <= 750) return 'WATER SOON';
+      return 'DRY/VERY DRY';
+    }
+    const pct = Number(metric(r, 'soil_moisture_percent'));
+    if (!Number.isFinite(pct)) return '—';
+    if (pct >= 83) return 'SOAKED';
+    if (pct >= 61) return 'WET';
+    if (pct >= 39) return 'GOOD';
+    if (pct >= 24) return 'GETTING DRY';
+    if (pct >= 11) return 'WATER SOON';
+    return 'DRY/VERY DRY';
+  };
+  const soilDisplay = r => r ? asPercent(r) + ' · ' + soilCondition(r) : '—';
   const asStage = r => r ? Number(metric(r, 'water_level_ft')).toFixed(2) + ' ft' : '—';
   const asDischarge = r => r && Number.isFinite(Number(r.discharge_cfs)) ?
     Number(r.discharge_cfs).toFixed(2) + ' cfs' : '—';
@@ -282,9 +303,15 @@
 
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
     if(!target)return;
-    const points=soilRows().map(r=>({x:new Date(r.observed_at).getTime(),y:Number(metric(r,'soil_moisture_percent')),iso:r.observed_at}));
+    const points=soilRows().map(r=>({
+      x:new Date(r.observed_at).getTime(),
+      y:Number(metric(r,'soil_moisture_percent')),
+      iso:r.observed_at,
+      condition:soilCondition(r),
+      adc10:metric(r,'soil_adc10')
+    }));
     renderLineChart(target,[{name:'Wingate soil moisture',color:EXTRA.soil.color,points}],
-      {axisLabel:'Soil moisture (%)',tooltipValue:v=>v.toFixed(1)+'%',strokeWidth:3.3,pointRadius:3.5,yMin:0,yMax:100,empty:'Waiting for soil moisture telemetry.'});
+      {axisLabel:'Soil moisture (%)',tooltipValue:(v,p)=>v.toFixed(1)+'% · '+(p?.condition||'—')+(p?.adc10!=null?' · ADC10 '+p.adc10:''),strokeWidth:3.3,pointRadius:3.5,yMin:0,yMax:100,empty:'Waiting for soil moisture telemetry.'});
     setText('soilChartCount',points.length?points.length+' soil moisture samples · selected window':'Waiting for soil readings');
   }
 
@@ -339,7 +366,7 @@
     setText('packHeroBattery', cardBatteryText(packDevice));
     addStatus(document.getElementById('packState'), pt || ps, Boolean(pt && ps &&
       ageHours(pt.observed_at) <= STALE_AFTER_HOURS && ageHours(ps.observed_at) <= STALE_AFTER_HOURS));
-    setText('soilMoisture', asPercent(sm));
+    setText('soilMoisture', soilDisplay(sm));
     setText('soilAdc', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : 'ADC —');
     setText('soilUpdated', freshness(sm));
     setText('soilHeroBattery', cardBatteryText(soilDevice));
@@ -373,8 +400,9 @@
     const agreementEl=document.getElementById('packDetailAgreement');
     if(agreementEl)agreementEl.className='sensor-agreement '+agreement.cls;
     refreshPackDifference24h();
-    setText('soilMoistureDetail', asPercent(sm));
+    setText('soilMoistureDetail', soilDisplay(sm));
     setText('soilAdcDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
+    setText('soilConditionDetail', soilCondition(sm));
     setText('soilAgeDetail', sm ? ageText(sm.observed_at) : '—');
     setText('soilMoistureTime', freshness(sm));
     renderPackChart();
