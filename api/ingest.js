@@ -8,7 +8,7 @@ const KNOWN_STATIONS = new Map([
   [1949224949, "It's a Swell Day"],
   [2650172798, 'Thousand Lake Mountain'],
   [4241345683, 'Pack Creek'], // !fccdcc93, temperature and stage
-  [2004386937, 'Wingate Moisture'], // !77788479, soil moisture
+  [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
   [3388602087, 'Cliff Sensor'], // !c9f9f6e7, temperature
 ]);
 
