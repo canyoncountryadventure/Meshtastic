@@ -129,7 +129,7 @@ function renderLineChart(container,series,opts={}){
   series.forEach(s=>{
     const pts=[...s.points].filter(p=>Number.isFinite(p.y)).sort((a,b)=>a.x-b.x);if(!pts.length)return;
     const poly=pts.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:s.color,'stroke-width':opts.strokeWidth||3,'stroke-linecap':'round','stroke-linejoin':'round'}));
-    pts.forEach(p=>{const c=svgEl('circle',{cx:x(p.x),cy:y(p.y),r:opts.pointRadius||3.1,fill:s.color,stroke:'#08171d','stroke-width':1.4});c.style.cursor='crosshair';c.addEventListener('mouseenter',ev=>showTooltip(container,ev,`${s.name}<br><strong>${opts.tooltipValue?opts.tooltipValue(p.y):p.y.toFixed(1)}</strong><br>${fmtTime(p.iso||new Date(p.x).toISOString())}`));c.addEventListener('mouseleave',()=>hideTooltip(container));svg.appendChild(c);});
+    pts.forEach(p=>{const c=svgEl('circle',{cx:x(p.x),cy:y(p.y),r:opts.pointRadius||3.1,fill:s.color,stroke:'#08171d','stroke-width':1.4});c.style.cursor='crosshair';c.addEventListener('mouseenter',ev=>showTooltip(container,ev,`${s.name}<br><strong>${opts.tooltipValue?opts.tooltipValue(p.y,p,s):p.y.toFixed(1)}</strong><br>${fmtTime(p.iso||new Date(p.x).toISOString())}`));c.addEventListener('mouseleave',()=>hideTooltip(container));svg.appendChild(c);});
   });
   if(opts.axisLabel)addText(svg,8,14,opts.axisLabel,'start','#90aab0',11);
 }
