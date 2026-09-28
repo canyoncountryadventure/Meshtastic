@@ -28,8 +28,8 @@
     <div class="hero-intro">
       <div class="eyebrow">Live station comparison</div>
       <h1>Meshtastic Command Dashboard</h1>
-      <p>Hidden Valley, Pack Creek, Wingate Moisture, Cliff Sensor, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
-      <div class="pipeline"><strong>Data path</strong><span>Field air temperature, creek water temperature and stage, and soil moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
+      <p>Hidden Valley, Pack Creek, Rock Moisture, Cliff Sensor, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
+      <div class="pipeline"><strong>Data path</strong><span>Field air temperature, creek water temperature and stage, and rock moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
     </div>
     <div class="station-hero-grid">
       <article class="station-hero hv-card">
@@ -103,19 +103,19 @@
   <section class="panel primary-monitor-panel soil-monitor-panel">
     <div class="panel-head monitor-head">
       <div>
-        <span class="eyebrow">Wingate Moisture</span>
-        <h2>Soil moisture</h2>
-        <p id="soilChartCount">Waiting for soil readings</p>
+        <span class="eyebrow">Rock Moisture</span>
+        <h2>Rock Moisture</h2>
+        <p id="soilChartCount">Waiting for rock-moisture readings</p>
       </div>
       <button type="button" class="expand-btn" id="soilChartExpand">Expand</button>
     </div>
     <div class="monitor-summary">
-      <div><span>Current moisture</span><strong id="soilMoistureDetail">—</strong><small>field-calibrated index</small></div>
-      <div><span>Condition</span><strong id="soilConditionDetail">—</strong><small>V4 field band</small></div>
-      <div><span>ADC10</span><strong id="soilAdcDetail">—</strong><small>raw sensor signal</small></div>
+      <div><span>Current ADC10</span><strong id="soilMoistureDetail">—</strong><small>lower = wetter</small></div>
+      <div><span>Firmware soil index</span><strong id="soilConditionDetail">—</strong><small>unchanged firmware value · not rock-calibrated</small></div>
+      <div><span>Raw sensor</span><strong id="soilAdcDetail">—</strong><small>ADC10</small></div>
       <div><span>Last packet</span><strong id="soilAgeDetail">—</strong><small id="soilMoistureTime">waiting for data</small></div>
     </div>
-    <div class="chart xlarge" id="soilMoistureChart"><div class="empty">Waiting for soil moisture telemetry.</div></div>
+    <div class="chart xlarge" id="soilMoistureChart"><div class="empty">Waiting for hourly rock-moisture telemetry.</div></div>
   </section>
 
   <section class="station-detail-grid">
@@ -164,7 +164,7 @@
     <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Air temp °F</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="6">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
-  <footer><span>Meshtastic environmental network · Pack Creek · Hidden Valley · Wingate Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Meshtastic environmental network · Pack Creek · Hidden Valley · Rock Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
@@ -184,7 +184,7 @@
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260928-soil-condition"></script>
+<script src="/network-sensors.js?v=20260928-rock-moisture-hourly"></script>
 <script src="/pack-command.js?v=20260925-pack-command-center"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
