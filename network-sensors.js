@@ -321,28 +321,30 @@
 
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
     if(!target)return;
-    const points=rockHourlyRows().map(r=>({
+    const moisturePoints=rockHourlyRows().map(r=>({
       x:new Date(r.observed_at).getTime(),
       y:Number(metric(r,'soil_adc10')),
       iso:r.observed_at,
       firmwarePct:metric(r,'soil_moisture_percent')
     })).reverse();
-    renderLineChart(target,[{name:'Rock moisture ADC10',color:EXTRA.soil.color,points,maxGapMs:90*60*1000}],
-      {axisLabel:'Rock sensor ADC10 · lower = wetter',tooltipValue:(v,p)=>'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),strokeWidth:3.3,pointRadius:3.5,bands:ROCK_PRECIP_BANDS,empty:'Waiting for hourly rock-moisture telemetry.'});
-    setText('soilChartCount',points.length?points.length+' hourly rock-moisture samples · rain windows overlaid':'Waiting for rock-moisture readings');
-  }
-
-  function renderRockTemperatureChart(target=document.getElementById('rockTemperatureChart')){
-    if(!target)return;
-    const rows=rockTemperatureRows();
-    const points=rows.map(r=>({
+    const tempPoints=rockTemperatureRows().map(r=>({
       x:new Date(r.observed_at).getTime(),
       y:tempF(r),
       iso:r.observed_at
     })).reverse();
-    renderLineChart(target,[{name:'Rock temperature · Swell probe',color:EXTRA.rockTemp.color,points,maxGapMs:90*60*1000}],
-      {axisLabel:'Rock temperature °F',tooltipValue:v=>v.toFixed(1)+' °F',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for Swell rock-temperature telemetry.'});
-    setText('rockTemperatureCount',points.length?points.length+' rock-temperature samples · Swell probe':'Waiting for rock-temperature readings');
+    renderLineChart(target,[
+      {name:'Rock moisture ADC10',color:EXTRA.soil.color,points:moisturePoints,maxGapMs:90*60*1000,strokeWidth:3.4,pointRadius:3.5},
+      {name:'Rock temperature',color:EXTRA.rockTemp.color,points:tempPoints,maxGapMs:90*60*1000,axis:'right',strokeWidth:2.4,pointRadius:2.6}
+    ],{
+      axisLabel:'Rock moisture ADC10 · lower = wetter',
+      rightAxisLabel:'Rock temperature °F',
+      rightAxisColor:EXTRA.rockTemp.color,
+      rightYFormat:v=>v.toFixed(0)+'°',
+      tooltipValue:(v,p,series)=>series?.axis==='right'?v.toFixed(1)+' °F':'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),
+      bands:ROCK_PRECIP_BANDS,
+      empty:'Waiting for rock-moisture telemetry.'
+    });
+    setText('soilChartCount',moisturePoints.length?moisturePoints.length+' moisture samples · '+tempPoints.length+' rock-temperature samples · rain overlaid':'Waiting for rock-moisture readings');
   }
 
   function openExpanded(titleText,renderer,sourceId){
@@ -377,7 +379,6 @@
   setPackSource('mx2001','packSource2001');
   document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart,'packStageChart'));
   document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture + Rain',renderSoilChart,'soilMoistureChart'));
-  document.getElementById('rockTemperatureExpand')?.addEventListener('click',()=>openExpanded('Rock Temperature · Swell probe',renderRockTemperatureChart,'rockTemperatureChart'));
 
   const earlierSummary = renderSummary;
   renderSummary = function() {
@@ -439,7 +440,6 @@
     setText('soilMoistureTime', freshness(sm));
     renderPackChart();
     renderSoilChart();
-    renderRockTemperatureChart();
 
     const tempStations = airTemperatureStations().map(s => ({
       name:s.name, reading:s.rows[0] || null
