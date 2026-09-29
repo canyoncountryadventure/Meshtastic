@@ -104,7 +104,7 @@
     <div class="panel-head monitor-head">
       <div>
         <span class="eyebrow">Sandstone wetting response</span>
-        <h2>Rock Moisture + Rain</h2>
+        <h2>Rock Moisture + Rain + Temperature</h2>
         <p id="soilChartCount">Waiting for rock-moisture readings</p>
       </div>
       <button type="button" class="expand-btn" id="soilChartExpand">Expand</button>
@@ -115,17 +115,8 @@
       <div><span>Rock temperature</span><strong id="soilAdcDetail">—</strong><small>Swell probe in adjacent rock</small></div>
       <div><span>Last packet</span><strong id="soilAgeDetail">—</strong><small id="soilMoistureTime">waiting for data</small></div>
     </div>
-    <div class="chart-note">Blue shaded periods = radar-observed precipitation · ADC10 line: lower = wetter</div>
+    <div class="chart-note">Moisture ADC10 = left axis · rock temperature = right axis · blue shaded periods = radar-observed precipitation</div>
     <div class="chart xlarge" id="soilMoistureChart"><div class="empty">Waiting for hourly rock-moisture telemetry.</div></div>
-    <div class="panel-head monitor-head" style="margin-top:24px">
-      <div>
-        <span class="eyebrow">Temperature correction reference</span>
-        <h2>Rock Temperature</h2>
-        <p id="rockTemperatureCount">Swell probe history begins with Rock Moisture installation · Sep 28, 4:41 PM MDT</p>
-      </div>
-      <button type="button" class="expand-btn" id="rockTemperatureExpand">Expand</button>
-    </div>
-    <div class="chart xlarge" id="rockTemperatureChart"><div class="empty">Waiting for Swell rock-temperature telemetry.</div></div>
   </section>
 
   <section class="station-detail-grid">
@@ -189,12 +180,12 @@
   };
 })();
 </script>
-<script src="/dashboard.js?v=20260929-independent-chart-ranges"></script>
+<script src="/dashboard.js?v=20260929-rock-one-graph"></script>
 <script src="/fishlake.js?v=20260925-fishlake-health"></script>
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260929-rock-rain-combined"></script>
+<script src="/network-sensors.js?v=20260929-rock-one-graph"></script>
 <script src="/pack-command.js?v=20260925-pack-command-center"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
