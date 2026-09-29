@@ -6,6 +6,7 @@
     pack: { node: 4241345683, name: 'Pack Creek', id: '!fccdcc93', color: '#66b9ff' },
     soil: { node: 2004386937, name: 'Rock Moisture', id: '!77788479', color: '#d9b873' },
     cliff: { node: 3388602087, name: 'Cliff Sensor', id: '!c9f9f6e7', color: '#c3a0fb' },
+    rockTemp: { node: 1949224949, name: 'Rock Temperature', source: "It's a Swell Day", color: '#8ecae6' },
   };
   const TEMPERATURE_TYPES = new Set(['environment', 'mx2001']);
   let packChartMetric = 'flow';
@@ -32,6 +33,8 @@
   const packTemperatureRows = () => rowsFor(EXTRA.pack.node).filter(r =>
     r.telemetry_type === 'mx2001' && tempF(r) !== null);
   const soilRows = () => rowsFor(EXTRA.soil.node).filter(r => r.telemetry_type === 'soil');
+  const rockTemperatureRows = () => rowsFor(EXTRA.rockTemp.node).filter(r =>
+    r.telemetry_type === 'environment' && tempF(r) !== null);
   const rockHourlyRows = () => {
     const buckets = new Map();
     soilRows().forEach(r => {
@@ -314,6 +317,11 @@
     setText('packChartCount',total?total+' '+(flowMode?'flow':'stage')+' samples · '+active.join(' + '):'Select at least one Pack Creek sensor');
   }
 
+  const rockChartWindow = () => ({
+    xMin: dashboardNow() - Number(state.hours || 24) * 3600000,
+    xMax: dashboardNow()
+  });
+
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
     if(!target)return;
     const points=rockHourlyRows().map(r=>({
@@ -323,8 +331,21 @@
       firmwarePct:metric(r,'soil_moisture_percent')
     })).reverse();
     renderLineChart(target,[{name:'Rock moisture ADC10',color:EXTRA.soil.color,points,maxGapMs:90*60*1000}],
-      {axisLabel:'Rock sensor ADC10 · lower = wetter',tooltipValue:(v,p)=>'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),strokeWidth:3.3,pointRadius:3.5,bands:ROCK_PRECIP_BANDS,empty:'Waiting for hourly rock-moisture telemetry.'});
+      {axisLabel:'Rock sensor ADC10 · lower = wetter',tooltipValue:(v,p)=>'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),strokeWidth:3.3,pointRadius:3.5,bands:ROCK_PRECIP_BANDS,...rockChartWindow(),empty:'Waiting for hourly rock-moisture telemetry.'});
     setText('soilChartCount',points.length?points.length+' hourly rock-moisture samples · selected window':'Waiting for rock-moisture readings');
+  }
+
+  function renderRockTemperatureChart(target=document.getElementById('rockTemperatureChart')){
+    if(!target)return;
+    const rows=rockTemperatureRows();
+    const points=rows.map(r=>({
+      x:new Date(r.observed_at).getTime(),
+      y:tempF(r),
+      iso:r.observed_at
+    })).reverse();
+    renderLineChart(target,[{name:'Rock temperature · Swell probe',color:EXTRA.rockTemp.color,points,maxGapMs:90*60*1000}],
+      {axisLabel:'Rock temperature °F',tooltipValue:v=>v.toFixed(1)+' °F',strokeWidth:3.3,pointRadius:3.5,bands:ROCK_PRECIP_BANDS,...rockChartWindow(),empty:'Waiting for Swell rock-temperature telemetry.'});
+    setText('rockTemperatureCount',points.length?points.length+' rock-temperature samples · Swell probe':'Waiting for rock-temperature readings');
   }
 
   function openExpanded(titleText,renderer){
@@ -359,6 +380,7 @@
   setPackSource('mx2001','packSource2001');
   document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart));
   document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture',renderSoilChart));
+  document.getElementById('rockTemperatureExpand')?.addEventListener('click',()=>openExpanded('Rock Temperature · Swell probe',renderRockTemperatureChart));
 
   const earlierSummary = renderSummary;
   renderSummary = function() {
@@ -367,6 +389,7 @@
     const ps = stageRows()[0] || null;
     const hs = hoboStageRows()[0] || null;
     const sm = soilRows()[0] || null;
+    const rockTemp = rockTemperatureRows()[0] || null;
     const ct = temperatureRows(EXTRA.cliff.node)[0] || null;
     const packDevice = deviceRows(EXTRA.pack.node)[0] || null;
     const soilDevice = deviceRows(EXTRA.soil.node)[0] || null;
@@ -413,12 +436,13 @@
     if(agreementEl)agreementEl.className='sensor-agreement '+agreement.cls;
     refreshPackDifference24h();
     setText('soilMoistureDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
-    setText('soilAdcDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
+    setText('soilAdcDetail', rockTemp ? tempF(rockTemp).toFixed(1) + ' °F' : '—');
     setText('soilConditionDetail', sm && metric(sm, 'soil_moisture_percent') != null ? Math.round(Number(metric(sm, 'soil_moisture_percent'))) + '%' : '—');
     setText('soilAgeDetail', sm ? ageText(sm.observed_at) : '—');
     setText('soilMoistureTime', freshness(sm));
     renderPackChart();
     renderSoilChart();
+    renderRockTemperatureChart();
 
     const tempStations = airTemperatureStations().map(s => ({
       name:s.name, reading:s.rows[0] || null
