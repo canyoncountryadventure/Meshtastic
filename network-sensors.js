@@ -34,6 +34,27 @@
   const packTemperatureRows = () => rowsFor(EXTRA.pack.node).filter(r =>
     r.telemetry_type === 'mx2001' && tempF(r) !== null);
   const soilRows = () => rowsFor(EXTRA.soil.node).filter(r => r.telemetry_type === 'soil');
+  const cliffDistanceRows = () => rowsFor(EXTRA.cliff.node).filter(r =>
+    r.telemetry_type === 'water_distance' && (
+      Number.isFinite(Number(metric(r,'distance_mm'))) ||
+      Number.isFinite(Number(metric(r,'distance_cm'))) ||
+      Number.isFinite(Number(metric(r,'distance_ft')))
+    ));
+  const cliffDistanceMm = r => {
+    if (!r) return null;
+    const mm=Number(metric(r,'distance_mm')); if(Number.isFinite(mm)) return mm;
+    const cm=Number(metric(r,'distance_cm')); if(Number.isFinite(cm)) return cm*10;
+    const ft=Number(metric(r,'distance_ft')); if(Number.isFinite(ft)) return ft*304.8;
+    return null;
+  };
+  const asCliffDistance = r => {
+    const mm=cliffDistanceMm(r);
+    return Number.isFinite(mm) ? (mm/304.8).toFixed(2)+' ft' : '—';
+  };
+  const asCliffDistanceRaw = r => {
+    const mm=cliffDistanceMm(r);
+    return Number.isFinite(mm) ? Math.round(mm)+' mm' : 'Waiting for distance';
+  };
   const rockTemperatureRows = () => rowsFor(EXTRA.rockTemp.node).filter(r =>
     r.telemetry_type === 'environment' && tempF(r) !== null &&
     new Date(r.observed_at).getTime() >= ROCK_MOISTURE_INSTALLED_AT);
@@ -147,6 +168,7 @@
     .monitor-summary strong{display:block;font-size:22px;margin-top:6px}
     .monitor-summary small{display:block;color:var(--muted);margin-top:5px}
     .pack-monitor-panel{border-color:rgba(102,185,255,.28)}
+    .cliff-battery-panel{border-color:rgba(195,160,251,.34)}
     .soil-monitor-panel{border-color:rgba(217,184,115,.28)}
     .reading-kicker{margin-top:12px;color:#86a4ab;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.11em}
     .temp-station-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 2px 12px}
@@ -161,28 +183,6 @@
 
   const hero = document.querySelector('.station-hero-grid');
   if (hero) hero.insertAdjacentHTML('afterbegin',
-    '<article class="station-hero extra-station" style="--accent:#66b9ff">' +
-      '<div class="station-heading"><span class="station-dot" style="background:#66b9ff"></span><div>' +
-      '<strong>Pack Creek</strong><small>PC1 · !fccdcc93 · water temperature + stage + flow</small></div></div>' +
-      '<div class="reading-kicker">Water temperature</div><div class="extra-reading" id="packTemp">—</div><div class="extra-secondary">Stage: <strong id="packStage">—</strong> · Flow: <strong id="packFlow">—</strong></div>' +
-      '<div class="station-meta"><span id="packUpdated">Waiting for readings</span><span id="packHeroBattery">Battery —</span></div><div class="station-state offline" id="packState">No readings yet</div>' +
-      '<details class="sensor-details"><summary>Sensor details</summary><div class="sensor-details-grid">' +
-        '<div class="sensor-details-block"><strong>Primary Stage Sensor — SEN0313</strong>' +
-          '<div class="sensor-details-row"><span>Stage</span><b id="packDetailStage">—</b></div>' +
-          '<div class="sensor-details-row"><span>Distance</span><b id="packDetailDistance">—</b></div>' +
-          '<div class="sensor-details-row"><span>Status</span><b id="packDetailCal">—</b></div></div>' +
-        '<div class="sensor-details-block"><strong>HOBO MX2001</strong>' +
-          '<div class="sensor-details-row"><span>Temperature</span><b id="packDetailTemp">—</b></div>' +
-          '<div class="sensor-details-row"><span>Stage</span><b id="packDetailHoboStage">—</b></div>' +
-          '<div class="sensor-details-row"><span>BLE RSSI</span><b id="packDetailBle">—</b></div></div>' +
-        '<div class="sensor-details-block sensor-comparison"><strong>Sensor Comparison</strong>' +
-          '<div class="sensor-details-row"><span>Stage difference</span><b id="packDetailDifference">—</b></div>' +
-          '<div class="sensor-details-row"><span>Agreement</span><b id="packDetailAgreement" class="sensor-agreement">—</b></div>' +
-          '<div class="sensor-details-row"><span>Authoritative sensor</span><b>SEN0313</b></div>' +
-          '<div class="sensor-details-row sensor-equation-row"><span>Flow equation</span><b>Q = 6.072(H−0.2226)^1.0424</b></div>' +
-          '<div class="pack-diff-spark-wrap"><div class="pack-diff-spark-head"><span>24h stage difference</span><small>313 stage − 2001 stage</small></div>' +
-          '<div id="packDifferenceSparkline" class="pack-diff-sparkline"><div class="pack-diff-spark-empty">Loading 24h comparison…</div></div></div></div>' +
-      '</div></details></article>' +
     '<article class="station-hero extra-station" style="--accent:#d9b873">' +
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
       '<strong>Rock Moisture</strong><small>Temporary sandstone test · !77788479 · raw ADC10</small></div></div>' +
@@ -190,9 +190,10 @@
       '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
     '<article class="station-hero extra-station" style="--accent:#c3a0fb">' +
       '<div class="station-heading"><span class="station-dot" style="background:#c3a0fb"></span><div>' +
-      '<strong>Cliff Sensor</strong><small>CCAT · !c9f9f6e7 · air temperature</small></div></div>' +
-      '<div class="extra-reading" id="cliffTemp">—</div><div class="extra-secondary">HOBO temperature</div>' +
-      '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No readings yet</div></article>');
+      '<strong>Cliff Sensor</strong><small>CCAT · !c9f9f6e7 · water distance</small></div></div>' +
+      '<div class="reading-kicker">Water distance</div><div class="extra-reading" id="cliffDistance">—</div>' +
+      '<div class="extra-secondary" id="cliffDistanceRaw">Waiting for ultrasonic distance</div>' +
+      '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No distance yet</div></article>');
 
   function packStageToFlow(stageFt){
     const h=Number(stageFt);
@@ -347,6 +348,23 @@
     setText('soilChartCount',moisturePoints.length?moisturePoints.length+' moisture samples · '+tempPoints.length+' rock-temperature samples · rain overlaid':'Waiting for rock-moisture readings');
   }
 
+
+  function renderCliffBatteryChart(target=document.getElementById('cliffBatteryChart')){
+    if(!target)return;
+    const rows=deviceRows(EXTRA.cliff.node);
+    const latest=rows[0]||null;
+    const voltageRows=rows.filter(r=>Number.isFinite(batteryV(r))&&batteryV(r)>0)
+      .sort((a,b)=>new Date(batteryTime(a))-new Date(batteryTime(b)));
+    const points=voltageRows.map(r=>({x:new Date(batteryTime(r)).getTime(),y:batteryV(r),iso:batteryTime(r)}));
+    renderLineChart(target,[{name:'Cliff Sensor voltage',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
+      {axisLabel:'Battery voltage (V)',tooltipValue:v=>v.toFixed(3)+' V',strokeWidth:3.3,pointRadius:3.4,empty:'Waiting for Cliff Sensor battery telemetry.'});
+    const pct=latest?batteryPct(latest):null, volts=latest?batteryV(latest):null;
+    setText('cliffBatteryNow',pct===101?'External':pct!==null?Math.round(pct)+'%':'—');
+    setText('cliffVoltageNow',volts!==null&&volts>0?volts.toFixed(3)+' V':'—');
+    setText('cliffBatteryAge',latest?ageText(batteryTime(latest)):'waiting for device packet');
+    setText('cliffBatteryChartCount',points.length?points.length+' voltage samples · Cliff Sensor':'Battery telemetry pending');
+  }
+
   function openExpanded(titleText,renderer,sourceId){
     const dialog=document.getElementById('expandDialog'),title=document.getElementById('expandTitle'),chart=document.getElementById('expandedChart'),mapEl=document.getElementById('expandedMap');
     if(!dialog||!title||!chart||!mapEl)return;
@@ -354,96 +372,45 @@
     setTimeout(()=>renderer(chart),40);
   }
 
-  document.getElementById('packModeFlow')?.addEventListener('click',()=>{
-    packChartMetric='flow';
-    document.getElementById('packModeFlow')?.classList.add('active');
-    document.getElementById('packModeStage')?.classList.remove('active');
-    renderPackChart();
-  });
-  document.getElementById('packModeStage')?.addEventListener('click',()=>{
-    packChartMetric='stage';
-    document.getElementById('packModeStage')?.classList.add('active');
-    document.getElementById('packModeFlow')?.classList.remove('active');
-    renderPackChart();
-  });
-  const setPackSource=(source,buttonId)=>{
-    const button=document.getElementById(buttonId);
-    if(!button)return;
-    button.addEventListener('click',()=>{
-      if(packChartSources.has(source))packChartSources.delete(source);else packChartSources.add(source);
-      button.setAttribute('aria-pressed',packChartSources.has(source)?'true':'false');
-      renderPackChart();
-    });
-  };
-  setPackSource('sen0313','packSource313');
-  setPackSource('mx2001','packSource2001');
-  document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart,'packStageChart'));
   document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture + Rain',renderSoilChart,'soilMoistureChart'));
+  document.getElementById('cliffBatteryExpand')?.addEventListener('click',()=>openExpanded('Cliff Sensor Battery',renderCliffBatteryChart,'cliffBatteryChart'));
 
   const earlierSummary = renderSummary;
   renderSummary = function() {
     earlierSummary();
-    const pt = packTemperatureRows()[0] || null;
-    const ps = stageRows()[0] || null;
-    const hs = hoboStageRows()[0] || null;
     const sm = soilRows()[0] || null;
     const rockTemp = rockTemperatureRows()[0] || null;
-    const ct = temperatureRows(EXTRA.cliff.node)[0] || null;
-    const packDevice = deviceRows(EXTRA.pack.node)[0] || null;
+    const cliffDistance = cliffDistanceRows()[0] || null;
     const soilDevice = deviceRows(EXTRA.soil.node)[0] || null;
     const cliffDevice = deviceRows(EXTRA.cliff.node)[0] || null;
-    setText('packTemp', asTemp(pt));
-    setText('packStage', asStage(ps));
-    setText('packFlow', asDischarge(ps));
-    setText('packUpdated', pt && ps ? 'Temp ' + ageText(pt.observed_at) + ' · Stage ' + ageText(ps.observed_at) : freshness(pt || ps));
-    setText('packHeroBattery', cardBatteryText(packDevice));
-    addStatus(document.getElementById('packState'), pt || ps, Boolean(pt && ps &&
-      ageHours(pt.observed_at) <= STALE_AFTER_HOURS && ageHours(ps.observed_at) <= STALE_AFTER_HOURS));
+
     setText('soilMoisture', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : '—');
     setText('soilAdc', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : 'ADC —');
     setText('soilUpdated', freshness(sm));
     setText('soilHeroBattery', cardBatteryText(soilDevice));
     addStatus(document.getElementById('soilState'), sm);
-    setText('cliffTemp', asTemp(ct));
-    setText('cliffUpdated', freshness(ct));
-    setText('cliffHeroBattery', cardBatteryText(cliffDevice));
-    addStatus(document.getElementById('cliffState'), ct);
 
-    setText('packStageDetail', asStage(ps));
-    setText('packFlowDetail', asDischarge(ps));
-    setText('packTempDetailMain', asTemp(pt));
-    setText('packStageAge', ps ? ageText(ps.observed_at) : '—');
-    setText('packRatingStatus', ps ? (ps.discharge_rating_status === 'within_measured_range' ? 'within measured rating range' : ps.discharge_rating_status === 'extrapolated_high' ? 'above measured rating range' : ps.discharge_rating_status === 'extrapolated_low' ? 'below measured rating range' : 'rating curve applied') : 'waiting for data');
-    setText('packDetailStage', asStage(ps));
-    setText('packDetailDistance', ps && Number.isFinite(Number(metric(ps, 'distance_mm'))) ?
-      (Number(metric(ps, 'distance_mm')) / 304.8).toFixed(2) + ' ft' : '—');
-    setText('packDetailCal', ps ? (metric(ps, 'stage_calibrated') === false ? 'Not calibrated' : 'Calibrated') : '—');
-    setText('packDetailTemp', asTemp(pt));
-    setText('packDetailHoboStage', asStage(hs));
-    setText('packDetailBle', hs && Number.isFinite(Number(metric(hs, 'ble_rssi_dbm'))) ?
-      Math.round(Number(metric(hs, 'ble_rssi_dbm'))) + ' dBm' : '—');
-    const primaryStage = ps ? Number(metric(ps, 'water_level_ft')) : null;
-    const hoboStage = hs ? Number(metric(hs, 'water_level_ft')) : null;
-    const stageDifferenceFt = Number.isFinite(primaryStage) && Number.isFinite(hoboStage) ?
-      Math.abs(primaryStage - hoboStage) : null;
-    setText('packDetailDifference', Number.isFinite(stageDifferenceFt) ?
-      stageDifferenceFt.toFixed(2) + ' ft (' + (stageDifferenceFt * 12).toFixed(2) + ' in)' : '—');
-    const agreement = packAgreement(stageDifferenceFt);
-    setText('packDetailAgreement', agreement.label);
-    const agreementEl=document.getElementById('packDetailAgreement');
-    if(agreementEl)agreementEl.className='sensor-agreement '+agreement.cls;
-    refreshPackDifference24h();
+    setText('cliffDistance', asCliffDistance(cliffDistance));
+    setText('cliffDistanceRaw', asCliffDistanceRaw(cliffDistance));
+    setText('cliffUpdated', freshness(cliffDistance));
+    setText('cliffHeroBattery', cardBatteryText(cliffDevice));
+    addStatus(document.getElementById('cliffState'), cliffDistance);
+    setText('cliffDistanceDetail', asCliffDistance(cliffDistance));
+    setText('cliffDistanceAge', cliffDistance ? ageText(cliffDistance.observed_at) : '—');
+
     setText('soilMoistureDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
     setText('soilAdcDetail', rockTemp ? tempF(rockTemp).toFixed(1) + ' °F' : '—');
     setText('soilConditionDetail', sm && metric(sm, 'soil_moisture_percent') != null ? Math.round(Number(metric(sm, 'soil_moisture_percent'))) + '%' : '—');
     setText('soilAgeDetail', sm ? ageText(sm.observed_at) : '—');
     setText('soilMoistureTime', freshness(sm));
-    renderPackChart();
+
     renderSoilChart();
+    renderCliffBatteryChart();
 
     const tempStations = airTemperatureStations().map(s => ({
       name:s.name, reading:s.rows[0] || null
     })).filter(s => s.reading && ageHours(s.reading.observed_at) <= STALE_AFTER_HOURS);
+
     if (tempStations.length >= 2) {
       const sorted = tempStations.map(s => ({name:s.name,value:tempF(s.reading)})).sort((a,b)=>a.value-b.value);
       setText('tempSpread',(sorted[sorted.length-1].value-sorted[0].value).toFixed(1)+'°F');
@@ -456,10 +423,10 @@
       setText('warmestStation',tempStations.length ? tempStations[0].name : '—');
       setText('warmestDetail',tempStations.length ? 'Only station currently reporting' : 'Waiting for temperatures');
     }
-    const packFreshest = [pt, ps].filter(Boolean).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at))[0] || null;
+
     const active = tempStations
-      .concat(packFreshest && ageHours(packFreshest.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.pack.name,reading:packFreshest}] : [])
-      .concat(sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.soil.name,reading:sm}] : []);
+      .concat(sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.soil.name,reading:sm}] : [])
+      .concat(cliffDistance && ageHours(cliffDistance.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.cliff.name,reading:cliffDistance}] : []);
     if (active.length) {
       const freshest = active.sort((a,b)=>new Date(b.reading.observed_at)-new Date(a.reading.observed_at))[0];
       setText('freshestStation',freshest.name);
@@ -468,20 +435,15 @@
       setText('freshestStation','—');
       setText('freshestDetail','No current station readings');
     }
-    // Pack Creek requires both temperature and stage for its complete station status.
-    const goodPack = pt && ps && ageHours(pt.observed_at) <= STALE_AFTER_HOURS &&
-      ageHours(ps.observed_at) <= STALE_AFTER_HOURS;
-    const healthy = Object.values(STATIONS).filter(s => {
-      const latest=temperatureRows(s.node)[0];
-      return latest && ageHours(latest.observed_at) <= STALE_AFTER_HOURS;
-    }).length + (goodPack ? 1 : 0) +
+
+    const healthy = tempStations.length +
       (sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? 1 : 0) +
-      (ct && ageHours(ct.observed_at) <= STALE_AFTER_HOURS ? 1 : 0);
-    setText('stationsReporting',healthy+' / 8');
+      (cliffDistance && ageHours(cliffDistance.observed_at) <= STALE_AFTER_HOURS ? 1 : 0);
+    setText('stationsReporting',healthy+' / 7');
     const n=document.getElementById('networkStatus');
     if(n){
-      n.className='live-pill '+(healthy===8?'online':healthy?'partial':'offline');
-      setText('networkStatusText',healthy===8?'All 8 stations reporting':healthy?healthy+' of 8 stations reporting':'No current station telemetry');
+      n.className='live-pill '+(healthy===7?'online':healthy?'partial':'offline');
+      setText('networkStatusText',healthy===7?'All 7 stations reporting':healthy?healthy+' of 7 stations reporting':'No current station telemetry');
     }
   };
 
@@ -489,10 +451,6 @@
     const stations = Object.values(STATIONS).map(s => ({
       node:Number(s.node),name:s.name,color:s.color,rows:temperatureRows(s.node)
     }));
-    stations.push({
-      node:EXTRA.cliff.node,name:EXTRA.cliff.name,color:EXTRA.cliff.color,
-      rows:temperatureRows(EXTRA.cliff.node)
-    });
     return stations.filter((s,index,all) => Number.isFinite(s.node) &&
       all.findIndex(other => other.node === s.node) === index);
   }
@@ -561,19 +519,19 @@
 
   const recentDescription = document.querySelector('.recent-panel .panel-head p');
   if (recentDescription) recentDescription.textContent =
-    'Air-temperature history from monitored air stations. Pack Creek water temperature stays in the Pack Creek monitor.';
+    'Air-temperature history from monitored air stations.';
   renderAirTemperatureFilters();
   document.querySelectorAll('.station-hero .station-heading').forEach(heading => {
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
-    if (!small || !name || name === 'Pack Creek' || name === 'Rock Moisture') return;
-    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day",'Thousand Lake Mountain','Cliff Sensor'].includes(name)) {
+    if (!small || !name || name === 'Rock Moisture' || name === 'Cliff Sensor') return;
+    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day",'Thousand Lake Mountain'].includes(name)) {
       small.textContent += ' · air temperature';
     }
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Pack Creek · Rock Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain';
+    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');
@@ -584,7 +542,7 @@
   });
   const mapDescription = document.querySelector('.map-panel .panel-head p');
   if (mapDescription) mapDescription.textContent =
-    'Mapped locations are shown where coordinates are confirmed. Pack Creek, Rock Moisture and Cliff Sensor are not positioned until their site coordinates are supplied.';
+    'Mapped locations are shown where coordinates are confirmed. Rock Moisture and Cliff Sensor are not positioned until their site coordinates are supplied.';
 
   // The original five-station scripts load on startup before this extension.
   // Refresh once so the added stations render immediately with the same API data.
