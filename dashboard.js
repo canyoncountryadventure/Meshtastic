@@ -166,7 +166,7 @@ window.setExpandedChartRangeSource=function(sourceId){
   const expanded=document.getElementById('expandedChart');
   if(expanded)expanded.dataset.rangeSource=sourceId||'';
 };
-function chartDimensions(container){const w=Math.max(520,container.clientWidth||900),h=Math.max(240,container.clientHeight||300);return {w,h,left:54,right:22,top:18,bottom:38,plotW:w-76,plotH:h-56};}
+function chartDimensions(container,hasRightAxis=false){const w=Math.max(520,container.clientWidth||900),h=Math.max(240,container.clientHeight||300),left=54,right=hasRightAxis?62:22;return {w,h,left,right,top:18,bottom:38,plotW:w-left-right,plotH:h-56};}
 function renderLineChart(container,series,opts={}){
   if(!container)return;
   ensureChartRangeControl(container);
@@ -176,9 +176,21 @@ function renderLineChart(container,series,opts={}){
   const inRange=p=>Number.isFinite(p.y)&&Number.isFinite(p.x)&&(!Number.isFinite(requestedMin)||p.x>=requestedMin)&&(!Number.isFinite(requestedMax)||p.x<=requestedMax);
   container.innerHTML=''; const all=series.flatMap(s=>s.points).filter(inRange);
   if(!all.length){container.innerHTML=`<div class="empty">${esc(opts.empty||'No data in this window.')}</div>`;return;}
-  const d=chartDimensions(container); const xs=all.map(p=>p.x),ys=all.map(p=>p.y);let xmin=Number.isFinite(requestedMin)?requestedMin:Math.min(...xs),xmax=Number.isFinite(requestedMax)?requestedMax:Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);if(xmax===xmin)xmax=xmin+3600000;const pad=(ymax-ymin||2)*.14;ymin-=pad;ymax+=pad;
+  const leftAll=series.filter(s=>s.axis!=='right').flatMap(s=>s.points).filter(inRange);
+  const rightAll=series.filter(s=>s.axis==='right').flatMap(s=>s.points).filter(inRange);
+  const hasRightAxis=rightAll.length>0;
+  const d=chartDimensions(container,hasRightAxis);
+  const xs=all.map(p=>p.x),leftYs=(leftAll.length?leftAll:all).map(p=>p.y),rightYs=rightAll.map(p=>p.y);
+  let xmin=Number.isFinite(requestedMin)?requestedMin:Math.min(...xs),xmax=Number.isFinite(requestedMax)?requestedMax:Math.max(...xs);
+  let ymin=Math.min(...leftYs),ymax=Math.max(...leftYs);
+  if(xmax===xmin)xmax=xmin+3600000;
+  const pad=(ymax-ymin||2)*.14;ymin-=pad;ymax+=pad;
   if(Number.isFinite(opts.yMin))ymin=opts.yMin;if(Number.isFinite(opts.yMax))ymax=opts.yMax;
-  const x=v=>d.left+(v-xmin)/(xmax-xmin)*d.plotW,y=v=>d.top+(ymax-v)/(ymax-ymin)*d.plotH;
+  let rymin=null,rymax=null;
+  if(hasRightAxis){rymin=Math.min(...rightYs);rymax=Math.max(...rightYs);const rpad=(rymax-rymin||2)*.14;rymin-=rpad;rymax+=rpad;if(Number.isFinite(opts.rightYMin))rymin=opts.rightYMin;if(Number.isFinite(opts.rightYMax))rymax=opts.rightYMax;}
+  const x=v=>d.left+(v-xmin)/(xmax-xmin)*d.plotW;
+  const y=v=>d.top+(ymax-v)/(ymax-ymin)*d.plotH;
+  const yr=v=>d.top+(rymax-v)/(rymax-rymin)*d.plotH;
   const svg=svgEl('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'none'});container.appendChild(svg);
   (opts.bands||[]).forEach(b=>{
     const start=Math.max(xmin,Number(b.start)),end=Math.min(xmax,Number(b.end));if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return;
@@ -192,17 +204,18 @@ function renderLineChart(container,series,opts={}){
     svg.appendChild(svgEl('line',{x1:x2,y1:d.top,x2,y2:d.top+d.plotH,stroke:b.stroke||'#66b9ff','stroke-width':1.2,'stroke-dasharray':'5 5','stroke-opacity':.8}));
     if(b.label)addText(svg,(x1+x2)/2,d.top+13,b.label,'middle',b.stroke||'#66b9ff',10);
   });
-  for(let i=0;i<=4;i++){const yy=d.top+d.plotH*i/4;svg.appendChild(svgEl('line',{x1:d.left,x2:d.left+d.plotW,y1:yy,y2:yy,stroke:'#17343d','stroke-width':1}));const val=ymax-(ymax-ymin)*i/4;addText(svg,d.left-8,yy+4,opts.yFormat?opts.yFormat(val):val.toFixed(1),'end');}
+  for(let i=0;i<=4;i++){const yy=d.top+d.plotH*i/4;svg.appendChild(svgEl('line',{x1:d.left,x2:d.left+d.plotW,y1:yy,y2:yy,stroke:'#17343d','stroke-width':1}));const val=ymax-(ymax-ymin)*i/4;addText(svg,d.left-8,yy+4,opts.yFormat?opts.yFormat(val):val.toFixed(1),'end');if(hasRightAxis){const rval=rymax-(rymax-rymin)*i/4;addText(svg,d.left+d.plotW+8,yy+4,opts.rightYFormat?opts.rightYFormat(rval):rval.toFixed(1),'start',opts.rightAxisColor||'#8ecae6');}}
   const span=xmax-xmin;for(let i=0;i<=4;i++){const xx=d.left+d.plotW*i/4;svg.appendChild(svgEl('line',{x1:xx,x2:xx,y1:d.top,y2:d.top+d.plotH,stroke:'#102b33','stroke-width':1}));addText(svg,xx,d.h-12,fmtAxis(xmin+span*i/4,span),'middle');}
   series.forEach(s=>{
     const pts=[...s.points].filter(inRange).sort((a,b)=>a.x-b.x);if(!pts.length)return;
     const maxGapMs=Number(s.maxGapMs||opts.maxGapMs)||Infinity;
+    const sy=s.axis==='right'?yr:y;
     let segment=[];
-    const drawSegment=seg=>{if(!seg.length)return;const poly=seg.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:s.color,'stroke-width':opts.strokeWidth||3,'stroke-linecap':'round','stroke-linejoin':'round'}));};
+    const drawSegment=seg=>{if(!seg.length)return;const poly=seg.map(p=>`${x(p.x)},${sy(p.y)}`).join(' ');svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:s.color,'stroke-width':s.strokeWidth||opts.strokeWidth||3,'stroke-linecap':'round','stroke-linejoin':'round','stroke-dasharray':s.dash||''}));};
     pts.forEach((p,i)=>{if(i&&p.x-pts[i-1].x>maxGapMs){drawSegment(segment);segment=[];}segment.push(p);});drawSegment(segment);
-    pts.forEach(p=>{const c=svgEl('circle',{cx:x(p.x),cy:y(p.y),r:opts.pointRadius||3.1,fill:s.color,stroke:'#08171d','stroke-width':1.4});c.style.cursor='crosshair';c.addEventListener('mouseenter',ev=>showTooltip(container,ev,`${s.name}<br><strong>${opts.tooltipValue?opts.tooltipValue(p.y,p,s):p.y.toFixed(1)}</strong><br>${fmtTime(p.iso||new Date(p.x).toISOString())}`));c.addEventListener('mouseleave',()=>hideTooltip(container));svg.appendChild(c);});
+    pts.forEach(p=>{const c=svgEl('circle',{cx:x(p.x),cy:sy(p.y),r:s.pointRadius||opts.pointRadius||3.1,fill:s.color,stroke:'#08171d','stroke-width':1.4});c.style.cursor='crosshair';c.addEventListener('mouseenter',ev=>showTooltip(container,ev,`${s.name}<br><strong>${opts.tooltipValue?opts.tooltipValue(p.y,p,s):p.y.toFixed(1)}</strong><br>${fmtTime(p.iso||new Date(p.x).toISOString())}`));c.addEventListener('mouseleave',()=>hideTooltip(container));svg.appendChild(c);});
   });
-  if(opts.axisLabel)addText(svg,8,14,opts.axisLabel,'start','#90aab0',11);
+  if(opts.axisLabel)addText(svg,8,14,opts.axisLabel,'start','#90aab0',11);if(hasRightAxis&&opts.rightAxisLabel)addText(svg,d.w-8,14,opts.rightAxisLabel,'end',opts.rightAxisColor||'#8ecae6',11);
 }
 function showTooltip(container,event,html){hideTooltip(container);const tip=document.createElement('div');tip.className='chart-tooltip';tip.innerHTML=html;const r=container.getBoundingClientRect();tip.style.left=`${event.clientX-r.left}px`;tip.style.top=`${event.clientY-r.top}px`;container.appendChild(tip);}
 function hideTooltip(container){container.querySelector('.chart-tooltip')?.remove();}
