@@ -112,10 +112,19 @@
     <div class="monitor-summary">
       <div><span>Current ADC10</span><strong id="soilMoistureDetail">—</strong><small>lower = wetter</small></div>
       <div><span>Firmware soil index</span><strong id="soilConditionDetail">—</strong><small>unchanged firmware value · not rock-calibrated</small></div>
-      <div><span>Raw sensor</span><strong id="soilAdcDetail">—</strong><small>ADC10</small></div>
+      <div><span>Rock temperature</span><strong id="soilAdcDetail">—</strong><small>Swell probe in adjacent rock</small></div>
       <div><span>Last packet</span><strong id="soilAgeDetail">—</strong><small id="soilMoistureTime">waiting for data</small></div>
     </div>
     <div class="chart xlarge" id="soilMoistureChart"><div class="empty">Waiting for hourly rock-moisture telemetry.</div></div>
+    <div class="panel-head monitor-head" style="margin-top:24px">
+      <div>
+        <span class="eyebrow">Temperature correction reference</span>
+        <h2>Rock Temperature</h2>
+        <p id="rockTemperatureCount">Waiting for rock-temperature readings</p>
+      </div>
+      <button type="button" class="expand-btn" id="rockTemperatureExpand">Expand</button>
+    </div>
+    <div class="chart xlarge" id="rockTemperatureChart"><div class="empty">Waiting for Swell rock-temperature telemetry.</div></div>
   </section>
 
   <section class="station-detail-grid">
@@ -179,12 +188,12 @@
   };
 })();
 </script>
-<script src="/dashboard.js?v=20260929-rock-rain-bands"></script>
+<script src="/dashboard.js?v=20260929-rock-temp-pair"></script>
 <script src="/fishlake.js?v=20260925-fishlake-health"></script>
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260929-rock-rain-bands"></script>
+<script src="/network-sensors.js?v=20260929-rock-temp-pair"></script>
 <script src="/pack-command.js?v=20260925-pack-command-center"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
