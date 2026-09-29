@@ -124,11 +124,26 @@ function renderLineChart(container,series,opts={}){
   if(Number.isFinite(opts.yMin))ymin=opts.yMin;if(Number.isFinite(opts.yMax))ymax=opts.yMax;
   const x=v=>d.left+(v-xmin)/(xmax-xmin)*d.plotW,y=v=>d.top+(ymax-v)/(ymax-ymin)*d.plotH;
   const svg=svgEl('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'none'});container.appendChild(svg);
+  (opts.bands||[]).forEach(b=>{
+    const start=Math.max(xmin,Number(b.start)),end=Math.min(xmax,Number(b.end));if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return;
+    const x1=x(start),x2=x(end);
+    const rect=svgEl('rect',{x:x1,y:d.top,width:Math.max(1,x2-x1),height:d.plotH,fill:b.fill||'rgba(102,185,255,.12)'});
+    rect.style.cursor='help';
+    rect.addEventListener('mouseenter',ev=>showTooltip(container,ev,`<strong>${esc(b.label||'Precipitation')}</strong><br>${fmtTime(new Date(start).toISOString())} – ${fmtTime(new Date(end).toISOString())}`));
+    rect.addEventListener('mouseleave',()=>hideTooltip(container));
+    svg.appendChild(rect);
+    svg.appendChild(svgEl('line',{x1,y1:d.top,x2:x1,y2:d.top+d.plotH,stroke:b.stroke||'#66b9ff','stroke-width':1.2,'stroke-dasharray':'5 5','stroke-opacity':.8}));
+    svg.appendChild(svgEl('line',{x1:x2,y1:d.top,x2,y2:d.top+d.plotH,stroke:b.stroke||'#66b9ff','stroke-width':1.2,'stroke-dasharray':'5 5','stroke-opacity':.8}));
+    if(b.label)addText(svg,(x1+x2)/2,d.top+13,b.label,'middle',b.stroke||'#66b9ff',10);
+  });
   for(let i=0;i<=4;i++){const yy=d.top+d.plotH*i/4;svg.appendChild(svgEl('line',{x1:d.left,x2:d.left+d.plotW,y1:yy,y2:yy,stroke:'#17343d','stroke-width':1}));const val=ymax-(ymax-ymin)*i/4;addText(svg,d.left-8,yy+4,opts.yFormat?opts.yFormat(val):val.toFixed(1),'end');}
   const span=xmax-xmin;for(let i=0;i<=4;i++){const xx=d.left+d.plotW*i/4;svg.appendChild(svgEl('line',{x1:xx,x2:xx,y1:d.top,y2:d.top+d.plotH,stroke:'#102b33','stroke-width':1}));addText(svg,xx,d.h-12,fmtAxis(xmin+span*i/4,span),'middle');}
   series.forEach(s=>{
     const pts=[...s.points].filter(p=>Number.isFinite(p.y)).sort((a,b)=>a.x-b.x);if(!pts.length)return;
-    const poly=pts.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:s.color,'stroke-width':opts.strokeWidth||3,'stroke-linecap':'round','stroke-linejoin':'round'}));
+    const maxGapMs=Number(s.maxGapMs||opts.maxGapMs)||Infinity;
+    let segment=[];
+    const drawSegment=seg=>{if(!seg.length)return;const poly=seg.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:s.color,'stroke-width':opts.strokeWidth||3,'stroke-linecap':'round','stroke-linejoin':'round'}));};
+    pts.forEach((p,i)=>{if(i&&p.x-pts[i-1].x>maxGapMs){drawSegment(segment);segment=[];}segment.push(p);});drawSegment(segment);
     pts.forEach(p=>{const c=svgEl('circle',{cx:x(p.x),cy:y(p.y),r:opts.pointRadius||3.1,fill:s.color,stroke:'#08171d','stroke-width':1.4});c.style.cursor='crosshair';c.addEventListener('mouseenter',ev=>showTooltip(container,ev,`${s.name}<br><strong>${opts.tooltipValue?opts.tooltipValue(p.y,p,s):p.y.toFixed(1)}</strong><br>${fmtTime(p.iso||new Date(p.x).toISOString())}`));c.addEventListener('mouseleave',()=>hideTooltip(container));svg.appendChild(c);});
   });
   if(opts.axisLabel)addText(svg,8,14,opts.axisLabel,'start','#90aab0',11);
