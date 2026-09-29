@@ -7,12 +7,13 @@ const KNOWN_STATIONS = new Map([
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "It's a Swell Day"],
   [2650172798, 'Thousand Lake Mountain'],
-  [4241345683, 'Pack Creek'], // !fccdcc93, temperature and stage
+  [4241345683, 'Pack Creek'], // !fccdcc93, ingestion paused
   [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
-  [3388602087, 'Cliff Sensor'], // !c9f9f6e7, temperature
+  [3388602087, 'Cliff Sensor'], // !c9f9f6e7, water distance
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);
+const PAUSED_INGEST_NODES = new Set([4241345683]); // Pack Creek: accept at gateway, do not write to Neon
 const MAX_BATCH_SIZE = 64;
 
 function parseJson(value) {
@@ -123,8 +124,8 @@ function validate(body) {
        Number(body.payload.soil_moisture_percent) < 0 || Number(body.payload.soil_moisture_percent) > 100)) {
     throw new Error('Invalid soil moisture reading or source node');
   }
-  if (body.type === 'water_distance' && nodeNum !== 4241345683) {
-    throw new Error('Water-distance packets are only approved for Pack Creek');
+  if (body.type === 'water_distance' && nodeNum !== 4241345683 && nodeNum !== 3388602087) {
+    throw new Error('Water-distance packets are only approved for Pack Creek or Cliff Sensor');
   }
 
   return nodeNum;
@@ -167,16 +168,36 @@ export default async function handler(req, res) {
   if (bodies.length > MAX_BATCH_SIZE) return res.status(413).json({ ok: false, error: `Maximum ${MAX_BATCH_SIZE} readings` });
 
   try {
+    const activeBodies = [];
+    const paused = [];
+    for (const rawBody of bodies) {
+      const body = parseJson(rawBody);
+      const nodeNum = validate(body);
+      if (PAUSED_INGEST_NODES.has(nodeNum)) {
+        paused.push({ node_num: nodeNum, station_name: KNOWN_STATIONS.get(nodeNum) });
+      } else {
+        activeBodies.push(body);
+      }
+    }
+
+    // If a request contains only paused Pack Creek telemetry, acknowledge it
+    // without opening a Neon connection or writing a row.
+    if (!activeBodies.length) {
+      return res.status(200).json({ ok: true, stored: 0, paused: paused.length, paused_nodes: paused });
+    }
+
     const sql = getSql();
     await ensureDatabaseReady(sql);
     const readings = [];
-    for (const body of bodies) {
-      readings.push(await insertReading(sql, parseJson(body)));
+    for (const body of activeBodies) {
+      readings.push(await insertReading(sql, body));
     }
 
     return res.status(201).json({
       ok: true,
       stored: readings.length,
+      paused: paused.length,
+      paused_nodes: paused.length ? paused : undefined,
       reading: readings.length === 1 ? readings[0] : undefined,
       readings: readings.length > 1 ? readings : undefined,
     });
