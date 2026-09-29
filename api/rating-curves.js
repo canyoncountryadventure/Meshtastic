@@ -7,6 +7,9 @@ const WINGATE_SOIL_NODE = 2004386937;
 const WINGATE_SOIL_DELETE_MIGRATION = '20260925_wingate_delete_soil_3018_3008_v1';
 const DELETE_ALL_SOIL_MIGRATION = '20260928_delete_all_soil_moisture_v1';
 const ROCK_MOISTURE_RESET_MIGRATION = '20260928_rock_moisture_fresh_start_v1';
+const ROCK_MOISTURE_FAKE_DRY_SPIKE_MIGRATION = '20260929_rock_moisture_fake_dry_spike_v1';
+const ROCK_MOISTURE_FAKE_DRY_SPIKE_START = '2026-09-29T10:49:11.000Z';
+const ROCK_MOISTURE_FAKE_DRY_SPIKE_END = '2026-09-29T12:42:25.000Z';
 
 let databaseReadyPromise;
 
@@ -267,6 +270,52 @@ async function resetSoilHistoryForRockMoisture(sql) {
   `;
 }
 
+async function deleteRockMoistureFakeDrySpike(sql) {
+  return sql`
+    WITH claimed AS (
+      INSERT INTO app_migrations (migration_key, details)
+      VALUES (
+        ${ROCK_MOISTURE_FAKE_DRY_SPIKE_MIGRATION},
+        jsonb_build_object(
+          'reason', 'Removed false dry Rock Moisture spike caused by rain intrusion into enclosure',
+          'start_utc', ${ROCK_MOISTURE_FAKE_DRY_SPIKE_START}::text,
+          'end_utc', ${ROCK_MOISTURE_FAKE_DRY_SPIKE_END}::text
+        )
+      )
+      ON CONFLICT (migration_key) DO NOTHING
+      RETURNING migration_key
+    ),
+    deleted AS (
+      DELETE FROM telemetry_readings
+      WHERE node_num = ${WINGATE_SOIL_NODE}
+        AND telemetry_type = 'soil'
+        AND observed_at >= ${ROCK_MOISTURE_FAKE_DRY_SPIKE_START}::timestamptz
+        AND observed_at <= ${ROCK_MOISTURE_FAKE_DRY_SPIKE_END}::timestamptz
+        AND EXISTS (SELECT 1 FROM claimed)
+      RETURNING id, observed_at, metrics
+    ),
+    recorded AS (
+      UPDATE app_migrations
+      SET details = details || jsonb_build_object(
+        'deleted_rows', (SELECT COUNT(*) FROM deleted),
+        'deleted_points', COALESCE(
+          (SELECT jsonb_agg(jsonb_build_object(
+            'id', id,
+            'observed_at', observed_at,
+            'soil_adc10', metrics->'soil_adc10',
+            'soil_moisture_percent', metrics->'soil_moisture_percent'
+          ) ORDER BY observed_at ASC) FROM deleted),
+          '[]'::jsonb
+        )
+      )
+      WHERE migration_key = ${ROCK_MOISTURE_FAKE_DRY_SPIKE_MIGRATION}
+        AND EXISTS (SELECT 1 FROM claimed)
+      RETURNING migration_key
+    )
+    SELECT COUNT(*)::integer AS deleted_rows FROM deleted
+  `;
+}
+
 async function prepareDatabase(sql) {
   await prepareRatingCurveTables(sql);
   await storePackCreekCurve(sql);
@@ -274,6 +323,7 @@ async function prepareDatabase(sql) {
   await deleteRequestedWingateSoilPoints(sql);
   await deleteAllExistingSoilMoisture(sql);
   await resetSoilHistoryForRockMoisture(sql);
+  await deleteRockMoistureFakeDrySpike(sql);
 }
 
 export function ensureDatabaseReady(sql) {
