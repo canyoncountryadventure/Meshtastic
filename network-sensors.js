@@ -15,8 +15,8 @@
   const PACK_DIFF_MATCH_MS = 15 * 60 * 1000;
   const ROCK_MOISTURE_INSTALLED_AT = Date.parse('2026-09-28T22:41:25.000Z'); // first persisted rock-moisture sample · 4:41:25 PM MDT
   const ROCK_PRECIP_BANDS = [
-    {start:Date.parse('2026-09-29T08:15:00.000Z'),end:Date.parse('2026-09-29T08:50:00.000Z'),label:'RAIN · 2:15–2:50 AM'},
-    {start:Date.parse('2026-09-29T09:30:00.000Z'),end:Date.parse('2026-09-29T11:40:00.000Z'),label:'RAIN · 3:30–5:40 AM'}
+    {start:Date.parse('2026-09-29T08:15:00.000Z'),end:Date.parse('2026-09-29T08:50:00.000Z'),label:'RAIN · 2:15–2:50 AM',fill:'rgba(102,185,255,.20)',stroke:'#66b9ff'},
+    {start:Date.parse('2026-09-29T09:30:00.000Z'),end:Date.parse('2026-09-29T11:40:00.000Z'),label:'RAIN · 3:30–5:40 AM',fill:'rgba(102,185,255,.20)',stroke:'#66b9ff'}
   ];
   let packDifference24h = [];
   let packDifferenceFetchedAt = 0;
@@ -329,7 +329,7 @@
     })).reverse();
     renderLineChart(target,[{name:'Rock moisture ADC10',color:EXTRA.soil.color,points,maxGapMs:90*60*1000}],
       {axisLabel:'Rock sensor ADC10 · lower = wetter',tooltipValue:(v,p)=>'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),strokeWidth:3.3,pointRadius:3.5,bands:ROCK_PRECIP_BANDS,empty:'Waiting for hourly rock-moisture telemetry.'});
-    setText('soilChartCount',points.length?points.length+' hourly rock-moisture samples · selected window':'Waiting for rock-moisture readings');
+    setText('soilChartCount',points.length?points.length+' hourly rock-moisture samples · rain windows overlaid':'Waiting for rock-moisture readings');
   }
 
   function renderRockTemperatureChart(target=document.getElementById('rockTemperatureChart')){
@@ -341,7 +341,7 @@
       iso:r.observed_at
     })).reverse();
     renderLineChart(target,[{name:'Rock temperature · Swell probe',color:EXTRA.rockTemp.color,points,maxGapMs:90*60*1000}],
-      {axisLabel:'Rock temperature °F',tooltipValue:v=>v.toFixed(1)+' °F',strokeWidth:3.3,pointRadius:3.5,bands:ROCK_PRECIP_BANDS,empty:'Waiting for Swell rock-temperature telemetry.'});
+      {axisLabel:'Rock temperature °F',tooltipValue:v=>v.toFixed(1)+' °F',strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for Swell rock-temperature telemetry.'});
     setText('rockTemperatureCount',points.length?points.length+' rock-temperature samples · Swell probe':'Waiting for rock-temperature readings');
   }
 
@@ -376,7 +376,7 @@
   setPackSource('sen0313','packSource313');
   setPackSource('mx2001','packSource2001');
   document.getElementById('packChartExpand')?.addEventListener('click',()=>openExpanded(packChartMetric==='flow'?'Pack Creek flow':'Pack Creek stage',renderPackChart,'packStageChart'));
-  document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture',renderSoilChart,'soilMoistureChart'));
+  document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture + Rain',renderSoilChart,'soilMoistureChart'));
   document.getElementById('rockTemperatureExpand')?.addEventListener('click',()=>openExpanded('Rock Temperature · Swell probe',renderRockTemperatureChart,'rockTemperatureChart'));
 
   const earlierSummary = renderSummary;
