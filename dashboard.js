@@ -10,7 +10,9 @@ const STATIONS = {
 };
 const EXPECTED_INTERVAL_HOURS = 1;
 const STALE_AFTER_HOURS = 3.25;
-const state = { hours: 720, readings: [], allReadings: [], ratingCurves: [], ratingCurvePoints: [], playbackAt: null, map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
+const state = { hours: 720, chartDefaultHours: 168, readings: [], allReadings: [], ratingCurves: [], ratingCurvePoints: [], playbackAt: null, map: null, baseLayer: null, mapKind: 'topo', expandedMap: null, lastChart: null };
+const CHART_RANGE_OPTIONS = [{hours:12,label:'12H'},{hours:24,label:'24H'},{hours:72,label:'3D'},{hours:168,label:'7D'},{hours:720,label:'30D'}];
+const chartRangeHours = new Map();
 const $ = id => document.getElementById(id);
 
 const num = v => {
@@ -116,11 +118,65 @@ function renderSummary(){
 
 function svgEl(tag,attrs={}){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;}
 function addText(svg,x,y,text,anchor='start',fill='#78949b',size=11){const t=svgEl('text',{x,y,'text-anchor':anchor,fill,'font-size':size,'font-family':'Inter,system-ui,sans-serif'});t.textContent=text;svg.appendChild(t);return t;}
+
+function chartRangeKey(container){
+  if(!container)return '';
+  return container.dataset?.rangeSource || container.id || '';
+}
+function chartHoursFor(container){
+  const key=chartRangeKey(container);
+  return chartRangeHours.get(key) || Number(state.chartDefaultHours) || 168;
+}
+function chartTimeWindow(container){
+  const hours=chartHoursFor(container),end=dashboardNow();
+  return {xMin:end-hours*3600000,xMax:end,hours};
+}
+window.chartTimeWindow=chartTimeWindow;
+function syncChartRangeControl(container){
+  if(!container||!container.id||container.id==='expandedChart')return;
+  const control=document.getElementById('range-'+container.id);
+  if(!control)return;
+  const selected=chartHoursFor(container);
+  control.querySelectorAll('button[data-chart-hours]').forEach(b=>b.classList.toggle('active',Number(b.dataset.chartHours)===selected));
+}
+function ensureChartRangeControl(container){
+  if(!container||!container.id||container.id==='expandedChart')return;
+  let control=document.getElementById('range-'+container.id);
+  if(!control){
+    control=document.createElement('div');
+    control.id='range-'+container.id;
+    control.className='tabs compact-tabs chart-range-tabs';
+    control.setAttribute('role','group');
+    control.setAttribute('aria-label','Chart timeframe');
+    control.innerHTML=CHART_RANGE_OPTIONS.map(o=>'<button type="button" data-chart-hours="'+o.hours+'">'+o.label+'</button>').join('');
+    container.parentNode?.insertBefore(control,container);
+    control.addEventListener('click',ev=>{
+      const button=ev.target.closest('button[data-chart-hours]');
+      if(!button)return;
+      const hours=Number(button.dataset.chartHours);
+      if(!Number.isFinite(hours))return;
+      chartRangeHours.set(container.id,hours);
+      syncChartRangeControl(container);
+      renderAll();
+    });
+  }
+  syncChartRangeControl(container);
+}
+window.setExpandedChartRangeSource=function(sourceId){
+  const expanded=document.getElementById('expandedChart');
+  if(expanded)expanded.dataset.rangeSource=sourceId||'';
+};
 function chartDimensions(container){const w=Math.max(520,container.clientWidth||900),h=Math.max(240,container.clientHeight||300);return {w,h,left:54,right:22,top:18,bottom:38,plotW:w-76,plotH:h-56};}
 function renderLineChart(container,series,opts={}){
-  container.innerHTML=''; const all=series.flatMap(s=>s.points).filter(p=>Number.isFinite(p.y)&&Number.isFinite(p.x));
+  if(!container)return;
+  ensureChartRangeControl(container);
+  const autoRange=opts.timeRange===false?{}:chartTimeWindow(container);
+  const requestedMin=Number.isFinite(opts.xMin)?opts.xMin:autoRange.xMin;
+  const requestedMax=Number.isFinite(opts.xMax)?opts.xMax:autoRange.xMax;
+  const inRange=p=>Number.isFinite(p.y)&&Number.isFinite(p.x)&&(!Number.isFinite(requestedMin)||p.x>=requestedMin)&&(!Number.isFinite(requestedMax)||p.x<=requestedMax);
+  container.innerHTML=''; const all=series.flatMap(s=>s.points).filter(inRange);
   if(!all.length){container.innerHTML=`<div class="empty">${esc(opts.empty||'No data in this window.')}</div>`;return;}
-  const d=chartDimensions(container); const xs=all.map(p=>p.x),ys=all.map(p=>p.y);let xmin=Number.isFinite(opts.xMin)?opts.xMin:Math.min(...xs),xmax=Number.isFinite(opts.xMax)?opts.xMax:Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);if(xmax===xmin)xmax=xmin+3600000;const pad=(ymax-ymin||2)*.14;ymin-=pad;ymax+=pad;
+  const d=chartDimensions(container); const xs=all.map(p=>p.x),ys=all.map(p=>p.y);let xmin=Number.isFinite(requestedMin)?requestedMin:Math.min(...xs),xmax=Number.isFinite(requestedMax)?requestedMax:Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);if(xmax===xmin)xmax=xmin+3600000;const pad=(ymax-ymin||2)*.14;ymin-=pad;ymax+=pad;
   if(Number.isFinite(opts.yMin))ymin=opts.yMin;if(Number.isFinite(opts.yMax))ymax=opts.yMax;
   const x=v=>d.left+(v-xmin)/(xmax-xmin)*d.plotW,y=v=>d.top+(ymax-v)/(ymax-ymin)*d.plotH;
   const svg=svgEl('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'none'});container.appendChild(svg);
@@ -139,7 +195,7 @@ function renderLineChart(container,series,opts={}){
   for(let i=0;i<=4;i++){const yy=d.top+d.plotH*i/4;svg.appendChild(svgEl('line',{x1:d.left,x2:d.left+d.plotW,y1:yy,y2:yy,stroke:'#17343d','stroke-width':1}));const val=ymax-(ymax-ymin)*i/4;addText(svg,d.left-8,yy+4,opts.yFormat?opts.yFormat(val):val.toFixed(1),'end');}
   const span=xmax-xmin;for(let i=0;i<=4;i++){const xx=d.left+d.plotW*i/4;svg.appendChild(svgEl('line',{x1:xx,x2:xx,y1:d.top,y2:d.top+d.plotH,stroke:'#102b33','stroke-width':1}));addText(svg,xx,d.h-12,fmtAxis(xmin+span*i/4,span),'middle');}
   series.forEach(s=>{
-    const pts=[...s.points].filter(p=>Number.isFinite(p.y)).sort((a,b)=>a.x-b.x);if(!pts.length)return;
+    const pts=[...s.points].filter(inRange).sort((a,b)=>a.x-b.x);if(!pts.length)return;
     const maxGapMs=Number(s.maxGapMs||opts.maxGapMs)||Infinity;
     let segment=[];
     const drawSegment=seg=>{if(!seg.length)return;const poly=seg.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:s.color,'stroke-width':opts.strokeWidth||3,'stroke-linecap':'round','stroke-linejoin':'round'}));};
@@ -195,7 +251,7 @@ function initMap(){if(!window.L){setText('mapStatus','Map engine unavailable.');
 function bindExpand(){
   const dialog=$('expandDialog'),title=$('expandTitle'),chart=$('expandedChart'),mapEl=$('expandedMap');
   $('expandClose')?.addEventListener('click',()=>dialog.close());
-  document.querySelectorAll('[data-expand]').forEach(btn=>btn.addEventListener('click',()=>{title.textContent=btn.dataset.title||'Chart';mapEl.hidden=true;chart.hidden=false;dialog.showModal();setTimeout(()=>{if(btn.dataset.expand==='tempChart')renderTemperatureChart(chart);else if(btn.dataset.expand==='batteryChart')renderBattery(chart);else if(btn.dataset.expand==='rfChart')renderRf(chart);},40);}));
+  document.querySelectorAll('[data-expand]').forEach(btn=>btn.addEventListener('click',()=>{title.textContent=btn.dataset.title||'Chart';mapEl.hidden=true;chart.hidden=false;chart.dataset.rangeSource=btn.dataset.expand||'';dialog.showModal();setTimeout(()=>{if(btn.dataset.expand==='tempChart')renderTemperatureChart(chart);else if(btn.dataset.expand==='batteryChart')renderBattery(chart);else if(btn.dataset.expand==='rfChart')renderRf(chart);},40);}));
   document.querySelectorAll('[data-expand-map]').forEach(btn=>btn.addEventListener('click',()=>{title.textContent=btn.dataset.title||'Station map';chart.hidden=true;mapEl.hidden=false;dialog.showModal();setTimeout(()=>{if(state.expandedMap){try{state.expandedMap.remove()}catch{}}mapEl.innerHTML='';state.expandedMap=L.map(mapEl,{preferCanvas:true,minZoom:3,maxZoom:20});mapLayer(state.mapKind).addTo(state.expandedMap);addMarkers(state.expandedMap);state.expandedMap.fitBounds([STATIONS.hv.coords,STATIONS.home.coords],{padding:[55,55],maxZoom:13});state.expandedMap.invalidateSize(true);},80);}));
   dialog?.addEventListener('close',()=>{if(state.expandedMap){try{state.expandedMap.remove()}catch{}state.expandedMap=null;}chart.innerHTML='';});
 }
@@ -225,7 +281,7 @@ async function loadData(){
   }
   catch(err){console.error(err);setText('networkStatusText','Telemetry API unavailable');$('networkStatus').className='live-pill offline';setText('updated','Refresh failed');}
 }
-function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;state.hours=Number(b.dataset.hours)||720;$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadData();});}
+function bindTabs(){$('tabs')?.addEventListener('click',ev=>{const b=ev.target.closest('button[data-hours]');if(!b)return;const hours=Number(b.dataset.hours)||168;state.chartDefaultHours=hours;document.querySelectorAll('.chart[id]').forEach(c=>{if(c.id!=='expandedChart')chartRangeHours.set(c.id,hours);});$('tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderAll();});}
 
 bindTabs();bindExpand();initMap();loadData();setInterval(loadData,60000);
 window.addEventListener('resize',()=>{state.map?.invalidateSize(false);state.expandedMap?.invalidateSize(false);});
