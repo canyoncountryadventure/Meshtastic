@@ -120,7 +120,7 @@ function chartDimensions(container){const w=Math.max(520,container.clientWidth||
 function renderLineChart(container,series,opts={}){
   container.innerHTML=''; const all=series.flatMap(s=>s.points).filter(p=>Number.isFinite(p.y)&&Number.isFinite(p.x));
   if(!all.length){container.innerHTML=`<div class="empty">${esc(opts.empty||'No data in this window.')}</div>`;return;}
-  const d=chartDimensions(container); const xs=all.map(p=>p.x),ys=all.map(p=>p.y);let xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);if(xmax===xmin)xmax=xmin+3600000;const pad=(ymax-ymin||2)*.14;ymin-=pad;ymax+=pad;
+  const d=chartDimensions(container); const xs=all.map(p=>p.x),ys=all.map(p=>p.y);let xmin=Number.isFinite(opts.xMin)?opts.xMin:Math.min(...xs),xmax=Number.isFinite(opts.xMax)?opts.xMax:Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);if(xmax===xmin)xmax=xmin+3600000;const pad=(ymax-ymin||2)*.14;ymin-=pad;ymax+=pad;
   if(Number.isFinite(opts.yMin))ymin=opts.yMin;if(Number.isFinite(opts.yMax))ymax=opts.yMax;
   const x=v=>d.left+(v-xmin)/(xmax-xmin)*d.plotW,y=v=>d.top+(ymax-v)/(ymax-ymin)*d.plotH;
   const svg=svgEl('svg',{viewBox:`0 0 ${d.w} ${d.h}`,preserveAspectRatio:'none'});container.appendChild(svg);
