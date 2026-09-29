@@ -12,6 +12,10 @@
   const packChartSources = new Set(['sen0313']);
   const PACK_RATING = { a: 6.07187614, offset: 0.22259098, b: 1.04237977 };
   const PACK_DIFF_MATCH_MS = 15 * 60 * 1000;
+  const ROCK_PRECIP_BANDS = [
+    {start:Date.parse('2026-09-29T08:15:00.000Z'),end:Date.parse('2026-09-29T08:50:00.000Z'),label:'RAIN · 2:15–2:50 AM'},
+    {start:Date.parse('2026-09-29T09:30:00.000Z'),end:Date.parse('2026-09-29T11:40:00.000Z'),label:'RAIN · 3:30–5:40 AM'}
+  ];
   let packDifference24h = [];
   let packDifferenceFetchedAt = 0;
   let packDifferenceFetchInFlight = false;
@@ -318,8 +322,8 @@
       iso:r.observed_at,
       firmwarePct:metric(r,'soil_moisture_percent')
     })).reverse();
-    renderLineChart(target,[{name:'Rock moisture ADC10',color:EXTRA.soil.color,points}],
-      {axisLabel:'Rock sensor ADC10 · lower = wetter',tooltipValue:(v,p)=>'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for hourly rock-moisture telemetry.'});
+    renderLineChart(target,[{name:'Rock moisture ADC10',color:EXTRA.soil.color,points,maxGapMs:90*60*1000}],
+      {axisLabel:'Rock sensor ADC10 · lower = wetter',tooltipValue:(v,p)=>'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),strokeWidth:3.3,pointRadius:3.5,bands:ROCK_PRECIP_BANDS,empty:'Waiting for hourly rock-moisture telemetry.'});
     setText('soilChartCount',points.length?points.length+' hourly rock-moisture samples · selected window':'Waiting for rock-moisture readings');
   }
 
