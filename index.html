@@ -28,7 +28,7 @@
     <div class="hero-intro">
       <div class="eyebrow">Live station comparison</div>
       <h1>Meshtastic Command Dashboard</h1>
-      <p>Hidden Valley, Pack Creek, Rock Moisture, Cliff Sensor, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
+      <p>Hidden Valley, Rock Moisture, Cliff Sensor, Fishlake Hightop, It's a Swell Day, and Thousand Lake Mountain feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
       <div class="pipeline"><strong>Data path</strong><span>Field air temperature, creek water temperature and stage, and rock moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
     </div>
     <div class="station-hero-grid">
@@ -51,7 +51,7 @@
     <article class="metric-card accent"><span>Air-temperature spread</span><strong id="tempSpread">—</strong><small id="tempSpreadDetail">difference between stations</small></article>
     <article class="metric-card"><span>Warmest air now</span><strong id="warmestStation">—</strong><small id="warmestDetail">latest readings</small></article>
     <article class="metric-card"><span>Freshest station</span><strong id="freshestStation">—</strong><small id="freshestDetail">most recent packet</small></article>
-    <article class="metric-card"><span>Stations reporting</span><strong id="stationsReporting">0 / 8</strong><small>healthy within 3 hr 15 min</small></article>
+    <article class="metric-card"><span>Stations reporting</span><strong id="stationsReporting">0 / 7</strong><small>healthy within 3 hr 15 min</small></article>
   </section>
 
   <section class="panel control-panel">
@@ -72,34 +72,6 @@
     <div class="chart xlarge" id="tempChart"><div class="empty">Waiting for air-temperature telemetry.</div></div>
   </section>
 
-  <section class="panel primary-monitor-panel pack-monitor-panel">
-    <div class="panel-head monitor-head">
-      <div>
-        <span class="eyebrow">Pack Creek · PC1</span>
-        <h2>Pack Creek flow</h2>
-        <p id="packChartCount">Waiting for calibrated stage telemetry</p>
-      </div>
-      <div class="monitor-actions">
-        <div class="tabs compact-tabs" id="packChartMode" role="group" aria-label="Pack Creek chart metric">
-          <button type="button" id="packModeFlow" class="active">Flow (CFS)</button>
-          <button type="button" id="packModeStage">Stage (ft)</button>
-        </div>
-        <div class="pack-source-filter" role="group" aria-label="Pack Creek sensor sources">
-          <button type="button" class="pack-source-btn" id="packSource313" aria-pressed="true"><span class="pack-source-dot" style="background:#66b9ff"></span>SEN0313</button>
-          <button type="button" class="pack-source-btn" id="packSource2001" aria-pressed="false"><span class="pack-source-dot" style="background:#ff9a67"></span>MX2001</button>
-        </div>
-        <button type="button" class="expand-btn" id="packChartExpand">Expand</button>
-      </div>
-    </div>
-    <div class="monitor-summary">
-      <div><span>Current flow</span><strong id="packFlowDetail">—</strong><small>rating curve output</small></div>
-      <div><span>Current stage</span><strong id="packStageDetail">—</strong><small>authoritative SEN0313</small></div>
-      <div><span>Water temperature</span><strong id="packTempDetailMain">—</strong><small>HOBO MX2001</small></div>
-      <div><span>Last stage packet</span><strong id="packStageAge">—</strong><small id="packRatingStatus">waiting for data</small></div>
-    </div>
-    <div class="chart xlarge" id="packStageChart"><div class="empty">Waiting for Pack Creek stage telemetry.</div></div>
-  </section>
-
   <section class="panel primary-monitor-panel soil-monitor-panel">
     <div class="panel-head monitor-head">
       <div>
@@ -117,6 +89,24 @@
     </div>
     <div class="chart-note">Moisture ADC10 = left axis · rock temperature = right axis · blue shaded periods = radar-observed precipitation</div>
     <div class="chart xlarge" id="soilMoistureChart"><div class="empty">Waiting for hourly rock-moisture telemetry.</div></div>
+  </section>
+
+  <section class="panel primary-monitor-panel cliff-battery-panel">
+    <div class="panel-head monitor-head">
+      <div>
+        <span class="eyebrow">Cliff Sensor · !c9f9f6e7</span>
+        <h2>Cliff Sensor Battery</h2>
+        <p id="cliffBatteryChartCount">Waiting for battery telemetry</p>
+      </div>
+      <button type="button" class="expand-btn" id="cliffBatteryExpand">Expand</button>
+    </div>
+    <div class="monitor-summary">
+      <div><span>Battery</span><strong id="cliffBatteryNow">—</strong><small id="cliffBatteryAge">waiting for device packet</small></div>
+      <div><span>Voltage</span><strong id="cliffVoltageNow">—</strong><small>field supply</small></div>
+      <div><span>Water distance</span><strong id="cliffDistanceDetail">—</strong><small>current ultrasonic reading</small></div>
+      <div><span>Distance packet</span><strong id="cliffDistanceAge">—</strong><small>Cliff water-distance telemetry</small></div>
+    </div>
+    <div class="chart xlarge" id="cliffBatteryChart"><div class="empty">Waiting for Cliff Sensor battery telemetry.</div></div>
   </section>
 
   <section class="station-detail-grid">
@@ -161,11 +151,11 @@
   </section>
 
   <section class="panel recent-panel">
-    <div class="panel-head"><div><h2>Recent readings</h2><p>Air-temperature history from monitored air stations. Pack Creek water temperature stays in the Pack Creek monitor.</p></div></div>
+    <div class="panel-head"><div><h2>Recent readings</h2><p>Air-temperature history from monitored air stations.</p></div></div>
     <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Air temp °F</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="6">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
-  <footer><span>Meshtastic environmental network · Pack Creek · Hidden Valley · Rock Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Meshtastic environmental network · Hidden Valley · Rock Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
@@ -185,8 +175,7 @@
 <script src="/swell.js?v=20260910-preserve-copy"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/seed.js?v=20260911-seed-visible"></script>
-<script src="/network-sensors.js?v=20260929-rock-one-graph"></script>
-<script src="/pack-command.js?v=20260925-pack-command-center"></script>
+<script src="/network-sensors.js?v=20260929-cliff-distance-pack-paused"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;
