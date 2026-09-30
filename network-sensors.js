@@ -185,12 +185,12 @@
   if (hero) hero.insertAdjacentHTML('afterbegin',
     '<article class="station-hero extra-station" style="--accent:#d9b873">' +
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
-      '<strong>Rock Moisture</strong><small>Temporary sandstone test · !77788479 · raw ADC10</small></div></div>' +
+      '<strong>Rock Moisture</strong><small>RAK4631 · Firmware V4 · !77788479 · raw ADC10</small></div></div>' +
       '<div class="extra-reading" id="soilMoisture">—</div><div class="extra-secondary" id="soilAdc">ADC —</div>' +
       '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
     '<article class="station-hero extra-station" style="--accent:#c3a0fb">' +
       '<div class="station-heading"><span class="station-dot" style="background:#c3a0fb"></span><div>' +
-      '<strong>Cliff Sensor</strong><small>CCAT · !c9f9f6e7 · water distance</small></div></div>' +
+      '<strong>Cliff Sensor</strong><small>CCAT · Firmware V4 · !c9f9f6e7 · water distance</small></div></div>' +
       '<div class="reading-kicker">Water distance</div><div class="extra-reading" id="cliffDistance">—</div>' +
       '<div class="extra-secondary" id="cliffDistanceRaw">Waiting for ultrasonic distance</div>' +
       '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No distance yet</div></article>');
