@@ -31,7 +31,7 @@
   if (heroGrid && !document.getElementById('seedTemp')) {
     heroGrid.insertAdjacentHTML('beforeend', `
       <article class="station-hero seed-card">
-        <div class="station-heading"><span class="station-dot seed"></span><div><strong>Thousand Lake Mountain</strong><small>XIAO nRF52 Kit · TLRP · !9df66d7e</small></div></div>
+        <div class="station-heading"><span class="station-dot seed"></span><div><strong>Thousand Lake Mountain</strong><small>XIAO nRF52 Kit · Firmware V3 · TLRP · !9df66d7e</small></div></div>
         <div class="big-temp"><span id="seedTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="seedUpdated">Waiting for temperature</span><span id="seedHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="seedState">No temperature yet</div>
