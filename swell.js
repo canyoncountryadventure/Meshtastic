@@ -23,7 +23,7 @@
   if (heroGrid && !document.getElementById('swTemp')) {
     heroGrid.insertAdjacentHTML('beforeend', `
       <article class="station-hero sw-card">
-        <div class="station-heading"><span class="station-dot sw"></span><div><strong>It's a Swell Day</strong><small>RAK4631 · SWRP · !742ecff5</small></div></div>
+        <div class="station-heading"><span class="station-dot sw"></span><div><strong>It's a Swell Day</strong><small>RAK4631 · Firmware V4 · SWRP · !742ecff5</small></div></div>
         <div class="big-temp"><span id="swTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="swUpdated">Waiting for temperature</span><span id="swHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="swState">No temperature yet</div>
