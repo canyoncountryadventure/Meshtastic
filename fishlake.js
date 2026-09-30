@@ -36,7 +36,7 @@
   if (heroGrid && !document.getElementById('flTemp')) {
     heroGrid.insertAdjacentHTML('beforeend', `
       <article class="station-hero fl-card">
-        <div class="station-heading"><span class="station-dot fl"></span><div><strong>Fishlake Hightop</strong><small>RAK4631 · FLHT · !5e021e35</small></div></div>
+        <div class="station-heading"><span class="station-dot fl"></span><div><strong>Fishlake Hightop</strong><small>RAK4631 · Firmware V3 · FLHT · !5e021e35</small></div></div>
         <div class="big-temp"><span id="flTemp">—</span><small>°F</small></div>
         <div class="station-meta"><span id="flUpdated">Waiting for temperature</span><span id="flHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="flState">No temperature yet</div>
