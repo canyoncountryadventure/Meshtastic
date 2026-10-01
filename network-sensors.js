@@ -457,11 +457,11 @@
     const healthy = tempStations.length +
       (sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? 1 : 0) +
       (cliffDistance && ageHours(cliffDistance.observed_at) <= STALE_AFTER_HOURS ? 1 : 0);
-    setText('stationsReporting',healthy+' / 7');
+    setText('stationsReporting',healthy+' / 6');
     const n=document.getElementById('networkStatus');
     if(n){
-      n.className='live-pill '+(healthy===7?'online':healthy?'partial':'offline');
-      setText('networkStatusText',healthy===7?'All 7 stations reporting':healthy?healthy+' of 7 stations reporting':'No current station telemetry');
+      n.className='live-pill '+(healthy===6?'online':healthy?'partial':'offline');
+      setText('networkStatusText',healthy===6?'All 6 stations reporting':healthy?healthy+' of 6 stations reporting':'No current station telemetry');
     }
   };
 
@@ -543,13 +543,13 @@
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
     if (!small || !name || name === 'Rock Moisture' || name === 'Pack Creek') return;
-    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day",'Thousand Lake Mountain'].includes(name)) {
+    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day"].includes(name)) {
       small.textContent += ' · air temperature';
     }
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Pack Creek · Moab · Fishlake · Swell · Thousand Lake Mountain';
+    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Pack Creek · Moab · Fishlake · Swell';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');
