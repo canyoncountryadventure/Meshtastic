@@ -76,11 +76,11 @@
 
   <section class="panel primary-monitor-panel pack-flow-panel">
     <div class="panel-head monitor-head">
-      <div><span class="eyebrow">Pack Creek · !c9f9f6e7</span><h2>Pack Creek Flow</h2><p id="packFlowChartCount">Waiting for calibrated stage readings</p></div>
+      <div><span class="eyebrow">Pack Creek · !c9f9f6e7</span><h2>Pack Creek Water Distance</h2><p id="packFlowChartCount">Waiting for water-distance readings</p></div>
       <button type="button" class="expand-btn" id="packFlowExpand">Expand</button>
     </div>
-    <div class="chart-note">Discharge in CFS from calibrated stage and the Pack Creek rating curve.</div>
-    <div class="chart xlarge" id="packFlowChart"><div class="empty">Waiting for calibrated Pack Creek stage telemetry.</div></div>
+    <div class="chart-note">Distance from the ultrasonic sensor to the water surface, in feet.</div>
+    <div class="chart xlarge" id="packFlowChart"><div class="empty">Waiting for Pack Creek water-distance telemetry.</div></div>
   </section>
 
   <section class="panel primary-monitor-panel cliff-battery-panel">
@@ -185,7 +185,7 @@
 <script src="/fishlake.js?v=20260929-firmware-labels"></script>
 <script src="/swell.js?v=20260929-firmware-labels"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
-<script src="/network-sensors.js?v=20261001-hide-thousand-lake"></script>
+<script src="/network-sensors.js?v=20261001-water-distance"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;
