@@ -5,7 +5,7 @@
   const EXTRA = {
     pack: { node: 4241345683, name: 'Pack Creek', id: '!fccdcc93', color: '#66b9ff' },
     soil: { node: 2004386937, name: 'Rock Moisture', id: '!77788479', color: '#d9b873' },
-    cliff: { node: 3388602087, name: 'Cliff Sensor', id: '!c9f9f6e7', color: '#c3a0fb' },
+    cliff: { node: 3388602087, name: 'Pack Creek', id: '!c9f9f6e7', color: '#c3a0fb' },
     rockTemp: { node: 1949224949, name: 'Rock Temperature', source: "It's a Swell Day", color: '#8ecae6' },
   };
   const TEMPERATURE_TYPES = new Set(['environment', 'mx2001']);
@@ -185,12 +185,12 @@
   if (hero) hero.insertAdjacentHTML('afterbegin',
     '<article class="station-hero extra-station" style="--accent:#d9b873">' +
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
-      '<strong>Rock Moisture</strong><small>RAK4631 · Firmware V4 · !77788479 · raw ADC10</small></div></div>' +
+      '<strong>Rock Moisture (experimental phase)</strong><small>RAK4631 · Firmware V4 · !77788479 · raw ADC10</small></div></div>' +
       '<div class="extra-reading" id="soilMoisture">—</div><div class="extra-secondary" id="soilAdc">ADC —</div>' +
       '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
     '<article class="station-hero extra-station" style="--accent:#c3a0fb">' +
       '<div class="station-heading"><span class="station-dot" style="background:#c3a0fb"></span><div>' +
-      '<strong>Cliff Sensor</strong><small>CCAT · Firmware V4 · !c9f9f6e7 · water distance</small></div></div>' +
+      '<strong>Pack Creek</strong><small>CCAT · Firmware V4 · !c9f9f6e7 · water distance</small></div></div>' +
       '<div class="reading-kicker">Water distance</div><div class="extra-reading" id="cliffDistance">—</div>' +
       '<div class="extra-secondary" id="cliffDistanceRaw">Waiting for ultrasonic distance</div>' +
       '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No distance yet</div></article>');
@@ -349,6 +349,22 @@
   }
 
 
+  function renderPackFlowChart(target=document.getElementById('packFlowChart')){
+    if(!target)return;
+    const rows=rowsFor(EXTRA.cliff.node).filter(r =>
+      r.telemetry_type==='water_distance' && metric(r,'stage_calibrated')!==false &&
+      metric(r,'water_level_ft')!=null && Number.isFinite(Number(metric(r,'water_level_ft'))));
+    const points=rows.map(r=>{
+      const stage=Number(metric(r,'water_level_ft'));
+      const flow=stage<=PACK_RATING.offset?0:PACK_RATING.a*Math.pow(stage-PACK_RATING.offset,PACK_RATING.b);
+      return {x:new Date(r.observed_at).getTime(),y:flow,iso:r.observed_at};
+    }).reverse();
+    renderLineChart(target,[{name:'Pack Creek rated flow',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
+      {axisLabel:'Discharge (cfs)',tooltipValue:v=>v.toFixed(3)+' cfs',strokeWidth:3.3,pointRadius:3.5,
+       empty:'Waiting for calibrated Pack Creek stage. Raw distance alone cannot determine flow.'});
+    setText('packFlowChartCount',points.length?points.length+' flow samples · calibrated SEN0313 stage':'Waiting for calibrated stage readings');
+  }
+
   function renderCliffBatteryChart(target=document.getElementById('cliffBatteryChart')){
     if(!target)return;
     const rows=deviceRows(EXTRA.cliff.node);
@@ -356,13 +372,13 @@
     const voltageRows=rows.filter(r=>Number.isFinite(batteryV(r))&&batteryV(r)>0)
       .sort((a,b)=>new Date(batteryTime(a))-new Date(batteryTime(b)));
     const points=voltageRows.map(r=>({x:new Date(batteryTime(r)).getTime(),y:batteryV(r),iso:batteryTime(r)}));
-    renderLineChart(target,[{name:'Cliff Sensor voltage',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
-      {axisLabel:'Battery voltage (V)',tooltipValue:v=>v.toFixed(3)+' V',strokeWidth:3.3,pointRadius:3.4,empty:'Waiting for Cliff Sensor battery telemetry.'});
+    renderLineChart(target,[{name:'Pack Creek voltage',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
+      {axisLabel:'Battery voltage (V)',tooltipValue:v=>v.toFixed(3)+' V',strokeWidth:3.3,pointRadius:3.4,empty:'Waiting for Pack Creek battery telemetry.'});
     const pct=latest?batteryPct(latest):null, volts=latest?batteryV(latest):null;
     setText('cliffBatteryNow',pct===101?'External':pct!==null?Math.round(pct)+'%':'—');
     setText('cliffVoltageNow',volts!==null&&volts>0?volts.toFixed(3)+' V':'—');
     setText('cliffBatteryAge',latest?ageText(batteryTime(latest)):'waiting for device packet');
-    setText('cliffBatteryChartCount',points.length?points.length+' voltage samples · Cliff Sensor':'Battery telemetry pending');
+    setText('cliffBatteryChartCount',points.length?points.length+' voltage samples · Pack Creek':'Battery telemetry pending');
   }
 
   function openExpanded(titleText,renderer,sourceId){
@@ -372,8 +388,9 @@
     setTimeout(()=>renderer(chart),40);
   }
 
-  document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture + Rain',renderSoilChart,'soilMoistureChart'));
-  document.getElementById('cliffBatteryExpand')?.addEventListener('click',()=>openExpanded('Cliff Sensor Battery',renderCliffBatteryChart,'cliffBatteryChart'));
+  document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture (experimental phase) + Rain',renderSoilChart,'soilMoistureChart'));
+  document.getElementById('packFlowExpand')?.addEventListener('click',()=>openExpanded('Pack Creek Flow',renderPackFlowChart,'packFlowChart'));
+  document.getElementById('cliffBatteryExpand')?.addEventListener('click',()=>openExpanded('Pack Creek Battery',renderCliffBatteryChart,'cliffBatteryChart'));
 
   const earlierSummary = renderSummary;
   renderSummary = function() {
@@ -405,6 +422,7 @@
     setText('soilMoistureTime', freshness(sm));
 
     renderSoilChart();
+    renderPackFlowChart();
     renderCliffBatteryChart();
 
     const tempStations = airTemperatureStations().map(s => ({
@@ -524,14 +542,14 @@
   document.querySelectorAll('.station-hero .station-heading').forEach(heading => {
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
-    if (!small || !name || name === 'Rock Moisture' || name === 'Cliff Sensor') return;
+    if (!small || !name || name === 'Rock Moisture' || name === 'Pack Creek') return;
     if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day",'Thousand Lake Mountain'].includes(name)) {
       small.textContent += ' · air temperature';
     }
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Cliff Sensor · Moab · Fishlake · Swell · Thousand Lake Mountain';
+    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Pack Creek · Moab · Fishlake · Swell · Thousand Lake Mountain';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');
@@ -542,7 +560,7 @@
   });
   const mapDescription = document.querySelector('.map-panel .panel-head p');
   if (mapDescription) mapDescription.textContent =
-    'Mapped locations are shown where coordinates are confirmed. Rock Moisture and Cliff Sensor are not positioned until their site coordinates are supplied.';
+    'Mapped locations are shown where coordinates are confirmed. Rock Moisture and Pack Creek are not positioned until their site coordinates are supplied.';
 
   // The original five-station scripts load on startup before this extension.
   // Refresh once so the added stations render immediately with the same API data.

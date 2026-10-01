@@ -13,7 +13,7 @@ const STATIONS = [
   { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
   { node: 4241345683, name: 'Pack Creek', battery: true, stage: true },
   { node: 2004386937, name: 'Wingate Moisture', battery: true, measure: 'soil' },
-  { node: 3388602087, name: 'Cliff Sensor', battery: true },
+  { node: 3388602087, name: 'Pack Creek', battery: true },
 ];
 
 const EXPECTED_INTERVAL_MINUTES = 60;

@@ -9,7 +9,7 @@ const KNOWN_STATIONS = new Map([
   [2650172798, 'Thousand Lake Mountain'],
   [4241345683, 'Pack Creek'], // !fccdcc93, ingestion paused
   [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
-  [3388602087, 'Cliff Sensor'], // !c9f9f6e7, water distance
+  [3388602087, 'Pack Creek'], // !c9f9f6e7, water distance
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);
@@ -125,7 +125,7 @@ function validate(body) {
     throw new Error('Invalid soil moisture reading or source node');
   }
   if (body.type === 'water_distance' && nodeNum !== 4241345683 && nodeNum !== 3388602087) {
-    throw new Error('Water-distance packets are only approved for Pack Creek or Cliff Sensor');
+    throw new Error('Water-distance packets are only approved for the configured Pack Creek nodes');
   }
 
   return nodeNum;

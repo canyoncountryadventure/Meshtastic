@@ -11,7 +11,7 @@
     {node:1949224949,name:"It's a Swell Day",short:'SWRP'},
     {node:2650172798,name:'Thousand Lake Mountain',short:'TLRP'},
     {node:2004386937,name:'Wingate Moisture',short:'SOIL'},
-    {node:3388602087,name:'Cliff Sensor',short:'CCAT'},
+    {node:3388602087,name:'Pack Creek',short:'CCAT'},
   ];
   const packetSeen = new Map();
   let playTimer = null;
