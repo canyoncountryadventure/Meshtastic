@@ -351,18 +351,13 @@
 
   function renderPackFlowChart(target=document.getElementById('packFlowChart')){
     if(!target)return;
-    const rows=rowsFor(EXTRA.cliff.node).filter(r =>
-      r.telemetry_type==='water_distance' && metric(r,'stage_calibrated')!==false &&
-      metric(r,'water_level_ft')!=null && Number.isFinite(Number(metric(r,'water_level_ft'))));
-    const points=rows.map(r=>{
-      const stage=Number(metric(r,'water_level_ft'));
-      const flow=stage<=PACK_RATING.offset?0:PACK_RATING.a*Math.pow(stage-PACK_RATING.offset,PACK_RATING.b);
-      return {x:new Date(r.observed_at).getTime(),y:flow,iso:r.observed_at};
-    }).reverse();
-    renderLineChart(target,[{name:'Pack Creek rated flow',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
-      {axisLabel:'Discharge (cfs)',tooltipValue:v=>v.toFixed(3)+' cfs',strokeWidth:3.3,pointRadius:3.5,
-       empty:'Waiting for calibrated Pack Creek stage. Raw distance alone cannot determine flow.'});
-    setText('packFlowChartCount',points.length?points.length+' flow samples · calibrated SEN0313 stage':'Waiting for calibrated stage readings');
+    const points=cliffDistanceRows().filter(r=>metric(r,'distance_valid')!==false)
+      .map(r=>({x:new Date(r.observed_at).getTime(),y:cliffDistanceMm(r)/304.8,iso:r.observed_at}))
+      .filter(p=>Number.isFinite(p.y)).reverse();
+    renderLineChart(target,[{name:'Pack Creek water distance',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
+      {axisLabel:'Water distance (ft)',tooltipValue:v=>v.toFixed(3)+' ft',strokeWidth:3.3,pointRadius:3.5,
+       empty:'Waiting for Pack Creek water-distance telemetry.'});
+    setText('packFlowChartCount',points.length?points.length+' water-distance samples':'Waiting for water-distance readings');
   }
 
   function renderCliffBatteryChart(target=document.getElementById('cliffBatteryChart')){
@@ -389,7 +384,7 @@
   }
 
   document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture (experimental phase) + Rain',renderSoilChart,'soilMoistureChart'));
-  document.getElementById('packFlowExpand')?.addEventListener('click',()=>openExpanded('Pack Creek Flow',renderPackFlowChart,'packFlowChart'));
+  document.getElementById('packFlowExpand')?.addEventListener('click',()=>openExpanded('Pack Creek Water Distance',renderPackFlowChart,'packFlowChart'));
   document.getElementById('cliffBatteryExpand')?.addEventListener('click',()=>openExpanded('Pack Creek Battery',renderCliffBatteryChart,'cliffBatteryChart'));
 
   const earlierSummary = renderSummary;
