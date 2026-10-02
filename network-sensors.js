@@ -55,9 +55,27 @@
     const mm=cliffDistanceMm(r);
     return Number.isFinite(mm) ? Math.round(mm)+' mm' : 'Waiting for distance';
   };
-  const rockTemperatureRows = () => rowsFor(EXTRA.rockTemp.node).filter(r =>
-    r.telemetry_type === 'environment' && tempF(r) !== null &&
-    new Date(r.observed_at).getTime() >= ROCK_MOISTURE_INSTALLED_AT);
+  const rockTemperatureRows = () => {
+    // Prefer temperature reported by the Rock Moisture station itself. Use the
+    // nearby Swell rock probe only as a historical/fallback source for hours
+    // where the Rock Moisture node has no temperature packet.
+    const primary = rowsFor(EXTRA.soil.node).filter(r =>
+      r.telemetry_type === 'environment' && tempF(r) !== null &&
+      new Date(r.observed_at).getTime() >= ROCK_MOISTURE_INSTALLED_AT);
+    const fallback = rowsFor(EXTRA.rockTemp.node).filter(r =>
+      r.telemetry_type === 'environment' && tempF(r) !== null &&
+      new Date(r.observed_at).getTime() >= ROCK_MOISTURE_INSTALLED_AT);
+    const buckets = new Map();
+    fallback.forEach(r => {
+      const hour=Math.floor(new Date(r.observed_at).getTime()/3600000);
+      if(!buckets.has(hour)) buckets.set(hour,{...r,rock_temp_source:'Swell fallback'});
+    });
+    primary.forEach(r => {
+      const hour=Math.floor(new Date(r.observed_at).getTime()/3600000);
+      buckets.set(hour,{...r,rock_temp_source:'Rock Moisture'});
+    });
+    return [...buckets.values()].sort(byTime);
+  };
   const rockHourlyRows = () => {
     const buckets = new Map();
     soilRows().forEach(r => {
@@ -67,6 +85,36 @@
       if (!buckets.has(hour)) buckets.set(hour, r);
     });
     return [...buckets.values()].sort(byTime);
+  };
+  const rockMoistureInterpolationSeries = measuredPoints => {
+    const sorted=[...measuredPoints].sort((a,b)=>a.x-b.x);
+    const out=[];
+    for(let i=1;i<sorted.length;i++){
+      const a=sorted[i-1], b=sorted[i];
+      const gap=b.x-a.x;
+      if(gap<=90*60*1000) continue;
+      const pts=[{...a,estimatedBridge:true}];
+      for(let t=a.x+60*60*1000;t<b.x;t+=60*60*1000){
+        const frac=(t-a.x)/gap;
+        pts.push({
+          x:t,
+          y:a.y+(b.y-a.y)*frac,
+          iso:new Date(t).toISOString(),
+          estimated:true,
+          gapHours:gap/3600000
+        });
+      }
+      pts.push({...b,estimatedBridge:true});
+      out.push({
+        name:'Interpolated moisture gap',
+        color:'#ff9a67',
+        points:pts,
+        dash:'7 6',
+        strokeWidth:2.5,
+        pointRadius:1.8
+      });
+    }
+    return out;
   };
   const stageRows = () => rowsFor(EXTRA.pack.node).filter(r =>
     r.telemetry_type === 'water_distance' &&
@@ -328,24 +376,37 @@
       iso:r.observed_at,
       firmwarePct:metric(r,'soil_moisture_percent')
     })).reverse();
+    const interpolationSeries=rockMoistureInterpolationSeries(moisturePoints);
     const tempPoints=rockTemperatureRows().map(r=>({
       x:new Date(r.observed_at).getTime(),
       y:tempF(r),
-      iso:r.observed_at
+      iso:r.observed_at,
+      tempSource:r.rock_temp_source||'Rock temperature'
     })).reverse();
+
     renderLineChart(target,[
-      {name:'Rock moisture ADC10',color:EXTRA.soil.color,points:moisturePoints,maxGapMs:90*60*1000,strokeWidth:3.4,pointRadius:3.5},
-      {name:'Rock temperature',color:EXTRA.rockTemp.color,points:tempPoints,maxGapMs:90*60*1000,axis:'right',strokeWidth:2.4,pointRadius:2.6}
+      {name:'Measured rock moisture',color:EXTRA.soil.color,points:moisturePoints,maxGapMs:90*60*1000,strokeWidth:3.5,pointRadius:3.4},
+      ...interpolationSeries,
+      {name:'Rock temperature',color:EXTRA.rockTemp.color,points:tempPoints,maxGapMs:100*60*1000,axis:'right',strokeWidth:2.3,pointRadius:2.4}
     ],{
-      axisLabel:'Rock moisture ADC10 · lower = wetter',
+      axisLabel:'ADC10 · lower = wetter',
       rightAxisLabel:'Rock temperature °F',
       rightAxisColor:EXTRA.rockTemp.color,
+      yFormat:v=>Math.round(v).toString(),
       rightYFormat:v=>v.toFixed(0)+'°',
-      tooltipValue:(v,p,series)=>series?.axis==='right'?v.toFixed(1)+' °F':'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':''),
+      tooltipValue:(v,p,series)=>{
+        if(series?.axis==='right') return v.toFixed(1)+' °F · '+(p?.tempSource||'rock temperature');
+        if(series?.name==='Interpolated moisture gap') return 'Estimated ADC10 '+Math.round(v)+' · linear interpolation';
+        return 'ADC10 '+Math.round(v)+(p?.firmwarePct!=null?' · firmware soil index '+Math.round(Number(p.firmwarePct))+'%':'');
+      },
       bands:ROCK_PRECIP_BANDS,
       empty:'Waiting for rock-moisture telemetry.'
     });
-    setText('soilChartCount',moisturePoints.length?moisturePoints.length+' moisture samples · '+tempPoints.length+' rock-temperature samples · rain overlaid':'Waiting for rock-moisture readings');
+
+    const gapCount=interpolationSeries.length;
+    setText('soilChartCount',moisturePoints.length
+      ? moisturePoints.length+' measured moisture · '+tempPoints.length+' temperature · '+gapCount+' interpolated gap'+(gapCount===1?'':'s')
+      : 'Waiting for rock-moisture readings');
   }
 
 
