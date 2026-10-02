@@ -147,7 +147,7 @@
       <div><span>Rock temperature</span><strong id="soilAdcDetail">—</strong><small>Swell probe in adjacent rock</small></div>
       <div><span>Last packet</span><strong id="soilAgeDetail">—</strong><small id="soilMoistureTime">waiting for data</small></div>
     </div>
-    <div class="chart-note">Moisture ADC10 = left axis · rock temperature = right axis · blue shaded periods = radar-observed precipitation</div>
+    <div class="chart-note">Solid tan = measured moisture · dashed orange = interpolated missing moisture · blue = rock temperature · shaded bands = rain</div>
     <div class="chart xlarge" id="soilMoistureChart"><div class="empty">Waiting for hourly rock-moisture telemetry.</div></div>
   </section>
 
@@ -185,7 +185,7 @@
 <script src="/fishlake.js?v=20260929-firmware-labels"></script>
 <script src="/swell.js?v=20260929-firmware-labels"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
-<script src="/network-sensors.js?v=20261001-water-distance"></script>
+<script src="/network-sensors.js?v=20261001-rock-cleanup-interpolation"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
   window.setInterval = window.__meshtasticNativeSetInterval;
