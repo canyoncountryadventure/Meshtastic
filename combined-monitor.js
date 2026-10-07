@@ -15,6 +15,7 @@
     {key:'voltage',name:'Battery voltage',unit:'V',dash:'',precision:3},
     {key:'temperature',name:'Temperature',unit:'°F',dash:'7 4',precision:1},
     {key:'moisture',name:'Moisture',unit:'ADC10',dash:'2 4',precision:0},
+    {key:'stage',name:'Swell Day stage',unit:'Stage ft',dash:'10 3 2 3',precision:3},
   ];
   const seriesPalette = [
     ['#55d9b7','#a8ed72','#1bb9a8'],
@@ -25,7 +26,7 @@
     ['#f5d05f','#f9f58b','#e89b31'],
     ['#fa86ac','#ffc2dc','#d94b93'],
   ];
-  const seriesColor = (site,definition) => seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
+  const seriesColor = (site,definition) => definition.key==='stage' ? '#ff56df' : seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
   const selectedSites = new Set();
   const selectedMetrics = new Set();
   const seriesRows = site => state.readings.filter(r => Number(r.node_num)===site.node &&
@@ -39,6 +40,11 @@
     if(key==='temperature'){
       const value=tempF(r);
       return temperatureTypes.has(r.telemetry_type) && value!==null ? {value,unit:'°F'} : null;
+    }
+    if(key==='stage'){
+      if(Number(r.node_num)!==1949224949 || !['mx2001','water_distance'].includes(r.telemetry_type))return null;
+      const value=num(metric(r,'water_level_ft'));
+      return value!==null ? {value,unit:'Stage ft'} : null;
     }
     if(r.telemetry_type!=='soil')return null;
     const adc=num(metric(r,'soil_adc10'));
@@ -94,7 +100,7 @@
     setText('combinedChartCount',`${selectedCount} sites selected · ${series.length} series with readings · ${range.hours} hours`);
     const unavailable=sites.filter(s=>selectedSites.has(s.node) && !series.some(line=>line.site.node===s.node));
     document.getElementById('combinedLegend').innerHTML=series.map(s=>
-      `<span><i class="combined-line ${s.definition.key}" style="border-color:${s.color}"></i>${esc(s.site.name)} · ${esc(s.definition.name)} (${esc(s.unit)})</span>`).join('')+
+      `<span><i class="combined-line ${s.definition.key}" style="border-color:${s.color}"></i>${esc(s.site.name)} · ${esc(s.definition.name)} (${esc(s.unit==='Stage ft'?'ft':s.unit)})</span>`).join('')+
       unavailable.map(s=>`<span class="combined-series-empty">${esc(s.name)} · no selected readings in this window</span>`).join('');
     if(!series.length){target.innerHTML=`<div class="empty">${selectedCount && selectedMetrics.size?'No selected measurements in this window.':'Select at least one site and measurement.'}</div>`;return;}
     const w=Math.max(620,target.clientWidth||900),h=Math.max(300,target.clientHeight||460),left=58,right=units.length>1?58+(units.length-2)*58:20,top=38,bottom=40,pw=w-left-right,ph=h-top-bottom;
@@ -105,7 +111,7 @@
       if(unit==='ADC10'){min=Math.max(0,min);max=Math.min(1023,max);}if(unit==='% index'){min=Math.max(0,min);max=Math.min(100,max);}
       return [unit,{min,max,y:v=>top+(max-v)/(max-min)*ph}];
     }));
-    const svg=svgEl('svg',{viewBox:`0 0 ${w} ${h}`,preserveAspectRatio:'none',role:'img','aria-label':'Site battery voltage, temperature and moisture comparison with independent unit scales'});target.appendChild(svg);
+    const svg=svgEl('svg',{viewBox:`0 0 ${w} ${h}`,preserveAspectRatio:'none',role:'img','aria-label':'Site battery voltage, temperature, moisture and stage comparison with independent unit scales'});target.appendChild(svg);
     for(let i=0;i<=4;i++){
       const yy=top+ph*i/4;svg.appendChild(svgEl('line',{x1:left,x2:left+pw,y1:yy,y2:yy,stroke:'#17343d','stroke-width':1}));
       units.forEach((unit,j)=>{const scale=scales.get(unit),value=scale.max-(scale.max-scale.min)*i/4;addText(svg,j===0?left-8:left+pw+8+(j-1)*58,yy+4,value.toFixed(unit==='V'?2:unit==='ADC10'?0:1),j===0?'end':'start','#a8c2c9',11);});
@@ -118,7 +124,7 @@
       line.points.forEach((p,i)=>{if(i && p.x-line.points[i-1].x>3*3600000)draw();segment.push(p);});draw();
       for(const point of line.points){
         const circle=svgEl('circle',{cx:x(point.x),cy:y(point.y),r:2.6,fill:line.color,stroke:'#08171d','stroke-width':1});
-        const tip=()=>`<strong>${esc(line.site.name)}</strong><br>${esc(line.definition.name)}: ${point.y.toFixed(line.definition.precision)} ${esc(line.unit)}<br>${esc(fmtTime(point.iso))}`;
+        const tip=()=>`<strong>${esc(line.site.name)}</strong><br>${esc(line.definition.name)}: ${point.y.toFixed(line.definition.precision)} ${esc(line.unit==='Stage ft'?'ft':line.unit)}<br>${esc(fmtTime(point.iso))}`;
         circle.addEventListener('mouseenter',ev=>showTooltip(target,ev,tip()));circle.addEventListener('mouseleave',()=>hideTooltip(target));circle.addEventListener('click',ev=>showTooltip(target,ev,tip()));
         const title=svgEl('title');title.textContent=`${line.site.name}: ${point.y.toFixed(line.definition.precision)} ${line.unit}`;circle.appendChild(title);svg.appendChild(circle);
       }
@@ -158,7 +164,7 @@
   }
   document.getElementById('combinedExpand')?.addEventListener('click',()=>{
     const dialog=document.getElementById('expandDialog'),target=document.getElementById('expandedChart');
-    setText('expandTitle','Battery, Temperature & Moisture');document.getElementById('expandedMap').hidden=true;target.hidden=false;target.dataset.rangeSource='combinedChart';dialog.showModal();setTimeout(()=>renderCombined(target),40);
+    setText('expandTitle','Battery, Temperature, Moisture & Stage');document.getElementById('expandedMap').hidden=true;target.hidden=false;target.dataset.rangeSource='combinedChart';dialog.showModal();setTimeout(()=>renderCombined(target),40);
   });
   const earlierRenderAll=renderAll;
   renderAll=function(){earlierRenderAll();renderCombined();renderFishlakeTemperature();renderNewCards();if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='combinedChart')renderCombined(document.getElementById('expandedChart'));if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='fishlakeTemperatureChart')renderFishlakeTemperature(document.getElementById('expandedChart'));};
