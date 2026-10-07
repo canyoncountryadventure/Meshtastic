@@ -13,10 +13,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'GET required' });
   }
 
-  const hours = clampInt(req.query.hours, 24, 1, 24 * 365);
-  const limit = clampInt(req.query.limit, 5000, 1, 10000);
-  const node = req.query.node === undefined ? null : clampInt(req.query.node, null, 1, 4294967295);
-  const bucketMinutes = clampInt(req.query.bucket_minutes, 1, 0, 24 * 60);
+  const params = new URL(req.url || '/', 'http://localhost').searchParams;
+  const hours = clampInt(params.get('hours'), 24, 1, 24 * 365);
+  const limit = clampInt(params.get('limit'), 5000, 1, 10000);
+  const nodeParam = params.get('node');
+  const node = nodeParam === null ? null : clampInt(nodeParam, null, 1, 4294967295);
+  const bucketMinutes = clampInt(params.get('bucket_minutes'), 1, 0, 24 * 60);
 
   try {
     const sql = getSql();
