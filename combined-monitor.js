@@ -16,8 +16,18 @@
     {key:'temperature',name:'Temperature',unit:'°F',dash:'7 4',precision:1},
     {key:'moisture',name:'Moisture',unit:'ADC10',dash:'2 4',precision:0},
   ];
-  const selectedSites = new Set(sites.map(s=>s.node));
-  const selectedMetrics = new Set(metricDefs.map(m=>m.key));
+  const seriesPalette = [
+    ['#55d9b7','#a8ed72','#1bb9a8'],
+    ['#ff9a67','#ffcf74','#ee6767'],
+    ['#c3a0fb','#f19cff','#827ff5'],
+    ['#d9b873','#f4e2ac','#aa8748'],
+    ['#57b7ff','#8be6fa','#3973ed'],
+    ['#f5d05f','#f9f58b','#e89b31'],
+    ['#fa86ac','#ffc2dc','#d94b93'],
+  ];
+  const seriesColor = (site,definition) => seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
+  const selectedSites = new Set();
+  const selectedMetrics = new Set();
   const seriesRows = site => state.readings.filter(r => Number(r.node_num)===site.node &&
     (!site.since || Date.parse(r.observed_at)>=site.since));
   const temperatureTypes = new Set(['environment','mx2001','rock_test']);
@@ -47,7 +57,7 @@
           if(!groups.has(result.unit))groups.set(result.unit,[]);
           groups.get(result.unit).push({x:time,y:result.value,iso:row.observed_at});
         }
-        for(const [unit,points] of groups)series.push({site,definition,unit,points:points.sort((a,b)=>a.x-b.x)});
+        for(const [unit,points] of groups)series.push({site,definition,unit,color:seriesColor(site,definition),points:points.sort((a,b)=>a.x-b.x)});
       }
     }
     return series;
@@ -59,9 +69,9 @@
   document.head.appendChild(css);
   const controls=document.getElementById('combinedControls');
   document.getElementById('combinedMetricControls').innerHTML=metricDefs.map(m=>
-    `<label class="combined-choice"><input type="checkbox" data-combined-metric="${m.key}" checked>${esc(m.name)}</label>`).join('');
+    `<label class="combined-choice"><input type="checkbox" data-combined-metric="${m.key}">${esc(m.name)}</label>`).join('');
   document.getElementById('combinedSiteControls').innerHTML=sites.map(s=>
-    `<label class="combined-choice" style="--choice-color:${s.color}"><input type="checkbox" data-combined-site="${s.node}" checked>${esc(s.name)}</label>`).join('');
+    `<label class="combined-choice" style="--choice-color:${s.color}"><input type="checkbox" data-combined-site="${s.node}">${esc(s.name)}</label>`).join('');
   controls.addEventListener('change',event=>{
     const input=event.target;
     if(input.dataset.combinedMetric){const key=input.dataset.combinedMetric;input.checked?selectedMetrics.add(key):selectedMetrics.delete(key);}
@@ -84,7 +94,7 @@
     setText('combinedChartCount',`${selectedCount} sites selected · ${series.length} series with readings · ${range.hours} hours`);
     const unavailable=sites.filter(s=>selectedSites.has(s.node) && !series.some(line=>line.site.node===s.node));
     document.getElementById('combinedLegend').innerHTML=series.map(s=>
-      `<span><i class="combined-line ${s.definition.key}" style="border-color:${s.site.color}"></i>${esc(s.site.name)} · ${esc(s.definition.name)} (${esc(s.unit)})</span>`).join('')+
+      `<span><i class="combined-line ${s.definition.key}" style="border-color:${s.color}"></i>${esc(s.site.name)} · ${esc(s.definition.name)} (${esc(s.unit)})</span>`).join('')+
       unavailable.map(s=>`<span class="combined-series-empty">${esc(s.name)} · no selected readings in this window</span>`).join('');
     if(!series.length){target.innerHTML=`<div class="empty">${selectedCount && selectedMetrics.size?'No selected measurements in this window.':'Select at least one site and measurement.'}</div>`;return;}
     const w=Math.max(620,target.clientWidth||900),h=Math.max(300,target.clientHeight||460),left=58,right=units.length>1?58+(units.length-2)*58:20,top=38,bottom=40,pw=w-left-right,ph=h-top-bottom;
@@ -104,10 +114,10 @@
     units.forEach((unit,j)=>addText(svg,j===0?left-8:left+pw+8+(j-1)*58,22,unit,j===0?'end':'start','#e1eff1',11));
     for(const line of series){
       const y=scales.get(line.unit).y;let segment=[];
-      const draw=()=>{if(segment.length)svg.appendChild(svgEl('polyline',{points:segment.map(p=>`${x(p.x)},${y(p.y)}`).join(' '),fill:'none',stroke:line.site.color,'stroke-width':2.6,'stroke-dasharray':line.definition.dash,'stroke-linejoin':'round'}));segment=[];};
+      const draw=()=>{if(segment.length)svg.appendChild(svgEl('polyline',{points:segment.map(p=>`${x(p.x)},${y(p.y)}`).join(' '),fill:'none',stroke:line.color,'stroke-width':2.6,'stroke-dasharray':line.definition.dash,'stroke-linejoin':'round'}));segment=[];};
       line.points.forEach((p,i)=>{if(i && p.x-line.points[i-1].x>3*3600000)draw();segment.push(p);});draw();
       for(const point of line.points){
-        const circle=svgEl('circle',{cx:x(point.x),cy:y(point.y),r:2.6,fill:line.site.color,stroke:'#08171d','stroke-width':1});
+        const circle=svgEl('circle',{cx:x(point.x),cy:y(point.y),r:2.6,fill:line.color,stroke:'#08171d','stroke-width':1});
         const tip=()=>`<strong>${esc(line.site.name)}</strong><br>${esc(line.definition.name)}: ${point.y.toFixed(line.definition.precision)} ${esc(line.unit)}<br>${esc(fmtTime(point.iso))}`;
         circle.addEventListener('mouseenter',ev=>showTooltip(target,ev,tip()));circle.addEventListener('mouseleave',()=>hideTooltip(target));circle.addEventListener('click',ev=>showTooltip(target,ev,tip()));
         const title=svgEl('title');title.textContent=`${line.site.name}: ${point.y.toFixed(line.definition.precision)} ${line.unit}`;circle.appendChild(title);svg.appendChild(circle);
