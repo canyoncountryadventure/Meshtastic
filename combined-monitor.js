@@ -1,4 +1,4 @@
-/* One comparison chart for all visible sites except Fishlake. */
+/* One comparison chart for every displayed station. */
 (() => {
   'use strict';
   const REPURPOSED_AT = Date.parse('2026-10-05T00:00:00Z');
@@ -6,10 +6,11 @@
     {node:1252758033,name:'Hidden Valley',color:'#55d9b7'},
     {node:2740603892,name:'Moab',color:'#ff9a67'},
     {node:3388602087,name:'Pack Creek (paused)',paused:true,color:'#c3a0fb'},
-    {node:2004386937,name:'Rock Moisture (experimental phase)',color:'#d9b873'},
+    {node:2004386937,name:'Soil Moisture',color:'#d9b873'},
     {node:1949224949,name:"It's a Swell Day",color:'#57b7ff'},
     {node:4241345683,name:'SMLA',short:'SMLA',id:'!fccdcc93',color:'#f5d05f',since:REPURPOSED_AT},
     {node:3044869407,name:'Revived',short:'RVV1',id:'!b57d051f',color:'#fa86ac',since:REPURPOSED_AT},
+    {node:1577197109,name:'Fishlake Hightop',color:'#60e5f5'},
   ];
   const metricDefs = [
     {key:'voltage',name:'Battery voltage',unit:'V',dash:'',precision:3},
@@ -25,6 +26,7 @@
     ['#57b7ff','#8be6fa','#3973ed'],
     ['#f5d05f','#f9f58b','#e89b31'],
     ['#fa86ac','#ffc2dc','#d94b93'],
+    ['#60e5f5','#d7f1ff','#20a6b6'],
   ];
   const seriesColor = (site,definition) => definition.key==='stage' ? '#ff56df' : seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
   const selectedSites = new Set();
@@ -70,9 +72,13 @@
   }
   const css=document.createElement('style');
   css.textContent=`
-    .combined-controls{display:grid;gap:12px;margin:12px 0}.combined-controls fieldset{border:1px solid #24434d;border-radius:12px;padding:12px}.combined-controls legend{color:#90aab0;font-size:12px;padding:0 6px}.combined-options{display:flex;flex-wrap:wrap;gap:8px}.combined-choice{display:inline-flex;align-items:center;gap:8px;border:1px solid #29464e;border-radius:9px;padding:10px 12px;color:#e4f0f1;background:#0a1a20;cursor:pointer;font-size:13px}.combined-choice input{accent-color:var(--choice-color,#55d9b7);width:17px;height:17px;margin:0}.combined-legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:#b6c9ce;margin:15px 0}.combined-line{display:inline-block;width:24px;border-top:3px solid;margin-right:7px;vertical-align:middle}.combined-line.temperature{border-top-style:dashed}.combined-line.moisture{border-top-style:dotted}.combined-series-empty{opacity:.6}.combined-chart-note{color:#a9bfc5;font-size:12px;margin:8px 0}.combined-new-card .extra-reading{font-size:26px}.combined-card-metrics{display:flex;flex-wrap:wrap;gap:10px;color:#b7cdd2;font-size:13px}.combined-monitor-panel .chart.xlarge{height:460px}@media(max-width:680px){.combined-monitor-panel .chart.xlarge{height:380px}.combined-choice{padding:10px;font-size:12px}}
+     .station-detail-grid[hidden]{display:none!important}.combined-controls{display:grid;gap:12px;margin:12px 0}.combined-controls fieldset{border:1px solid #24434d;border-radius:12px;padding:12px}.combined-controls legend{color:#90aab0;font-size:12px;padding:0 6px}.combined-options{display:flex;flex-wrap:wrap;gap:8px}.combined-choice{display:inline-flex;align-items:center;gap:8px;border:1px solid #29464e;border-radius:9px;padding:10px 12px;color:#e4f0f1;background:#0a1a20;cursor:pointer;font-size:13px}.combined-choice input{accent-color:var(--choice-color,#55d9b7);width:17px;height:17px;margin:0}.combined-legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:#b6c9ce;margin:15px 0}.combined-line{display:inline-block;width:24px;border-top:3px solid;margin-right:7px;vertical-align:middle}.combined-line.temperature{border-top-style:dashed}.combined-line.moisture{border-top-style:dotted}.combined-series-empty{opacity:.6}.combined-chart-note{color:#a9bfc5;font-size:12px;margin:8px 0}.combined-new-card .extra-reading{font-size:26px}.combined-card-metrics{display:flex;flex-wrap:wrap;gap:10px;color:#b7cdd2;font-size:13px}.combined-monitor-panel .chart.xlarge{height:460px}@media(max-width:680px){.combined-monitor-panel .chart.xlarge{height:380px}.combined-choice{padding:10px;font-size:12px}}
   `;
   document.head.appendChild(css);
+  // Detailed station statistics now belong in the comparison graph.
+  document.querySelector('.station-detail-grid')?.setAttribute('hidden','');
+  const soilCard=document.getElementById('soilMoisture')?.closest('article');
+  if(soilCard){const title=soilCard.querySelector('strong');if(title)title.textContent='Soil Moisture';}
   const controls=document.getElementById('combinedControls');
   document.getElementById('combinedMetricControls').innerHTML=metricDefs.map(m=>
     `<label class="combined-choice"><input type="checkbox" data-combined-metric="${m.key}">${esc(m.name)}</label>`).join('');
@@ -156,7 +162,7 @@
       if(el){el.className='station-state '+(fresh?'online':'offline');el.textContent=fresh?'Reporting':latest?'Stale':'No new telemetry';}
     }
     const packState=document.getElementById('cliffState');if(packState){packState.className='station-state stale';packState.textContent='Paused';}
-    const allSites=[...sites.filter(site=>!site.paused),{node:1577197109,name:'Fishlake Hightop'}];
+    const allSites=sites.filter(site=>!site.paused);
     const healthy=allSites.filter(site=>seriesRows(site).some(r=>ageHours(r.observed_at)<=STALE_AFTER_HOURS)).length;
     setText('stationsReporting',healthy+' / '+allSites.length);
     setText('networkStatusText',healthy===allSites.length?'All '+allSites.length+' stations reporting':healthy+' of '+allSites.length+' stations reporting · Pack Creek paused');

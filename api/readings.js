@@ -1,0 +1,111 @@
+import { getSql } from './db.js';
+import { ensureDatabaseReady, getActiveRatingCurves, getRatingCurvePoints, rateReadings } from './rating-curves.js';
+
+function clampInt(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ ok: false, error: 'GET required' });
+  }
+
+  const params = new URL(req.url || '/', 'http://localhost').searchParams;
+  const hours = clampInt(params.get('hours'), 24, 1, 24 * 365);
+  const limit = clampInt(params.get('limit'), 5000, 1, 10000);
+  const nodeParam = params.get('node');
+  const node = nodeParam === null ? null : clampInt(nodeParam, null, 1, 4294967295);
+  const bucketMinutes = clampInt(params.get('bucket_minutes'), 1, 0, 24 * 60);
+
+  try {
+    const sql = getSql();
+    await ensureDatabaseReady(sql);
+    let rows;
+
+    if (bucketMinutes > 0 && node !== null) {
+      rows = await sql`
+        SELECT id, observed_at, received_at, node_num, station_name,
+               telemetry_type, temperature_c, metrics, radio
+        FROM (
+          SELECT id, observed_at, received_at, node_num, station_name,
+                 telemetry_type, temperature_c, metrics, radio,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY node_num, telemetry_type,
+                                FLOOR(EXTRACT(EPOCH FROM observed_at) / (${bucketMinutes} * 60))
+                   ORDER BY observed_at DESC
+                 ) AS bucket_rank
+          FROM telemetry_readings
+          WHERE observed_at >= NOW() - (${hours} * INTERVAL '1 hour')
+            AND node_num = ${node}
+        ) sampled
+        WHERE bucket_rank = 1
+        ORDER BY observed_at DESC
+        LIMIT ${limit}
+      `;
+    } else if (bucketMinutes > 0) {
+      rows = await sql`
+        SELECT id, observed_at, received_at, node_num, station_name,
+               telemetry_type, temperature_c, metrics, radio
+        FROM (
+          SELECT id, observed_at, received_at, node_num, station_name,
+                 telemetry_type, temperature_c, metrics, radio,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY node_num, telemetry_type,
+                                FLOOR(EXTRACT(EPOCH FROM observed_at) / (${bucketMinutes} * 60))
+                   ORDER BY observed_at DESC
+                 ) AS bucket_rank
+          FROM telemetry_readings
+          WHERE observed_at >= NOW() - (${hours} * INTERVAL '1 hour')
+        ) sampled
+        WHERE bucket_rank = 1
+        ORDER BY observed_at DESC
+        LIMIT ${limit}
+      `;
+    } else if (node !== null) {
+      rows = await sql`
+        SELECT id, observed_at, received_at, node_num, station_name,
+               telemetry_type, temperature_c, metrics, radio
+        FROM telemetry_readings
+        WHERE observed_at >= NOW() - (${hours} * INTERVAL '1 hour')
+          AND node_num = ${node}
+        ORDER BY observed_at DESC
+        LIMIT ${limit}
+      `;
+    } else {
+      rows = await sql`
+        SELECT id, observed_at, received_at, node_num, station_name,
+               telemetry_type, temperature_c, metrics, radio
+        FROM telemetry_readings
+        WHERE observed_at >= NOW() - (${hours} * INTERVAL '1 hour')
+        ORDER BY observed_at DESC
+        LIMIT ${limit}
+      `;
+    }
+
+    const [curves, curvePoints] = await Promise.all([
+      getActiveRatingCurves(sql, node),
+      getRatingCurvePoints(sql, node),
+    ]);
+    rows = rateReadings(rows, curves);
+
+    // Short edge cache prevents repeated clicks/page reloads from waking Neon repeatedly.
+    // Browser itself still revalidates; Vercel serves identical requests from edge for 60 seconds.
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=60');
+    return res.status(200).json({
+      ok: true,
+      hours,
+      node,
+      bucket_minutes: bucketMinutes,
+      readings: rows,
+      rating_curves: curves,
+      rating_curve_points: curvePoints,
+    });
+  } catch (error) {
+    console.error('Telemetry query failed', error);
+    return res.status(500).json({ ok: false, error: 'Database query failed' });
+  }
+}
