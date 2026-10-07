@@ -123,7 +123,8 @@ export default async function handler(req, res) {
     await ensureDatabaseReady(sql);
     const curves = await getActiveRatingCurves(sql);
     const curveByNode = new Map(curves.map(curve => [Number(curve.node_num), curve]));
-    const wanted = req.query.node ? Number(req.query.node) : null;
+    const nodeParam = new URL(req.url || '/', 'http://localhost').searchParams.get('node');
+    const wanted = nodeParam ? Number(nodeParam) : null;
     const configs = Number.isFinite(wanted) ? STATIONS.filter(s => s.node === wanted) : STATIONS;
     if (!configs.length) return res.status(404).json({ ok: false, error: 'Unknown station' });
 
