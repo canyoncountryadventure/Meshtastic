@@ -11,8 +11,9 @@ const STATIONS = [
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
   { node: 1949224949, name: "It's a Swell Day", battery: true },
   { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
-  { node: 4241345683, name: 'Pack Creek', battery: true, stage: true },
+  { node: 4241345683, name: 'SMLA', battery: true, measure: 'any' },
   { node: 2004386937, name: 'Wingate Moisture', battery: true, measure: 'soil' },
+  { node: 3044869407, name: 'Revived', battery: true, measure: 'any' },
   { node: 3388602087, name: 'Pack Creek', battery: true },
 ];
 
@@ -134,7 +135,8 @@ export default async function handler(req, res) {
         SELECT id, observed_at, received_at, temperature_c, metrics, radio
         FROM telemetry_readings
         WHERE node_num=${station.node}
-          AND ((${station.measure === 'soil'} AND telemetry_type='soil' AND metrics ? 'soil_moisture_percent')
+          AND ((${station.measure === 'any'} AND telemetry_type IN ('environment', 'mx2001', 'soil', 'device', 'rock_test'))
+            OR (${station.measure === 'soil'} AND telemetry_type='soil' AND metrics ? 'soil_moisture_percent')
             OR (${station.measure !== 'soil'} AND telemetry_type IN ('environment', 'mx2001')
                 AND temperature_c IS NOT NULL))
         ORDER BY observed_at DESC
@@ -184,3 +186,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'Station health query failed' });
   }
 }
+

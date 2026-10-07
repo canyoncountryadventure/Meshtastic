@@ -7,13 +7,14 @@ const KNOWN_STATIONS = new Map([
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "It's a Swell Day"],
   [2650172798, 'Thousand Lake Mountain'],
-  [4241345683, 'Pack Creek'], // !fccdcc93, ingestion paused
+  [4241345683, 'SMLA'], // !fccdcc93, repurposed station
   [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
+  [3044869407, 'Revived'], // !b57d051f, repurposed station
   [3388602087, 'Pack Creek'], // !c9f9f6e7, water distance
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);
-const PAUSED_INGEST_NODES = new Set([4241345683]); // Pack Creek: accept at gateway, do not write to Neon
+const PAUSED_INGEST_NODES = new Set(); // SMLA ingestion restored after station repurposing
 const MAX_BATCH_SIZE = 64;
 
 function parseJson(value) {
@@ -120,7 +121,7 @@ function validate(body) {
   // Type-specific validity: a soil node is not a temperature sensor; the
   // ultrasonic Pack Creek stage is only valid following field calibration.
   if (body.type === 'soil' &&
-      (nodeNum !== 2004386937 || !Number.isFinite(Number(body.payload.soil_moisture_percent)) ||
+      (![2004386937, 4241345683, 3044869407].includes(nodeNum) || !Number.isFinite(Number(body.payload.soil_moisture_percent)) ||
        Number(body.payload.soil_moisture_percent) < 0 || Number(body.payload.soil_moisture_percent) > 100)) {
     throw new Error('Invalid soil moisture reading or source node');
   }
@@ -206,3 +207,4 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: error?.message || 'Telemetry ingest failed' });
   }
 }
+

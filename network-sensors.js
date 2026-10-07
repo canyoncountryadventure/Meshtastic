@@ -30,7 +30,10 @@
   const byTime = (a, b) => new Date(b.observed_at) - new Date(a.observed_at);
   const rowsFor = node => state.readings.filter(r => sameNode(r, node)).sort(byTime);
   const hasTemperature = r => r && TEMPERATURE_TYPES.has(r.telemetry_type) && tempF(r) !== null;
-  const temperatureRows = node => rowsFor(node).filter(hasTemperature);
+  const temperatureRows = node => {
+    const site = Object.values(STATIONS).find(s=>Number(s.node)===node);
+    return rowsFor(node).filter(r=>hasTemperature(r) && (!site?.since || Date.parse(r.observed_at)>=site.since));
+  };
   const packTemperatureRows = () => rowsFor(EXTRA.pack.node).filter(r =>
     r.telemetry_type === 'mx2001' && tempF(r) !== null);
   const soilRows = () => rowsFor(EXTRA.soil.node).filter(r => r.telemetry_type === 'soil');
@@ -622,3 +625,4 @@
   // Refresh once so the added stations render immediately with the same API data.
   loadData();
 })();
+
