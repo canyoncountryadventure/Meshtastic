@@ -6,6 +6,8 @@ import {
 } from './rating-curves.js';
 
 const STATIONS = [
+  { node: 1695962694, name: 'Cottonwood Creek', battery: true, stage: true },
+  { node: 2425602407, name: 'Cottonwood Relay', battery: true, measure: 'device' },
   { node: 1252758033, name: 'Hidden Valley', battery: true },
   { node: 2740603892, name: 'Moab', battery: false },
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
@@ -69,7 +71,7 @@ function resultFor(station, environment, device, stage, curve) {
       node_num: station.node,
       healthy: false,
       alert: true,
-      reason: station.measure === 'soil' ? 'no_soil_reading' : 'no_temperature_reading',
+      reason: station.measure === 'soil' ? 'no_soil_reading' : station.measure === 'device' ? 'no_device_reading' : 'no_temperature_reading',
       expected_interval_minutes: EXPECTED_INTERVAL_MINUTES,
       alert_after_minutes: ALERT_AFTER_MINUTES,
       latest,
@@ -102,7 +104,7 @@ function resultFor(station, environment, device, stage, curve) {
     healthy: !alert,
     alert,
     reason: stageAlert ? (stage ? 'stage_reading_stale' : 'no_stage_reading') :
-      alert ? (station.measure === 'soil' ? 'soil_readings_missed' : 'three_hourly_readings_missed') : 'reporting_normally',
+      alert ? (station.measure === 'soil' ? 'soil_readings_missed' : station.measure === 'device' ? 'device_readings_missed' : 'three_hourly_readings_missed') : 'reporting_normally',
     ...(station.stage ? { stage_healthy: !stageAlert, stage_age_minutes: stageAgeMinutes === null ? null : Number(stageAgeMinutes.toFixed(1)) } : {}),
     expected_interval_minutes: EXPECTED_INTERVAL_MINUTES,
     alert_after_minutes: ALERT_AFTER_MINUTES,
@@ -136,8 +138,9 @@ export default async function handler(req, res) {
         WHERE node_num=${station.node}
           AND observed_at >= ${station.since || '1970-01-01T00:00:00Z'}::timestamptz
           AND ((${station.measure === 'any'} AND telemetry_type IN ('environment', 'mx2001', 'soil', 'device', 'rock_test'))
+            OR (${station.measure === 'device'} AND telemetry_type='device')
             OR (${station.measure === 'soil'} AND telemetry_type='soil' AND metrics ? 'soil_moisture_percent')
-            OR (${station.measure !== 'soil'} AND telemetry_type IN ('environment', 'mx2001')
+            OR (${station.measure !== 'soil' && station.measure !== 'device'} AND telemetry_type IN ('environment', 'mx2001')
                 AND temperature_c IS NOT NULL))
         ORDER BY observed_at DESC
         LIMIT 1
@@ -164,7 +167,7 @@ export default async function handler(req, res) {
           FROM telemetry_readings
           WHERE node_num=${station.node}
           AND observed_at >= ${station.since || '1970-01-01T00:00:00Z'}::timestamptz
-            AND telemetry_type='water_distance'
+            AND telemetry_type IN ('water_distance', 'mx2001')
             AND (metrics ? 'water_level_ft')
             AND COALESCE((metrics->>'stage_calibrated')::boolean, TRUE)
           ORDER BY observed_at DESC

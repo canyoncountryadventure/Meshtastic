@@ -9,6 +9,8 @@ const KNOWN_STATIONS = new Map([
   [2650172798, 'Thousand Lake Mountain'],
   [4241345683, 'SMLA'], // !fccdcc93, repurposed station
   [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
+  [1695962694, 'Cottonwood Creek'], // !65165646, CC01: MB stage and MX2001 stage/temperature
+  [2425602407, 'Cottonwood Relay'], // !9093c167, CC02
   [3044869407, 'Revived'], // !b57d051f, repurposed station
 ]);
 
@@ -118,14 +120,14 @@ function validate(body) {
     throw new Error('Telemetry packet has no temperature');
   }
   // Type-specific validity: a soil node is not a temperature sensor; the
-  // ultrasonic Pack Creek stage is only valid following field calibration.
+  // ultrasonic stage is only valid following field calibration.
   if (body.type === 'soil' &&
       (![2004386937, 4241345683, 3044869407].includes(nodeNum) || !Number.isFinite(Number(body.payload.soil_moisture_percent)) ||
        Number(body.payload.soil_moisture_percent) < 0 || Number(body.payload.soil_moisture_percent) > 100)) {
     throw new Error('Invalid soil moisture reading or source node');
   }
-  if (body.type === 'water_distance' && nodeNum !== 1949224949) {
-    throw new Error('Water-distance packets are only approved for Swell Day');
+  if (body.type === 'water_distance' && ![1949224949, 1695962694].includes(nodeNum)) {
+    throw new Error('Water-distance packets are only approved for Swell Day and Cottonwood Creek');
   }
 
   return nodeNum;

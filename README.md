@@ -13,6 +13,8 @@ Production [dashboard](https://meshtastic-ecru.vercel.app/) and Vercel/Neon inge
 | Moab (Heltec) | !a35a4bf4 | 2740603892 | Local HOBO BLE temperature and gateway |
 | Fishlake Hightop | !5e021e35 | 1577197109 | HOBO temperature |
 | It's a Swell Day | !742ecff5 | 1949224949 | MX2001 stage/temperature and SEN0313 stage |
+| Cottonwood Creek (CC01) | !65165646 | 1695962694 | MB water stage and MX2001 stage/temperature |
+| Cottonwood Relay (CC02) | !9093c167 | 2425602407 | Device battery and radio-link telemetry |
 | Thousand Lake Mountain | !9df66d7e | 2650172798 | HOBO temperature |
 
 Pack Creek telemetry is retired. Its node `!c9f9f6e7` is acknowledged without storing new readings. Historical Pack Creek telemetry is deleted, while the stage–discharge curve and five rating points remain in `rating_curves` and `rating_curve_points`. SMLA's repurposed-node readings are retained. Revived readings before its October 5 repurposing are excluded from current health checks.
@@ -31,13 +33,13 @@ The Heltec accepts these source packets **only from approved nodes**:
 
 The Heltec does not have to be renamed to track the field-node names. It uploads the numeric \`from\` identifier and sensor values; Vercel assigns \`station_name\` from its authoritative mapping.
 
-The current Heltec branch is [Heltec-Gateway-v2](https://github.com/canyoncountryadventure/firmware/tree/Heltec-Gateway-v2). It is built by the GitHub Actions workflow [Build Heltec Gateway v4](https://github.com/canyoncountryadventure/firmware/actions/workflows/build_cca_heltec_gateway.yml). A completed successful run publishes \`downloads/Heltec-Gateway-v2.zip\` on the firmware repository's \`field-self-recovery\` branch. **Do not flash a binary from an older run** expecting it to have the new station allowlist.
+The current Heltec branch is [Heltec-Gateway-v4](https://github.com/canyoncountryadventure/firmware/tree/Heltec-Gateway-v4). It is built by the GitHub Actions workflow [Build Heltec Gateway v4](https://github.com/canyoncountryadventure/firmware/actions/workflows/build_cca_heltec_gateway.yml). A completed successful run publishes \`downloads/Heltec-Gateway-v4.zip\` on the firmware repository's \`field-self-recovery\` branch. **Do not flash a binary from an older run** expecting it to have the new station allowlist.
 
 The production gateway build injects \`HOBO_HTTP_GATEWAY_INGEST_KEY\` from the GitHub Actions secret. Keep that secret out of source control. For a normal Wi-Fi Unified OTA update, use the regular non-factory Heltec V4 application image; do not erase Meshtastic NVS and do not use the factory image.
 
 ## Dashboard behavior
 
-The existing five stations remain visible, with the replacement Hidden Valley mapped exclusively to !4aab9211. Pack Creek has separate temperature, stage, and calculated discharge values, Wingate Moisture displays only soil moisture, and Cliff Sensor displays temperature. The temperature comparison includes the seven temperature-capable stations, while soil moisture and calibrated stage have dedicated graphs. The historical view depends on the selected time window. A reading that has not reached Neon is displayed as unavailable, not simulated or inferred.
+Cottonwood Creek and Swell Day each have independent ultrasonic stage, MX2001 stage, and MX2001 temperature controls. The comparison graph keeps sensor stage series separate. Cottonwood Relay displays battery and radio-link status without requiring a temperature logger. Pack Creek has no live telemetry card; its rating records are retained. Soil Moisture uses its own logger.
 
 Pack Creek rating curve version 1 is \`Q = 6.07187614 × (H − 0.22259098)^1.04237977\`, where \`H\` is calibrated stage in feet and \`Q\` is discharge in cubic feet per second. Its measured stage range is 0.2444–0.6904 ft; API responses identify values outside that range as extrapolated.
 
@@ -50,6 +52,6 @@ The [watershed presentation page](https://meshtastic-ecru.vercel.app/watershed) 
 After installing the updated Heltec binary, check:
 
 1. A new Hidden Valley measurement is accepted under !4aab9211; the retired ID is rejected.
-2. Pack Creek temperature and calibrated stage reach \`/api/readings\` as \`environment\`/\`mx2001\` and \`water_distance\` as appropriate.
-3. Soil's \`SM\` packet becomes a single \`soil\` record containing \`soil_moisture_percent\`; Cliff Sensor temperature becomes an \`environment\` or \`mx2001\` record.
-4. \`/api/station-health\` shows the eight configured stations; the dashboard labels reflect those node IDs.
+2. Cottonwood Creek and Swell Day temperature and calibrated stage reach \`/api/readings\` as \`environment\`/\`mx2001\` and \`water_distance\` as appropriate.
+3. Soil's \`SM\` packet becomes a single \`soil\` record containing \`soil_moisture_percent\`; approved HOBO temperature becomes an \`environment\` or \`mx2001\` record.
+4. \`/api/station-health\` shows the ten configured stations; the dashboard labels reflect those node IDs.

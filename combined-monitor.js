@@ -10,12 +10,14 @@
     {node:4241345683,name:'SMLA',short:'SMLA',id:'!fccdcc93',color:'#f5d05f',since:REPURPOSED_AT},
     {node:3044869407,name:'Revived',short:'RVV1',id:'!b57d051f',color:'#fa86ac',since:REPURPOSED_AT},
     {node:1577197109,name:'Fishlake Hightop',color:'#60e5f5'},
+    {node:1695962694,name:'Cottonwood Creek',color:'#b49cff'},
+    {node:2425602407,name:'Cottonwood Relay',color:'#ffb36b'},
   ];
   const metricDefs = [
     {key:'voltage',name:'Battery voltage',unit:'V',dash:'',precision:3},
     {key:'temperature',name:'Temperature',unit:'°F',dash:'7 4',precision:1},
     {key:'moisture',name:'Moisture',unit:'ADC10',dash:'2 4',precision:0},
-    {key:'stage',name:'Swell Day stage',unit:'Stage ft',dash:'10 3 2 3',precision:3},
+    {key:'stage',name:'Water stage',unit:'Stage ft',dash:'10 3 2 3',precision:3},
   ];
   const seriesPalette = [
     ['#55d9b7','#a8ed72','#1bb9a8'],
@@ -26,6 +28,7 @@
     ['#f5d05f','#f9f58b','#e89b31'],
     ['#fa86ac','#ffc2dc','#d94b93'],
     ['#60e5f5','#d7f1ff','#20a6b6'],
+    ['#ffb36b','#ffd5a7','#c77f38'],
   ];
   const seriesColor = (site,definition) => definition.key==='stage' ? '#ff56df' : seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
   const selectedSites = new Set();
@@ -43,9 +46,11 @@
       return temperatureTypes.has(r.telemetry_type) && value!==null ? {value,unit:'°F'} : null;
     }
     if(key==='stage'){
-      if(Number(r.node_num)!==1949224949 || !['mx2001','water_distance'].includes(r.telemetry_type))return null;
+      if(![1949224949,1695962694].includes(Number(r.node_num)) || !['mx2001','water_distance'].includes(r.telemetry_type))return null;
       const value=num(metric(r,'water_level_ft'));
-      return value!==null ? {value,unit:'Stage ft'} : null;
+      if(r.telemetry_type==='water_distance' && (metric(r,'stage_calibrated')===false || metric(r,'distance_valid')===false))return null;
+      const sensor=r.telemetry_type==='mx2001'?'MX2001':Number(r.node_num)===1695962694?'MB':'SEN0313';
+      return value!==null ? {value,unit:'Stage ft',sensor} : null;
     }
     if(r.telemetry_type!=='soil')return null;
     const adc=num(metric(r,'soil_adc10'));
@@ -61,10 +66,11 @@
         for(const row of seriesRows(site)){
           const result=valueFor(row,definition.key),time=Date.parse(definition.key==='voltage'?batteryTime(row):row.observed_at);
           if(!result||!Number.isFinite(time))continue;
-          if(!groups.has(result.unit))groups.set(result.unit,[]);
-          groups.get(result.unit).push({x:time,y:result.value,iso:row.observed_at});
+          const groupKey=result.sensor || result.unit;
+          if(!groups.has(groupKey))groups.set(groupKey,{unit:result.unit,sensor:result.sensor,points:[]});
+          groups.get(groupKey).points.push({x:time,y:result.value,iso:row.observed_at});
         }
-        for(const [unit,points] of groups)series.push({site,definition,unit,color:seriesColor(site,definition),points:points.sort((a,b)=>a.x-b.x)});
+        for(const {unit,sensor,points} of groups.values())series.push({site,definition:sensor?{...definition,name:sensor+' stage'}:definition,unit,color:sensor?(sensor==='MX2001'?'#57b7ff':sensor==='MB'?'#b49cff':'#55d9b7'):seriesColor(site,definition),points:points.sort((a,b)=>a.x-b.x)});
       }
     }
     return series;
@@ -172,6 +178,6 @@
   });
   const earlierRenderAll=renderAll;
   renderAll=function(){earlierRenderAll();renderCombined();renderFishlakeTemperature();renderNewCards();if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='combinedChart')renderCombined(document.getElementById('expandedChart'));if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='fishlakeTemperatureChart')renderFishlakeTemperature(document.getElementById('expandedChart'));};
-  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Swell · SMLA · Revived';
+  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Swell · SMLA · Revived · Cottonwood Creek · Cottonwood Relay';
   renderAll();
 })();
