@@ -14,7 +14,10 @@
     .sw-card{border-color:rgba(87,183,255,.42);background:linear-gradient(160deg,rgba(87,183,255,.15),rgba(13,34,42,.95) 55%)}
     .sw-card:after{background:var(--sw)}
     .station-dot.sw,.legend-swatch.sw{background:var(--sw);box-shadow:0 0 18px rgba(87,183,255,.64)}
-    .sw-detail,.sw-battery-panel{border-color:rgba(87,183,255,.3)}
+    .sw-detail,.sw-battery-panel,.sw-water-panel{border-color:rgba(87,183,255,.3)}
+    .sw-water-now{display:flex;align-items:baseline;gap:8px;margin:8px 0 2px;color:#d9efff}
+    .sw-water-now span{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#88a4aa;font-weight:800}
+    .sw-water-now strong{font-size:24px}
     .station-badge.sw{background:var(--sw-soft);color:#c9e8ff}
   `;
   document.head.appendChild(style);
@@ -25,8 +28,9 @@
       <article class="station-hero sw-card">
         <div class="station-heading"><span class="station-dot sw"></span><div><strong>It's a Swell Day</strong><small>RAK4631 · Firmware V4 · SWRP · !742ecff5</small></div></div>
         <div class="big-temp"><span id="swTemp">—</span><small>°F</small></div>
-        <div class="station-meta"><span id="swUpdated">Waiting for temperature</span><span id="swHeroBattery">Battery —</span></div>
-        <div class="station-state offline" id="swState">No temperature yet</div>
+        <div class="sw-water-now"><span>Water level</span><strong id="swWaterLevel">—</strong></div>
+        <div class="station-meta"><span id="swUpdated">Waiting for temperature / water level</span><span id="swHeroBattery">Battery —</span></div>
+        <div class="station-state offline" id="swState">No temperature or water level yet</div>
       </article>`);
   }
 
@@ -75,8 +79,10 @@
   if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day · refreshes only on demand to conserve Neon compute";
 
   const swRows = () => state.readings.filter(r => num(r?.node_num) === SWELL.node);
-  const swTempRows = () => swRows().filter(r => tempF(r) !== null && r.telemetry_type === 'environment').sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
+  const swTempRows = () => swRows().filter(r => tempF(r) !== null && (r.telemetry_type === 'environment' || r.telemetry_type === 'mx2001')).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
+  const swWaterRows = () => swRows().filter(r => (r.telemetry_type === 'mx2001' || r.telemetry_type === 'water_distance') && num(metric(r,'water_level_ft')) !== null).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
   const swLatest = () => swTempRows()[0] || null;
+  const swWaterLatest = () => swWaterRows()[0] || null;
   const swDeviceRows = () => swRows().filter(r => batteryV(r) !== null || batteryPct(r) !== null).sort((a,b) => new Date(batteryTime(b)) - new Date(batteryTime(a)));
 
   function fillSwellStats() {
@@ -158,6 +164,30 @@
     });
   }
 
+  function renderSwellWaterLevel(target = document.getElementById('swWaterLevelChart')) {
+    if (!target) return;
+    const rows = swWaterRows();
+    const points = rows.map(r => ({x:new Date(r.observed_at).getTime(), y:num(metric(r,'water_level_ft')), iso:r.observed_at})).filter(p => p.y !== null).reverse();
+    renderLineChart(target, [{name:"It's a Swell Day water level", color:SWELL.color, points, maxGapMs:3*3600000}], {
+      axisLabel:'Water level ft', tooltipValue:v=>`${v.toFixed(3)} ft`, empty:"Waiting for It's a Swell Day water-level telemetry.", pointRadius:3.4, strokeWidth:3.2,
+    });
+    setText('swWaterLevelChartCount', points.length ? `${points.length} water-level samples · MX2001` : 'Waiting for water-level readings');
+  }
+
+  document.getElementById('swWaterLevelExpand')?.addEventListener('click', () => {
+    const dialog = document.getElementById('expandDialog');
+    const title = document.getElementById('expandTitle');
+    const chart = document.getElementById('expandedChart');
+    const mapEl = document.getElementById('expandedMap');
+    if (!dialog || !title || !chart || !mapEl) return;
+    title.textContent = "It's a Swell Day water level";
+    mapEl.hidden = true;
+    chart.hidden = false;
+    chart.dataset.rangeSource = 'swWaterLevelChart';
+    dialog.showModal();
+    setTimeout(() => renderSwellWaterLevel(chart), 40);
+  });
+
   document.getElementById('swBatteryExpand')?.addEventListener('click', () => {
     const dialog = document.getElementById('expandDialog');
     const title = document.getElementById('expandTitle');
@@ -175,8 +205,11 @@
   renderSummary = function() {
     originalRenderSummary();
     const sw = swLatest();
+    const water = swWaterLatest();
     setText('swTemp', sw ? tempF(sw).toFixed(1) : '—');
-    setText('swUpdated', sw ? `Updated ${ageText(sw.observed_at)}` : 'Waiting for temperature');
+    setText('swWaterLevel', water ? num(metric(water,'water_level_ft')).toFixed(2) + ' ft' : '—');
+    const freshest = [sw, water].filter(Boolean).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at))[0] || null;
+    setText('swUpdated', freshest ? `Updated ${ageText(freshest.observed_at)}` : 'Waiting for temperature / water level');
     const stateEl = document.getElementById('swState');
     if (stateEl) {
       if (!sw) {
@@ -196,6 +229,7 @@
     } else setText('swHeroBattery', 'Battery —');
     fillSwellStats();
     renderSwellBattery();
+    renderSwellWaterLevel();
 
     const current = [
       { station: STATIONS.hv, reading: latestTemp('hv') },
