@@ -35,6 +35,10 @@
       <article class="station-hero hv-card">
         <div class="station-heading"><span class="station-dot hv"></span><div><strong>Hidden Valley</strong><small>RAK4631 · Firmware V3 · 9211 · !4aab9211 · air temperature</small></div></div>
         <div class="big-temp"><span id="hvTemp">—</span><small>°F</small></div>
+        <div id="hvVoltageSnapshot" class="hv-voltage-snapshot stale" aria-live="polite">
+          <span>Battery voltage</span><strong id="hvVoltageNow">—</strong>
+          <small id="hvVoltageAge">Waiting for device telemetry</small>
+        </div>
         <div class="station-meta"><span id="hvUpdated">Waiting for temperature</span><span id="hvHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="hvState">No temperature yet</div>
       </article>
@@ -155,12 +159,12 @@
   };
 })();
 </script>
-<script src="/dashboard.js?v=20261007-combined"></script>
+<script src="/dashboard.js?v=20261011-hv-voltage"></script>
 <script src="/fishlake.js?v=20260929-firmware-labels"></script>
 <script src="/swell.js?v=20261011-mx-visible"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/network-sensors.js?v=20261011-retired-pack"></script>
-<script src="/combined-monitor.js?v=20261011-mx-temperature"></script>
+<script src="/combined-monitor.js?v=20261011-hv-voltage"></script>
 <script src="/cottonwood.js?v=20261011-cottonwood"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {
