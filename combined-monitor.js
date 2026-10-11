@@ -135,7 +135,7 @@
         const latest=seriesRows(site).filter(r=>r.telemetry_type==='device'&&batteryV(r)!==null)
           .sort((a,b)=>Date.parse(batteryTime(b))-Date.parse(batteryTime(a)))[0];
         return latest
-          ? `<span class="combined-series-empty">${esc(site.name)} voltage: last ${batteryV(latest).toFixed(3)} V at ${esc(fmtTime(batteryTime(latest)))} (${esc(ageText(batteryTime(latest)))} ago; outside selected graph window)</span>`
+          ? `<span class="combined-series-empty">${esc(site.name)} voltage: last ${batteryV(latest).toFixed(3)} V at ${esc(fmtTime(batteryTime(latest)))} (${esc(ageText(batteryTime(latest)))}; outside selected graph window)</span>`
           : `<span class="combined-series-empty">${esc(site.name)} voltage: no battery packet in available history</span>`;
       }):[];
     document.getElementById('combinedLegend').innerHTML=series.map(s=>
