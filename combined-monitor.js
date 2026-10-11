@@ -125,9 +125,23 @@
     const selectedCount=selectedSites.size;
     setText('combinedChartCount',`${selectedCount} sites selected · ${series.length} series with readings · ${range.hours} hours`);
     const unavailable=sites.filter(s=>selectedSites.has(s.node) && !series.some(line=>line.site.node===s.node));
+    // Explain absent voltage curves without extrapolating a 17-day-old sample
+    // into the current 7-day chart. Applies even when the site's temperature
+    // is present and the generic "unavailable" site message is suppressed.
+    const voltageHistoryNotes=selectedMetrics.has('voltage')?sites
+      .filter(site=>selectedSites.has(site.node))
+      .filter(site=>!series.some(line=>line.site.node===site.node && line.definition.key==='voltage'))
+      .map(site=>{
+        const latest=seriesRows(site).filter(r=>r.telemetry_type==='device'&&batteryV(r)!==null)
+          .sort((a,b)=>Date.parse(batteryTime(b))-Date.parse(batteryTime(a)))[0];
+        return latest
+          ? `<span class="combined-series-empty">${esc(site.name)} voltage: last ${batteryV(latest).toFixed(3)} V at ${esc(fmtTime(batteryTime(latest)))} (${esc(ageText(batteryTime(latest)))} ago; outside selected graph window)</span>`
+          : `<span class="combined-series-empty">${esc(site.name)} voltage: no battery packet in available history</span>`;
+      }):[];
     document.getElementById('combinedLegend').innerHTML=series.map(s=>
       `<span><i class="combined-line ${s.definition.key}" style="border-color:${s.color}"></i>${esc(s.site.name)} · ${esc(s.definition.name)} (${esc(s.unit==='Stage ft'?'ft':s.unit)})</span>`).join('')+
-      unavailable.map(s=>`<span class="combined-series-empty">${esc(s.name)} · no selected readings in this window</span>`).join('');
+      unavailable.map(s=>`<span class="combined-series-empty">${esc(s.name)} · no selected readings in this window</span>`).join('')+
+      voltageHistoryNotes.join('');
     if(!series.length){target.innerHTML=`<div class="empty">${selectedCount && selectedMetrics.size?'No selected measurements in this window.':'Select at least one site and measurement.'}</div>`;return;}
     const w=Math.max(620,target.clientWidth||900),h=Math.max(300,target.clientHeight||460),left=58,right=units.length>1?58+(units.length-2)*58:20,top=38,bottom=40,pw=w-left-right,ph=h-top-bottom;
     const x=t=>left+(t-range.xMin)/(range.xMax-range.xMin)*pw;
