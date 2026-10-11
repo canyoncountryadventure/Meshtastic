@@ -20,6 +20,7 @@
     {key:'mx-stage',name:'MX2001 stage',unit:'Stage ft',dash:'10 3 2 3',precision:3},
     {key:'mb-stage',name:'MB stage',unit:'Stage ft',dash:'5 3',precision:3},
     {key:'sen-stage',name:'SEN0313 stage',unit:'Stage ft',dash:'',precision:3},
+    {key:'mx-temp',name:'MX2001 temperature',unit:'°F',dash:'4 3',precision:1},
   ];
   const seriesPalette = [
     ['#55d9b7','#a8ed72','#1bb9a8'],
@@ -32,7 +33,7 @@
     ['#60e5f5','#d7f1ff','#20a6b6'],
     ['#ffb36b','#ffd5a7','#c77f38'],
   ];
-  const seriesColor = (site,definition) => definition.unit==='Stage ft' ? site.color : seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
+  const seriesColor = (site,definition) => definition.unit==='Stage ft' ? site.color : seriesPalette[sites.indexOf(site)][definition.key==='mx-temp' ? 1 : metricDefs.indexOf(definition)];
   const selectedSites = new Set();
   const selectedMetrics = new Set();
   const seriesRows = site => state.readings.filter(r => Number(r.node_num)===site.node &&
@@ -44,8 +45,16 @@
       return r.telemetry_type==='device' && value!==null && value>0 ? {value,unit:'V'} : null;
     }
     if(key==='temperature'){
+      // For the two water stations, keep ambient and HOBO MX2001 temperature
+      // independent; other legacy stations retain their existing temperature source.
+      if(r.telemetry_type==='mx2001' && [1949224949,1695962694].includes(Number(r.node_num)))return null;
       const value=tempF(r);
       return temperatureTypes.has(r.telemetry_type) && value!==null ? {value,unit:'°F'} : null;
+    }
+    if(key==='mx-temp'){
+      if(r.telemetry_type!=='mx2001' || ![1949224949,1695962694].includes(Number(r.node_num)))return null;
+      const value=tempF(r);
+      return value!==null ? {value,unit:'°F'} : null;
     }
     if(['mx-stage','mb-stage','sen-stage'].includes(key)){
       const node=Number(r.node_num);
