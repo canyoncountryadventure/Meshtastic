@@ -17,7 +17,9 @@
     {key:'voltage',name:'Battery voltage',unit:'V',dash:'',precision:3},
     {key:'temperature',name:'Temperature',unit:'°F',dash:'7 4',precision:1},
     {key:'moisture',name:'Moisture',unit:'ADC10',dash:'2 4',precision:0},
-    {key:'stage',name:'Water stage',unit:'Stage ft',dash:'10 3 2 3',precision:3},
+    {key:'mx-stage',name:'MX2001 stage',unit:'Stage ft',dash:'10 3 2 3',precision:3},
+    {key:'mb-stage',name:'MB stage',unit:'Stage ft',dash:'5 3',precision:3},
+    {key:'sen-stage',name:'SEN0313 stage',unit:'Stage ft',dash:'',precision:3},
   ];
   const seriesPalette = [
     ['#55d9b7','#a8ed72','#1bb9a8'],
@@ -30,7 +32,7 @@
     ['#60e5f5','#d7f1ff','#20a6b6'],
     ['#ffb36b','#ffd5a7','#c77f38'],
   ];
-  const seriesColor = (site,definition) => definition.key==='stage' ? '#ff56df' : seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
+  const seriesColor = (site,definition) => definition.unit==='Stage ft' ? site.color : seriesPalette[sites.indexOf(site)][metricDefs.indexOf(definition)];
   const selectedSites = new Set();
   const selectedMetrics = new Set();
   const seriesRows = site => state.readings.filter(r => Number(r.node_num)===site.node &&
@@ -45,8 +47,12 @@
       const value=tempF(r);
       return temperatureTypes.has(r.telemetry_type) && value!==null ? {value,unit:'°F'} : null;
     }
-    if(key==='stage'){
-      if(![1949224949,1695962694].includes(Number(r.node_num)) || !['mx2001','water_distance'].includes(r.telemetry_type))return null;
+    if(['mx-stage','mb-stage','sen-stage'].includes(key)){
+      const node=Number(r.node_num);
+      if(![1949224949,1695962694].includes(node))return null;
+      if(key==='mx-stage' && r.telemetry_type!=='mx2001')return null;
+      if(key==='mb-stage' && (node!==1695962694 || r.telemetry_type!=='water_distance'))return null;
+      if(key==='sen-stage' && (node!==1949224949 || r.telemetry_type!=='water_distance'))return null;
       const value=num(metric(r,'water_level_ft'));
       if(r.telemetry_type==='water_distance' && (metric(r,'stage_calibrated')===false || metric(r,'distance_valid')===false))return null;
       const sensor=r.telemetry_type==='mx2001'?'MX2001':Number(r.node_num)===1695962694?'MB':'SEN0313';
@@ -70,7 +76,7 @@
           if(!groups.has(groupKey))groups.set(groupKey,{unit:result.unit,sensor:result.sensor,points:[]});
           groups.get(groupKey).points.push({x:time,y:result.value,iso:row.observed_at});
         }
-        for(const {unit,sensor,points} of groups.values())series.push({site,definition:sensor?{...definition,name:sensor+' stage'}:definition,unit,color:sensor?(sensor==='MX2001'?'#57b7ff':sensor==='MB'?'#b49cff':'#55d9b7'):seriesColor(site,definition),points:points.sort((a,b)=>a.x-b.x)});
+        for(const {unit,sensor,points} of groups.values())series.push({site,definition:sensor?{...definition,name:sensor+' stage'}:definition,unit,color:sensor?(sensor==='MX2001'?(site.node===1695962694?'#ead7ff':'#57b7ff'):sensor==='MB'?'#b49cff':'#55d9b7'):seriesColor(site,definition),points:points.sort((a,b)=>a.x-b.x)});
       }
     }
     return series;
