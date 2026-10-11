@@ -103,9 +103,22 @@ function renderSummary(){
   setText('homeUpdated',home?`Updated ${ageText(home.observed_at)}`:'Waiting for temperature');
   setStationState('hv',hv); setStationState('home',home);
 
-  const dr=hvDeviceRows(),latestD=dr[0]||null;
-  if(latestD){const p=batteryPct(latestD),v=batteryV(latestD);setText('hvHeroBattery',p!==null?`Battery ${Math.round(p)}%`:v!==null?`${v.toFixed(3)} V`:'Battery —');}
-  else setText('hvHeroBattery','Battery —');
+  // The most recent voltage can be much older than the station's temperature.
+  // Never imply an old device packet is a live battery measurement.
+  const dr=hvDeviceRows(),latestD=dr.find(r=>batteryV(r)!==null)||null;
+  const voltage=latestD?batteryV(latestD):null;
+  const voltsTime=latestD?batteryTime(latestD):null;
+  const voltageFresh=voltage!==null && ageHours(voltsTime)<=STALE_AFTER_HOURS;
+  const batteryPctNow=latestD?batteryPct(latestD):null;
+  setText('hvVoltageNow',voltage!==null?`${voltage.toFixed(3)} V`:'—');
+  setText('hvVoltageAge',voltage!==null
+    ? `${voltageFresh?'Measured':'Last measured'} ${fmtTime(voltsTime)} · ${ageText(voltsTime)}${voltageFresh?'':' · STALE'}`
+    : 'No voltage reading in the available history');
+  const voltageBox=$('hvVoltageSnapshot');
+  if(voltageBox)voltageBox.classList.toggle('stale',!voltageFresh);
+  setText('hvHeroBattery',voltage!==null
+    ? `Battery ${batteryPctNow!==null?Math.round(batteryPctNow)+'% · ':''}${voltage.toFixed(3)} V${voltageFresh?'':' · stale'}`
+    : 'Battery voltage unavailable');
 
   if(hv&&home){const a=tempF(hv),b=tempF(home),spread=Math.abs(a-b),warmer=a>=b?STATIONS.hv:STATIONS.home;setText('tempSpread',`${spread.toFixed(1)}°F`);setText('tempSpreadDetail',`${warmer.name} is ${(spread).toFixed(1)}° warmer`);setText('warmestStation',warmer.name);setText('warmestDetail',`${Math.max(a,b).toFixed(1)}°F now`);}
   else {setText('tempSpread','—');setText('tempSpreadDetail','need both current readings');const only=hv?STATIONS.hv:home?STATIONS.home:null;setText('warmestStation',only?only.name:'—');setText('warmestDetail',only?'only station currently reporting':'latest readings');}
