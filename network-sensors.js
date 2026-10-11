@@ -238,13 +238,7 @@
       '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
       '<strong>Rock Moisture (experimental phase)</strong><small>RAK4631 · Firmware V4 · !77788479 · raw ADC10</small></div></div>' +
       '<div class="extra-reading" id="soilMoisture">—</div><div class="extra-secondary" id="soilAdc">ADC —</div>' +
-      '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>' +
-    '<article class="station-hero extra-station" style="--accent:#c3a0fb">' +
-      '<div class="station-heading"><span class="station-dot" style="background:#c3a0fb"></span><div>' +
-      '<strong>Pack Creek</strong><small>CCAT · Firmware V4 · !c9f9f6e7 · water distance</small></div></div>' +
-      '<div class="reading-kicker">Water distance</div><div class="extra-reading" id="cliffDistance">—</div>' +
-      '<div class="extra-secondary" id="cliffDistanceRaw">Waiting for ultrasonic distance</div>' +
-      '<div class="station-meta"><span id="cliffUpdated">Waiting for readings</span><span id="cliffHeroBattery">Battery —</span></div><div class="station-state offline" id="cliffState">No distance yet</div></article>');
+      '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>');
 
   function packStageToFlow(stageFt){
     const h=Number(stageFt);
@@ -608,7 +602,7 @@
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Pack Creek · Moab · Fishlake · Swell';
+    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Swell';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');
@@ -619,7 +613,7 @@
   });
   const mapDescription = document.querySelector('.map-panel .panel-head p');
   if (mapDescription) mapDescription.textContent =
-    'Mapped locations are shown where coordinates are confirmed. Rock Moisture and Pack Creek are not positioned until their site coordinates are supplied.';
+    'Mapped locations are shown where coordinates are confirmed. Rock Moisture is not positioned until its site coordinates are supplied.';
 
   // The original five-station scripts load on startup before this extension.
   // Refresh once so the added stations render immediately with the same API data.
