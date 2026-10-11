@@ -19,6 +19,11 @@
     .sw-water-now span{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#88a4aa;font-weight:800}
     .sw-water-now strong{font-size:24px}
     .station-badge.sw{background:var(--sw-soft);color:#c9e8ff}
+    .sw-mx-latest{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin:10px 20px 12px;padding:12px 14px;border:1px solid rgba(87,183,255,.35);border-radius:10px;background:rgba(87,183,255,.07);font-size:13px;color:#bcd4da}
+    .sw-mx-latest strong{color:#f0f8fa;font-size:16px;margin-left:5px}
+    .sw-mx-latest .sw-mx-time{flex-basis:100%;font-size:12px;color:#94b5bf}
+    .sw-mx-latest.stale .sw-mx-time{color:#e8bc78}
+    .sw-mx-latest .sw-mx-label{font-weight:750;color:#57b7ff}
   `;
   document.head.appendChild(style);
 
@@ -164,7 +169,21 @@
     });
   }
 
-  const swSeriesEnabled = { 'mx-stage': true, 'sen-stage': true, 'mx-temp': false };
+  // Show both HOBO MX2001 measurements by default. The combined mesh graph
+  // deliberately retains its independent, initially unchecked selectors.
+  const swSeriesEnabled = { 'mx-stage': true, 'sen-stage': true, 'mx-temp': true };
+  const mxTempToggle = document.querySelector('#swSensorControls input[data-sw-series="mx-temp"]');
+  if (mxTempToggle) mxTempToggle.checked = true;
+  const swPanelHead = document.querySelector('.sw-water-panel .panel-head');
+  if (swPanelHead && !document.getElementById('swMxLatest')) {
+    swPanelHead.insertAdjacentHTML('afterend', `
+      <div class="sw-mx-latest" id="swMxLatest" aria-live="polite">
+        <span class="sw-mx-label">HOBO MX2001</span>
+        <span>Stage <strong id="swMxStageNow">—</strong></span>
+        <span>Temperature <strong id="swMxTempNow">—</strong></span>
+        <span class="sw-mx-time" id="swMxLastSeen">Waiting for MX2001 telemetry</span>
+      </div>`);
+  }
   const swSensorRows = type => swRows().filter(r => r.telemetry_type === type).sort((a,b) => new Date(a.observed_at)-new Date(b.observed_at));
   const swPoints = (type, field, converter) => swSensorRows(type).map(r => ({
     x:new Date(r.observed_at).getTime(), y:converter(r,field), iso:r.observed_at
@@ -173,6 +192,18 @@
   const swTempValue = r => tempF(r);
   function renderSwellWaterLevel(target = document.getElementById('swWaterLevelChart')) {
     if (!target) return;
+    const mxLatest = swSensorRows('mx2001').at(-1) || null;
+    const mxStage = mxLatest ? num(metric(mxLatest, 'water_level_ft')) : null;
+    const mxTemp = mxLatest ? tempF(mxLatest) : null;
+    setText('swMxStageNow', mxStage !== null ? mxStage.toFixed(3) + ' ft' : '—');
+    setText('swMxTempNow', mxTemp !== null ? mxTemp.toFixed(1) + ' °F' : '—');
+    const mxLastSeen = document.getElementById('swMxLastSeen');
+    const mxLatestBox = document.getElementById('swMxLatest');
+    if (mxLatestBox) mxLatestBox.classList.toggle('stale', !mxLatest || ageHours(mxLatest.observed_at) > STALE_AFTER_HOURS);
+    if (mxLastSeen) mxLastSeen.textContent = mxLatest
+      ? 'Last MX2001 packet: ' + fmtTime(mxLatest.observed_at) + ' (' + ageText(mxLatest.observed_at) + ')' +
+        (ageHours(mxLatest.observed_at) > STALE_AFTER_HOURS ? ' · STALE: logger telemetry has stopped updating' : ' · Reporting')
+      : 'No MX2001 stage or temperature packets in the last 30 days';
     const mx = swPoints('mx2001','water_level_ft',swStageValue);
     const sen = swPoints('water_distance','water_level_ft',swStageValue);
     const series = [];
