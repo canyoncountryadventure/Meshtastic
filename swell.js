@@ -164,15 +164,42 @@
     });
   }
 
+  const swSeriesEnabled = { 'mx-stage': true, 'sen-stage': true, 'mx-temp': false };
+  const swSensorRows = type => swRows().filter(r => r.telemetry_type === type).sort((a,b) => new Date(a.observed_at)-new Date(b.observed_at));
+  const swPoints = (type, field, converter) => swSensorRows(type).map(r => ({
+    x:new Date(r.observed_at).getTime(), y:converter(r,field), iso:r.observed_at
+  })).filter(p => Number.isFinite(p.x) && p.y !== null && Number.isFinite(p.y));
+  const swStageValue = (r,field) => num(metric(r,field));
+  const swTempValue = r => tempF(r);
   function renderSwellWaterLevel(target = document.getElementById('swWaterLevelChart')) {
     if (!target) return;
-    const rows = swWaterRows();
-    const points = rows.map(r => ({x:new Date(r.observed_at).getTime(), y:num(metric(r,'water_level_ft')), iso:r.observed_at})).filter(p => p.y !== null).reverse();
-    renderLineChart(target, [{name:"It's a Swell Day water level", color:SWELL.color, points, maxGapMs:3*3600000}], {
-      axisLabel:'Water level ft', tooltipValue:v=>`${v.toFixed(3)} ft`, empty:"Waiting for It's a Swell Day water-level telemetry.", pointRadius:3.4, strokeWidth:3.2,
+    const mx = swPoints('mx2001','water_level_ft',swStageValue);
+    const sen = swPoints('water_distance','water_level_ft',swStageValue);
+    const series = [];
+    if (swSeriesEnabled['mx-stage']) series.push({name:'MX2001 stage',color:'#57b7ff',points:mx,maxGapMs:3*3600000});
+    if (swSeriesEnabled['sen-stage']) series.push({name:'SEN0313 stage',color:'#55d9b7',points:sen,maxGapMs:3*3600000});
+    renderLineChart(target,series,{
+      axisLabel:'Stage ft',tooltipValue:v=>`${v.toFixed(3)} ft`,
+      empty:series.length?'No stage readings for selected sensors.':'Select a stage sensor above.',
+      pointRadius:3.4,strokeWidth:3.2
     });
-    setText('swWaterLevelChartCount', points.length ? `${points.length} water-level samples · MX2001` : 'Waiting for water-level readings');
+    const temps = swPoints('mx2001','temperature',swTempValue);
+    const tempTarget = target.id === 'expandedChart' ? null : document.getElementById('swWaterTempChart');
+    if(tempTarget){
+      tempTarget.style.display = swSeriesEnabled['mx-temp'] ? '' : 'none';
+      if(swSeriesEnabled['mx-temp'])renderLineChart(tempTarget,[{name:'MX2001 temperature',color:'#f3c969',points:temps,maxGapMs:3*3600000}],{
+        axisLabel:'Temperature °F',tooltipValue:v=>`${v.toFixed(1)} °F`,
+        empty:'Waiting for MX2001 temperature readings.',pointRadius:3.4,strokeWidth:3.2
+      });
+    }
+    setText('swWaterLevelChartCount',`${mx.length} MX2001 stage · ${sen.length} SEN0313 stage · ${temps.length} MX2001 temperature samples`);
   }
+  document.querySelectorAll('#swSensorControls input[data-sw-series]').forEach(input=>{
+    input.addEventListener('change',()=>{
+      swSeriesEnabled[input.dataset.swSeries]=input.checked;
+      renderSwellWaterLevel();
+    });
+  });
 
   document.getElementById('swWaterLevelExpand')?.addEventListener('click', () => {
     const dialog = document.getElementById('expandDialog');
