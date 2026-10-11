@@ -10,11 +10,10 @@ const KNOWN_STATIONS = new Map([
   [4241345683, 'SMLA'], // !fccdcc93, repurposed station
   [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
   [3044869407, 'Revived'], // !b57d051f, repurposed station
-  [3388602087, 'Pack Creek'], // !c9f9f6e7, water distance
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);
-const PAUSED_INGEST_NODES = new Set(); // SMLA ingestion restored after station repurposing
+const PAUSED_INGEST_NODES = new Set([3388602087]);
 const MAX_BATCH_SIZE = 64;
 
 function parseJson(value) {
@@ -125,8 +124,8 @@ function validate(body) {
        Number(body.payload.soil_moisture_percent) < 0 || Number(body.payload.soil_moisture_percent) > 100)) {
     throw new Error('Invalid soil moisture reading or source node');
   }
-  if (body.type === 'water_distance' && nodeNum !== 4241345683 && nodeNum !== 3388602087) {
-    throw new Error('Water-distance packets are only approved for the configured Pack Creek nodes');
+  if (body.type === 'water_distance' && nodeNum !== 1949224949) {
+    throw new Error('Water-distance packets are only approved for Swell Day');
   }
 
   return nodeNum;
@@ -173,15 +172,16 @@ export default async function handler(req, res) {
     const paused = [];
     for (const rawBody of bodies) {
       const body = parseJson(rawBody);
-      const nodeNum = validate(body);
+      const nodeNum = nodeNumber(body);
       if (PAUSED_INGEST_NODES.has(nodeNum)) {
-        paused.push({ node_num: nodeNum, station_name: KNOWN_STATIONS.get(nodeNum) });
+        paused.push({ node_num: nodeNum });
       } else {
+        validate(body);
         activeBodies.push(body);
       }
     }
 
-    // If a request contains only paused Pack Creek telemetry, acknowledge it
+    // Acknowledge retired-node packets
     // without opening a Neon connection or writing a row.
     if (!activeBodies.length) {
       return res.status(200).json({ ok: true, stored: 0, paused: paused.length, paused_nodes: paused });

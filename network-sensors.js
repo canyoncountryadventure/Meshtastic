@@ -3,24 +3,15 @@
   'use strict';
 
   const EXTRA = {
-    pack: { node: 4241345683, name: 'Pack Creek', id: '!fccdcc93', color: '#66b9ff' },
     soil: { node: 2004386937, name: 'Rock Moisture', id: '!77788479', color: '#d9b873' },
-    cliff: { node: 3388602087, name: 'Pack Creek', id: '!c9f9f6e7', color: '#c3a0fb' },
-    rockTemp: { node: 1949224949, name: 'Rock Temperature', source: "It's a Swell Day", color: '#8ecae6' },
+    rockTemp: { node: 2004386937, name: 'Soil Temperature', color: '#8ecae6' },
   };
   const TEMPERATURE_TYPES = new Set(['environment', 'mx2001']);
-  let packChartMetric = 'flow';
-  const packChartSources = new Set(['sen0313']);
-  const PACK_RATING = { a: 6.07187614, offset: 0.22259098, b: 1.04237977 };
-  const PACK_DIFF_MATCH_MS = 15 * 60 * 1000;
   const ROCK_MOISTURE_INSTALLED_AT = Date.parse('2026-09-28T22:41:25.000Z'); // first persisted rock-moisture sample · 4:41:25 PM MDT
   const ROCK_PRECIP_BANDS = [
     {start:Date.parse('2026-09-29T08:15:00.000Z'),end:Date.parse('2026-09-29T08:50:00.000Z'),label:'RAIN · 2:15–2:50 AM',fill:'rgba(102,185,255,.20)',stroke:'#66b9ff'},
     {start:Date.parse('2026-09-29T09:30:00.000Z'),end:Date.parse('2026-09-29T11:40:00.000Z'),label:'RAIN · 3:30–5:40 AM',fill:'rgba(102,185,255,.20)',stroke:'#66b9ff'}
   ];
-  let packDifference24h = [];
-  let packDifferenceFetchedAt = 0;
-  let packDifferenceFetchInFlight = false;
   const selectedAirTemperatureNodes = new Set([
     STATIONS.hv?.node,
     STATIONS.home?.node,
@@ -34,51 +25,9 @@
     const site = Object.values(STATIONS).find(s=>Number(s.node)===node);
     return rowsFor(node).filter(r=>hasTemperature(r) && (!site?.since || Date.parse(r.observed_at)>=site.since));
   };
-  const packTemperatureRows = () => rowsFor(EXTRA.pack.node).filter(r =>
-    r.telemetry_type === 'mx2001' && tempF(r) !== null);
   const soilRows = () => rowsFor(EXTRA.soil.node).filter(r => r.telemetry_type === 'soil');
-  const cliffDistanceRows = () => rowsFor(EXTRA.cliff.node).filter(r =>
-    r.telemetry_type === 'water_distance' && (
-      Number.isFinite(Number(metric(r,'distance_mm'))) ||
-      Number.isFinite(Number(metric(r,'distance_cm'))) ||
-      Number.isFinite(Number(metric(r,'distance_ft')))
-    ));
-  const cliffDistanceMm = r => {
-    if (!r) return null;
-    const mm=Number(metric(r,'distance_mm')); if(Number.isFinite(mm)) return mm;
-    const cm=Number(metric(r,'distance_cm')); if(Number.isFinite(cm)) return cm*10;
-    const ft=Number(metric(r,'distance_ft')); if(Number.isFinite(ft)) return ft*304.8;
-    return null;
-  };
-  const asCliffDistance = r => {
-    const mm=cliffDistanceMm(r);
-    return Number.isFinite(mm) ? (mm/304.8).toFixed(2)+' ft' : '—';
-  };
-  const asCliffDistanceRaw = r => {
-    const mm=cliffDistanceMm(r);
-    return Number.isFinite(mm) ? Math.round(mm)+' mm' : 'Waiting for distance';
-  };
-  const rockTemperatureRows = () => {
-    // Prefer temperature reported by the Rock Moisture station itself. Use the
-    // nearby Swell rock probe only as a historical/fallback source for hours
-    // where the Rock Moisture node has no temperature packet.
-    const primary = rowsFor(EXTRA.soil.node).filter(r =>
-      r.telemetry_type === 'environment' && tempF(r) !== null &&
-      new Date(r.observed_at).getTime() >= ROCK_MOISTURE_INSTALLED_AT);
-    const fallback = rowsFor(EXTRA.rockTemp.node).filter(r =>
-      r.telemetry_type === 'environment' && tempF(r) !== null &&
-      new Date(r.observed_at).getTime() >= ROCK_MOISTURE_INSTALLED_AT);
-    const buckets = new Map();
-    fallback.forEach(r => {
-      const hour=Math.floor(new Date(r.observed_at).getTime()/3600000);
-      if(!buckets.has(hour)) buckets.set(hour,{...r,rock_temp_source:'Swell fallback'});
-    });
-    primary.forEach(r => {
-      const hour=Math.floor(new Date(r.observed_at).getTime()/3600000);
-      buckets.set(hour,{...r,rock_temp_source:'Rock Moisture'});
-    });
-    return [...buckets.values()].sort(byTime);
-  };
+  const rockTemperatureRows = () => rowsFor(EXTRA.soil.node).filter(r =>
+    hasTemperature(r) && Date.parse(r.observed_at) >= ROCK_MOISTURE_INSTALLED_AT);
   const rockHourlyRows = () => {
     const buckets = new Map();
     soilRows().forEach(r => {
@@ -119,15 +68,6 @@
     }
     return out;
   };
-  const stageRows = () => rowsFor(EXTRA.pack.node).filter(r =>
-    r.telemetry_type === 'water_distance' &&
-    Number.isFinite(Number(metric(r, 'water_level_ft'))) &&
-    metric(r, 'water_level_ft') !== null &&
-    metric(r, 'stage_calibrated') !== false);
-  const hoboStageRows = () => rowsFor(EXTRA.pack.node).filter(r =>
-    r.telemetry_type === 'mx2001' &&
-    Number.isFinite(Number(metric(r, 'water_level_ft'))) &&
-    metric(r, 'water_level_ft') !== null);
   const asPercent = r => r ? Math.round(Number(metric(r, 'soil_moisture_percent'))) + '%' : '—';
   const soilCondition = r => {
     if (!r) return '—';
@@ -150,10 +90,6 @@
     return 'DRY/VERY DRY';
   };
   const soilDisplay = r => r ? asPercent(r) + ' · ' + soilCondition(r) : '—';
-  const asStage = r => r ? Number(metric(r, 'water_level_ft')).toFixed(2) + ' ft' : '—';
-  const asDischarge = r => r && Number.isFinite(Number(r.discharge_cfs)) ?
-    Number(r.discharge_cfs).toFixed(2) + ' cfs' : '—';
-  const asTemp = r => r ? tempF(r).toFixed(1) + ' °F' : '—';
   const freshness = r => r ? 'Updated ' + ageText(r.observed_at) : 'Waiting for readings';
   const deviceRows = node => rowsFor(node).filter(r => r.telemetry_type === 'device' &&
     (batteryPct(r) !== null || batteryV(r) !== null));
@@ -197,29 +133,16 @@
     .sensor-agreement.good{color:#86d7e8}
     .sensor-agreement.watch{color:#f3c969}
     .sensor-agreement.investigate{color:#ff8f80}
-    .pack-diff-spark-wrap{margin-top:11px;padding-top:10px;border-top:1px solid #17343d}
-    .pack-diff-spark-head{display:flex;justify-content:space-between;gap:5px 10px;align-items:baseline;margin-bottom:7px;flex-wrap:wrap}
-    .pack-diff-spark-head span{font-size:11px;color:#88a4aa;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-    .pack-diff-spark-head small{font-size:10px;color:var(--muted)}
-    .pack-diff-sparkline{height:74px;width:100%;position:relative;overflow:hidden;border-radius:8px;background:#08171d}
-    .pack-diff-sparkline svg{display:block;width:100%;height:100%}
-    .pack-diff-spark-empty{height:74px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
     .primary-monitor-panel{overflow:hidden}
     .primary-monitor-panel .chart.xlarge{height:440px}
     .monitor-head{align-items:flex-end}
     .monitor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
     .compact-tabs{gap:4px}.compact-tabs button{padding:7px 9px;font-size:12px}
-    .pack-source-filter{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-    .pack-source-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #24434d;background:#0a1a20;color:#8ea8ae;border-radius:999px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:750}
-    .pack-source-btn[aria-pressed="true"]{background:#17343e;border-color:#5b8e9b;color:#fff}
-    .pack-source-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
     .monitor-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
     .monitor-summary>div{background:#091a20;border:1px solid #1b3740;border-radius:11px;padding:12px}
     .monitor-summary span{display:block;color:#88a4aa;font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
     .monitor-summary strong{display:block;font-size:22px;margin-top:6px}
     .monitor-summary small{display:block;color:var(--muted);margin-top:5px}
-    .pack-monitor-panel{border-color:rgba(102,185,255,.28)}
-    .cliff-battery-panel{border-color:rgba(195,160,251,.34)}
     .soil-monitor-panel{border-color:rgba(217,184,115,.28)}
     .reading-kicker{margin-top:12px;color:#86a4ab;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.11em}
     .temp-station-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 2px 12px}
@@ -239,131 +162,6 @@
       '<strong>Rock Moisture (experimental phase)</strong><small>RAK4631 · Firmware V4 · !77788479 · raw ADC10</small></div></div>' +
       '<div class="extra-reading" id="soilMoisture">—</div><div class="extra-secondary" id="soilAdc">ADC —</div>' +
       '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>');
-
-  function packStageToFlow(stageFt){
-    const h=Number(stageFt);
-    if(!Number.isFinite(h) || h<=PACK_RATING.offset)return null;
-    return PACK_RATING.a*Math.pow(h-PACK_RATING.offset,PACK_RATING.b);
-  }
-
-  function pack313Points(metricName){
-    if(metricName==='stage'){
-      return stageRows().map(r=>({x:new Date(r.observed_at).getTime(),y:Number(metric(r,'water_level_ft')),iso:r.observed_at}));
-    }
-    return stageRows().filter(r=>Number.isFinite(Number(r.discharge_cfs))).map(r=>({x:new Date(r.observed_at).getTime(),y:Number(r.discharge_cfs),iso:r.observed_at}));
-  }
-
-  function pack2001Points(metricName){
-    return hoboStageRows().map(r=>{
-      const stage=Number(metric(r,'water_level_ft'));
-      const y=metricName==='stage'?stage:packStageToFlow(stage);
-      return {x:new Date(r.observed_at).getTime(),y,iso:r.observed_at};
-    }).filter(p=>Number.isFinite(p.y));
-  }
-
-  function packAgreement(absDiffFt){
-    if(!Number.isFinite(absDiffFt)) return {label:'—',cls:''};
-    if(absDiffFt<=0.02)return {label:'Excellent',cls:'excellent'};
-    if(absDiffFt<=0.05)return {label:'Good',cls:'good'};
-    if(absDiffFt<=0.10)return {label:'Watch',cls:'watch'};
-    return {label:'Investigate',cls:'investigate'};
-  }
-
-  function pairPackStageDifferences(rows){
-    const primary=rows.filter(r=>Number(r.node_num)===EXTRA.pack.node&&r.telemetry_type==='water_distance'&&
-      Number.isFinite(Number(metric(r,'water_level_ft')))&&metric(r,'stage_calibrated')!==false)
-      .map(r=>({t:new Date(r.observed_at).getTime(),stage:Number(metric(r,'water_level_ft')),iso:r.observed_at}))
-      .filter(p=>Number.isFinite(p.t)).sort((a,b)=>a.t-b.t);
-    const hobo=rows.filter(r=>Number(r.node_num)===EXTRA.pack.node&&r.telemetry_type==='mx2001'&&
-      Number.isFinite(Number(metric(r,'water_level_ft'))))
-      .map(r=>({t:new Date(r.observed_at).getTime(),stage:Number(metric(r,'water_level_ft')),iso:r.observed_at}))
-      .filter(p=>Number.isFinite(p.t)).sort((a,b)=>a.t-b.t);
-    if(!primary.length||!hobo.length)return [];
-    const paired=[];
-    let j=0;
-    for(const p of primary){
-      while(j+1<hobo.length&&Math.abs(hobo[j+1].t-p.t)<=Math.abs(hobo[j].t-p.t))j++;
-      const h=hobo[j];
-      if(h&&Math.abs(h.t-p.t)<=PACK_DIFF_MATCH_MS)paired.push({x:p.t,y:p.stage-h.stage,iso:p.iso});
-    }
-    return paired;
-  }
-
-  function renderPackDifferenceSparkline(){
-    const target=document.getElementById('packDifferenceSparkline');
-    if(!target)return;
-    const points=packDifference24h.filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)).sort((a,b)=>a.x-b.x);
-    if(!points.length){
-      target.innerHTML='<div class="pack-diff-spark-empty">No matched 24h stage pairs yet.</div>';
-      return;
-    }
-    target.innerHTML='';
-    const w=420,h=74,padX=5,padY=9;
-    const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
-    let xmin=Math.min(...xs),xmax=Math.max(...xs);
-    let ymin=Math.min(...ys,0),ymax=Math.max(...ys,0);
-    if(xmax===xmin)xmax=xmin+1;
-    const yPad=Math.max(0.005,(ymax-ymin)*0.18);
-    ymin-=yPad;ymax+=yPad;
-    const x=v=>padX+(v-xmin)/(xmax-xmin)*(w-padX*2);
-    const y=v=>padY+(ymax-v)/(ymax-ymin)*(h-padY*2);
-    const svg=svgEl('svg',{viewBox:`0 0 ${w} ${h}`,preserveAspectRatio:'none','aria-label':'24 hour SEN0313 minus MX2001 stage difference'});
-    svg.appendChild(svgEl('line',{x1:padX,x2:w-padX,y1:y(0),y2:y(0),stroke:'#31505a','stroke-width':1,'stroke-dasharray':'4 4'}));
-    const poly=points.map(p=>`${x(p.x)},${y(p.y)}`).join(' ');
-    svg.appendChild(svgEl('polyline',{points:poly,fill:'none',stroke:'#66b9ff','stroke-width':2.5,'stroke-linecap':'round','stroke-linejoin':'round'}));
-    const last=points.at(-1);
-    svg.appendChild(svgEl('circle',{cx:x(last.x),cy:y(last.y),r:3.2,fill:'#66b9ff',stroke:'#08171d','stroke-width':1.2}));
-    target.appendChild(svg);
-    target.title=`${points.length} matched readings · latest signed difference ${last.y>=0?'+':''}${last.y.toFixed(3)} ft`;
-  }
-
-  async function refreshPackDifference24h(force=false){
-    const now=Date.now();
-    if(packDifferenceFetchInFlight)return;
-    if(!force&&packDifferenceFetchedAt&&now-packDifferenceFetchedAt<60000){
-      renderPackDifferenceSparkline();
-      return;
-    }
-    packDifferenceFetchInFlight=true;
-    try{
-      const res=await fetch(`/api/readings?hours=24&node=${EXTRA.pack.node}&limit=5000`,{cache:'no-store'});
-      const data=await res.json();
-      if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);
-      packDifference24h=pairPackStageDifferences(Array.isArray(data.readings)?data.readings:[]);
-      packDifferenceFetchedAt=Date.now();
-      renderPackDifferenceSparkline();
-    }catch(err){
-      console.error('Pack Creek 24h difference fetch failed',err);
-      const target=document.getElementById('packDifferenceSparkline');
-      if(target&&!packDifference24h.length)target.innerHTML='<div class="pack-diff-spark-empty">24h comparison unavailable.</div>';
-    }finally{
-      packDifferenceFetchInFlight=false;
-    }
-  }
-
-  function renderPackChart(target=document.getElementById('packStageChart')){
-    if(!target)return;
-    const flowMode=packChartMetric==='flow';
-    const metricName=flowMode?'flow':'stage';
-    const series=[];
-    let total=0;
-    if(packChartSources.has('sen0313')){
-      const points=pack313Points(metricName); total+=points.length;
-      series.push({name:flowMode?'SEN0313 rated flow':'SEN0313 stage',color:EXTRA.pack.color,points});
-    }
-    if(packChartSources.has('mx2001')){
-      const points=pack2001Points(metricName); total+=points.length;
-      series.push({name:flowMode?'MX2001 stage-derived flow':'MX2001 stage',color:'#ff9a67',points});
-    }
-    renderLineChart(target,series,
-      flowMode
-        ? {axisLabel:'Discharge (cfs)',tooltipValue:v=>v.toFixed(2)+' cfs',strokeWidth:3.3,pointRadius:3.5,empty:'Select a Pack Creek sensor source.'}
-        : {axisLabel:'Water level (ft)',tooltipValue:v=>v.toFixed(3)+' ft',strokeWidth:3.3,pointRadius:3.5,empty:'Select a Pack Creek sensor source.'});
-    const active=[];
-    if(packChartSources.has('sen0313'))active.push('SEN0313');
-    if(packChartSources.has('mx2001'))active.push('MX2001');
-    setText('packChartCount',total?total+' '+(flowMode?'flow':'stage')+' samples · '+active.join(' + '):'Select at least one Pack Creek sensor');
-  }
 
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
     if(!target)return;
@@ -407,33 +205,6 @@
   }
 
 
-  function renderPackFlowChart(target=document.getElementById('packFlowChart')){
-    if(!target)return;
-    const points=cliffDistanceRows().filter(r=>metric(r,'distance_valid')!==false)
-      .map(r=>({x:new Date(r.observed_at).getTime(),y:cliffDistanceMm(r)/304.8,iso:r.observed_at}))
-      .filter(p=>Number.isFinite(p.y)).reverse();
-    renderLineChart(target,[{name:'Pack Creek water distance',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
-      {axisLabel:'Water distance (ft)',tooltipValue:v=>v.toFixed(3)+' ft',strokeWidth:3.3,pointRadius:3.5,
-       empty:'Waiting for Pack Creek water-distance telemetry.'});
-    setText('packFlowChartCount',points.length?points.length+' water-distance samples':'Waiting for water-distance readings');
-  }
-
-  function renderCliffBatteryChart(target=document.getElementById('cliffBatteryChart')){
-    if(!target)return;
-    const rows=deviceRows(EXTRA.cliff.node);
-    const latest=rows[0]||null;
-    const voltageRows=rows.filter(r=>Number.isFinite(batteryV(r))&&batteryV(r)>0)
-      .sort((a,b)=>new Date(batteryTime(a))-new Date(batteryTime(b)));
-    const points=voltageRows.map(r=>({x:new Date(batteryTime(r)).getTime(),y:batteryV(r),iso:batteryTime(r)}));
-    renderLineChart(target,[{name:'Pack Creek voltage',color:EXTRA.cliff.color,points,maxGapMs:3*60*60*1000}],
-      {axisLabel:'Battery voltage (V)',tooltipValue:v=>v.toFixed(3)+' V',strokeWidth:3.3,pointRadius:3.4,empty:'Waiting for Pack Creek battery telemetry.'});
-    const pct=latest?batteryPct(latest):null, volts=latest?batteryV(latest):null;
-    setText('cliffBatteryNow',pct===101?'External':pct!==null?Math.round(pct)+'%':'—');
-    setText('cliffVoltageNow',volts!==null&&volts>0?volts.toFixed(3)+' V':'—');
-    setText('cliffBatteryAge',latest?ageText(batteryTime(latest)):'waiting for device packet');
-    setText('cliffBatteryChartCount',points.length?points.length+' voltage samples · Pack Creek':'Battery telemetry pending');
-  }
-
   function openExpanded(titleText,renderer,sourceId){
     const dialog=document.getElementById('expandDialog'),title=document.getElementById('expandTitle'),chart=document.getElementById('expandedChart'),mapEl=document.getElementById('expandedMap');
     if(!dialog||!title||!chart||!mapEl)return;
@@ -442,17 +213,13 @@
   }
 
   document.getElementById('soilChartExpand')?.addEventListener('click',()=>openExpanded('Rock Moisture (experimental phase) + Rain',renderSoilChart,'soilMoistureChart'));
-  document.getElementById('packFlowExpand')?.addEventListener('click',()=>openExpanded('Pack Creek Water Distance',renderPackFlowChart,'packFlowChart'));
-  document.getElementById('cliffBatteryExpand')?.addEventListener('click',()=>openExpanded('Pack Creek Battery',renderCliffBatteryChart,'cliffBatteryChart'));
 
   const earlierSummary = renderSummary;
   renderSummary = function() {
     earlierSummary();
     const sm = soilRows()[0] || null;
     const rockTemp = rockTemperatureRows()[0] || null;
-    const cliffDistance = cliffDistanceRows()[0] || null;
     const soilDevice = deviceRows(EXTRA.soil.node)[0] || null;
-    const cliffDevice = deviceRows(EXTRA.cliff.node)[0] || null;
 
     setText('soilMoisture', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : '—');
     setText('soilAdc', sm && metric(sm, 'soil_adc10') != null ? 'ADC10 ' + metric(sm, 'soil_adc10') : 'ADC —');
@@ -460,13 +227,6 @@
     setText('soilHeroBattery', cardBatteryText(soilDevice));
     addStatus(document.getElementById('soilState'), sm);
 
-    setText('cliffDistance', asCliffDistance(cliffDistance));
-    setText('cliffDistanceRaw', asCliffDistanceRaw(cliffDistance));
-    setText('cliffUpdated', freshness(cliffDistance));
-    setText('cliffHeroBattery', cardBatteryText(cliffDevice));
-    addStatus(document.getElementById('cliffState'), cliffDistance);
-    setText('cliffDistanceDetail', asCliffDistance(cliffDistance));
-    setText('cliffDistanceAge', cliffDistance ? ageText(cliffDistance.observed_at) : '—');
 
     setText('soilMoistureDetail', sm && metric(sm, 'soil_adc10') != null ? String(metric(sm, 'soil_adc10')) : '—');
     setText('soilAdcDetail', rockTemp ? tempF(rockTemp).toFixed(1) + ' °F' : '—');
@@ -475,8 +235,6 @@
     setText('soilMoistureTime', freshness(sm));
 
     renderSoilChart();
-    renderPackFlowChart();
-    renderCliffBatteryChart();
 
     const tempStations = airTemperatureStations().map(s => ({
       name:s.name, reading:s.rows[0] || null
@@ -497,7 +255,6 @@
 
     const active = tempStations
       .concat(sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.soil.name,reading:sm}] : [])
-      .concat(cliffDistance && ageHours(cliffDistance.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.cliff.name,reading:cliffDistance}] : []);
     if (active.length) {
       const freshest = active.sort((a,b)=>new Date(b.reading.observed_at)-new Date(a.reading.observed_at))[0];
       setText('freshestStation',freshest.name);
@@ -508,8 +265,7 @@
     }
 
     const healthy = tempStations.length +
-      (sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? 1 : 0) +
-      (cliffDistance && ageHours(cliffDistance.observed_at) <= STALE_AFTER_HOURS ? 1 : 0);
+      (sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? 1 : 0);
     setText('stationsReporting',healthy+' / 6');
     const n=document.getElementById('networkStatus');
     if(n){
@@ -595,7 +351,7 @@
   document.querySelectorAll('.station-hero .station-heading').forEach(heading => {
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
-    if (!small || !name || name === 'Rock Moisture' || name === 'Pack Creek') return;
+    if (!small || !name || name === 'Rock Moisture') return;
     if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day"].includes(name)) {
       small.textContent += ' · air temperature';
     }

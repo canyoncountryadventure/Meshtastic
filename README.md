@@ -7,19 +7,19 @@ Production [dashboard](https://meshtastic-ecru.vercel.app/) and Vercel/Neon inge
 | Display name | Node ID | Decimal node number | Data |
 |---|---|---:|---|
 | Hidden Valley | !4aab9211 | 1252758033 | HOBO temperature (MX2001; stage may be present in the source packet but is not displayed for this station) |
-| Pack Creek | !fccdcc93 | 4241345683 | Temperature and water level/stage |
-| Wingate Moisture | !77788479 | 2004386937 | Soil moisture (%) and ADC10; **not** temperature or PIR |
-| Cliff Sensor | !c9f9f6e7 | 3388602087 | HOBO temperature |
+| SMLA | !fccdcc93 | 4241345683 | Temperature and device telemetry |
+| Soil Moisture | !77788479 | 2004386937 | Soil ADC10 and its own HOBO temperature |
+| Revived | !b57d051f | 3044869407 | HOBO temperature and device telemetry |
 | Moab (Heltec) | !a35a4bf4 | 2740603892 | Local HOBO BLE temperature and gateway |
 | Fishlake Hightop | !5e021e35 | 1577197109 | HOBO temperature |
-| It's a Swell Day | !742ecff5 | 1949224949 | HOBO temperature |
+| It's a Swell Day | !742ecff5 | 1949224949 | MX2001 stage/temperature and SEN0313 stage |
 | Thousand Lake Mountain | !9df66d7e | 2650172798 | HOBO temperature |
 
-The retired Hidden Valley **!b57d051f / 3044869407** is removed from the live Heltec allowlist, ingest allowlist, dashboard, and station-health checks. Existing historical rows are retained in Neon for audit purposes but are not merged into the replacement station's charts, battery statistics, or RF history.
+Pack Creek telemetry is retired. Its node `!c9f9f6e7` is acknowledged without storing new readings. Historical Pack Creek telemetry is deleted, while the stage–discharge curve and five rating points remain in `rating_curves` and `rating_curve_points`. SMLA's repurposed-node readings are retained. Revived readings before its October 5 repurposing are excluded from current health checks.
 
 ## Packet path
 
-Field-node measurements → Meshtastic LoRa mesh → Heltec Gateway v2 → HTTPS POST to \`/api/ingest\` → Neon \`telemetry_readings\` → \`/api/readings\` → dashboard. Pack Creek calibrated SEN0313 stage is converted to discharge with the active versioned rating curve stored in Neon.
+Field-node measurements → Meshtastic LoRa mesh → Heltec Gateway v4 → HTTPS POST to \`/api/ingest\` → Neon \`telemetry_readings\` → \`/api/readings\` → dashboard. Swell Day MX2001 and SEN0313 readings are kept as separate sensor series. Pack Creek rating records remain available for future use.
 
 The Heltec accepts these source packets **only from approved nodes**:
 
@@ -31,7 +31,7 @@ The Heltec accepts these source packets **only from approved nodes**:
 
 The Heltec does not have to be renamed to track the field-node names. It uploads the numeric \`from\` identifier and sensor values; Vercel assigns \`station_name\` from its authoritative mapping.
 
-The current Heltec branch is [Heltec-Gateway-v2](https://github.com/canyoncountryadventure/firmware/tree/Heltec-Gateway-v2). It is built by the GitHub Actions workflow [Build Heltec Gateway v2](https://github.com/canyoncountryadventure/firmware/actions/workflows/build_cca_heltec_gateway.yml). A completed successful run publishes \`downloads/Heltec-Gateway-v2.zip\` on the firmware repository's \`field-self-recovery\` branch. **Do not flash a binary from an older run** expecting it to have the new station allowlist.
+The current Heltec branch is [Heltec-Gateway-v2](https://github.com/canyoncountryadventure/firmware/tree/Heltec-Gateway-v2). It is built by the GitHub Actions workflow [Build Heltec Gateway v4](https://github.com/canyoncountryadventure/firmware/actions/workflows/build_cca_heltec_gateway.yml). A completed successful run publishes \`downloads/Heltec-Gateway-v2.zip\` on the firmware repository's \`field-self-recovery\` branch. **Do not flash a binary from an older run** expecting it to have the new station allowlist.
 
 The production gateway build injects \`HOBO_HTTP_GATEWAY_INGEST_KEY\` from the GitHub Actions secret. Keep that secret out of source control. For a normal Wi-Fi Unified OTA update, use the regular non-factory Heltec V4 application image; do not erase Meshtastic NVS and do not use the factory image.
 

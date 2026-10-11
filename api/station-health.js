@@ -13,8 +13,7 @@ const STATIONS = [
   { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
   { node: 4241345683, name: 'SMLA', battery: true, measure: 'any' },
   { node: 2004386937, name: 'Wingate Moisture', battery: true, measure: 'soil' },
-  { node: 3044869407, name: 'Revived', battery: true, measure: 'any' },
-  { node: 3388602087, name: 'Pack Creek', battery: true },
+  { node: 3044869407, name: 'Revived', battery: true, measure: 'any', since: '2026-10-05T00:00:00Z' },
 ];
 
 const EXPECTED_INTERVAL_MINUTES = 60;
@@ -135,6 +134,7 @@ export default async function handler(req, res) {
         SELECT id, observed_at, received_at, temperature_c, metrics, radio
         FROM telemetry_readings
         WHERE node_num=${station.node}
+          AND observed_at >= ${station.since || '1970-01-01T00:00:00Z'}::timestamptz
           AND ((${station.measure === 'any'} AND telemetry_type IN ('environment', 'mx2001', 'soil', 'device', 'rock_test'))
             OR (${station.measure === 'soil'} AND telemetry_type='soil' AND metrics ? 'soil_moisture_percent')
             OR (${station.measure !== 'soil'} AND telemetry_type IN ('environment', 'mx2001')
@@ -149,6 +149,7 @@ export default async function handler(req, res) {
           SELECT id, observed_at, received_at, metrics, radio
           FROM telemetry_readings
           WHERE node_num=${station.node}
+          AND observed_at >= ${station.since || '1970-01-01T00:00:00Z'}::timestamptz
             AND telemetry_type='device'
           ORDER BY observed_at DESC
           LIMIT 1
@@ -162,6 +163,7 @@ export default async function handler(req, res) {
           SELECT observed_at, telemetry_type, metrics
           FROM telemetry_readings
           WHERE node_num=${station.node}
+          AND observed_at >= ${station.since || '1970-01-01T00:00:00Z'}::timestamptz
             AND telemetry_type='water_distance'
             AND (metrics ? 'water_level_ft')
             AND COALESCE((metrics->>'stage_calibrated')::boolean, TRUE)
