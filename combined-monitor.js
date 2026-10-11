@@ -5,7 +5,6 @@
   const sites = [
     {node:1252758033,name:'Hidden Valley',color:'#55d9b7'},
     {node:2740603892,name:'Moab',color:'#ff9a67'},
-    {node:3388602087,name:'Pack Creek (paused)',paused:true,color:'#c3a0fb'},
     {node:2004386937,name:'Soil Moisture',color:'#d9b873'},
     {node:1949224949,name:"It's a Swell Day",color:'#57b7ff'},
     {node:4241345683,name:'SMLA',short:'SMLA',id:'!fccdcc93',color:'#f5d05f',since:REPURPOSED_AT},
@@ -161,11 +160,10 @@
       const el=document.getElementById('combinedState'+site.node),fresh=latest && ageHours(latest.observed_at)<=STALE_AFTER_HOURS;
       if(el){el.className='station-state '+(fresh?'online':'offline');el.textContent=fresh?'Reporting':latest?'Stale':'No new telemetry';}
     }
-    const packState=document.getElementById('cliffState');if(packState){packState.className='station-state stale';packState.textContent='Paused';}
-    const allSites=sites.filter(site=>!site.paused);
+    const allSites=sites;
     const healthy=allSites.filter(site=>seriesRows(site).some(r=>ageHours(r.observed_at)<=STALE_AFTER_HOURS)).length;
     setText('stationsReporting',healthy+' / '+allSites.length);
-    setText('networkStatusText',healthy===allSites.length?'All '+allSites.length+' stations reporting':healthy+' of '+allSites.length+' stations reporting · Pack Creek paused');
+    setText('networkStatusText',healthy===allSites.length?'All '+allSites.length+' stations reporting':healthy+' of '+allSites.length+' stations reporting');
     const status=document.getElementById('networkStatus');if(status)status.className='live-pill '+(healthy===allSites.length?'online':healthy?'partial':'offline');
   }
   document.getElementById('combinedExpand')?.addEventListener('click',()=>{
@@ -174,6 +172,6 @@
   });
   const earlierRenderAll=renderAll;
   renderAll=function(){earlierRenderAll();renderCombined();renderFishlakeTemperature();renderNewCards();if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='combinedChart')renderCombined(document.getElementById('expandedChart'));if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='fishlakeTemperatureChart')renderFishlakeTemperature(document.getElementById('expandedChart'));};
-  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Rock Moisture · Pack Creek · Moab · Fishlake · Swell · SMLA · Revived';
+  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Swell · SMLA · Revived';
   renderAll();
 })();
