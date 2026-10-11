@@ -83,11 +83,11 @@
 
   <section class="panel primary-monitor-panel sw-water-panel">
     <div class="panel-head monitor-head">
-      <div><span class="eyebrow">It's a Swell Day · !742ecff5</span><h2>Swell Day Water Level</h2><p id="swWaterLevelChartCount">Waiting for water-level readings</p></div>
+      <div><span class="eyebrow">It's a Swell Day · !742ecff5</span><h2>Swell Day Water Stage &amp; Temperature</h2><p id="swWaterLevelChartCount">Waiting for water-level readings</p></div>
       <button type="button" class="expand-btn" id="swWaterLevelExpand">Expand</button>
     </div>
-    <div class="chart-note">Water level reported by the Swell Day MX2001, in feet.</div>
-    <div class="chart xlarge" id="swWaterLevelChart"><div class="empty">Waiting for Swell Day water-level telemetry.</div></div>
+    <div class="combined-options" id="swSensorControls" style="padding:0 20px 12px;display:flex;flex-wrap:wrap;gap:16px"><label><input type="checkbox" data-sw-series="mx-stage" checked> MX2001 stage</label><label><input type="checkbox" data-sw-series="sen-stage" checked> SEN0313 stage</label><label><input type="checkbox" data-sw-series="mx-temp"> MX2001 temperature</label></div><div class="chart-note">Stage in feet; temperature in °F on its own chart and scale. Each sensor is shown independently; missing readings are not interpolated.</div>
+    <div class="chart xlarge" id="swWaterLevelChart"><div class="empty">Waiting for Swell Day water-level telemetry.</div></div><div class="chart xlarge" id="swWaterTempChart" style="display:none"><div class="empty">Waiting for MX2001 temperature.</div></div>
   </section>
 
 
@@ -157,7 +157,7 @@
 </script>
 <script src="/dashboard.js?v=20261007-combined"></script>
 <script src="/fishlake.js?v=20260929-firmware-labels"></script>
-<script src="/swell.js?v=20261011-water-level"></script>
+<script src="/swell.js?v=20261011-stage-sensor-toggles"></script>
 <script src="/swell-map.js?v=20260910-preserve-copy"></script>
 <script src="/network-sensors.js?v=20261011-no-pack"></script>
 <script src="/combined-monitor.js?v=20261011-no-pack"></script>
