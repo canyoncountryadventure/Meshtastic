@@ -73,7 +73,7 @@
 
   <section class="panel primary-monitor-panel combined-monitor-panel" id="combinedMonitorPanel">
     <div class="panel-head monitor-head">
-      <div><span class="eyebrow">Site comparison</span><h2>Battery, Temperature, Moisture &amp; Stage</h2><p id="combinedChartCount">Select sites and measurements below.</p></div>
+      <div><span class="eyebrow">Site comparison</span><h2>Battery, Temperature, Moisture, Stage &amp; Discharge</h2><p id="combinedChartCount">Select sites and measurements below.</p></div>
       <button type="button" class="expand-btn" id="combinedExpand">Expand</button>
     </div>
     <div class="combined-controls" id="combinedControls">
@@ -81,7 +81,7 @@
       <fieldset><legend>Sites</legend><div id="combinedSiteControls" class="combined-options"></div></fieldset>
     </div>
     <div id="combinedLegend" class="combined-legend" aria-live="polite"></div>
-    <div class="chart-note">Select sites, then measurements. MX2001 stage is available for Pack Creek and Cottonwood Creek; MB stage is Cottonwood Creek, and SEN0313 stage is Pack Creek. Each measurement has its own labeled scale. Rock Moisture is in experimental phase: raw ADC10, lower = wetter. Missing readings stay missing.</div>
+    <div class="chart-note">Select sites, then measurements. MX2001 stage is available for Pack Creek and Cottonwood Creek; MB stage is Cottonwood Creek, and SEN0313 stage is Pack Creek. Pack Creek discharge is in cfs. Each measurement has its own labeled scale. Rock Moisture is in experimental phase: raw ADC10, lower = wetter. Missing readings stay missing.</div>
     <div class="chart xlarge" id="combinedChart"><div class="empty">Waiting for station telemetry.</div></div>
   </section>
 
@@ -161,10 +161,10 @@
 </script>
 <script src="/dashboard.js?v=20261011-hv-voltage"></script>
 <script src="/fishlake.js?v=20260929-firmware-labels"></script>
-<script src="/swell.js?v=20261011-pack-creek"></script>
-<script src="/swell-map.js?v=20261011-pack-creek"></script>
-<script src="/network-sensors.js?v=20261011-pack-creek"></script>
-<script src="/combined-monitor.js?v=20261011-pack-creek"></script>
+<script src="/swell.js?v=20261011-pack-cfs"></script>
+<script src="/swell-map.js?v=20261011-pack-cfs"></script>
+<script src="/network-sensors.js?v=20261011-pack-cfs"></script>
+<script src="/combined-monitor.js?v=20261011-pack-cfs"></script>
 <script src="/cottonwood.js?v=20261011-cottonwood"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {

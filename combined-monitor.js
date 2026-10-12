@@ -20,6 +20,7 @@
     {key:'mx-stage',name:'MX2001 stage',unit:'Stage ft',dash:'10 3 2 3',precision:3},
     {key:'mb-stage',name:'MB stage',unit:'Stage ft',dash:'5 3',precision:3},
     {key:'sen-stage',name:'SEN0313 stage',unit:'Stage ft',dash:'',precision:3},
+    {key:'discharge',name:'Pack Creek discharge',unit:'cfs',dash:'3 3',precision:3},
     {key:'mx-temp',name:'MX2001 temperature',unit:'°F',dash:'4 3',precision:1},
   ];
   const seriesPalette = [
@@ -33,13 +34,18 @@
     ['#60e5f5','#d7f1ff','#20a6b6'],
     ['#ffb36b','#ffd5a7','#c77f38'],
   ];
-  const seriesColor = (site,definition) => definition.unit==='Stage ft' ? site.color : seriesPalette[sites.indexOf(site)][definition.key==='mx-temp' ? 1 : metricDefs.indexOf(definition)];
+  const seriesColor = (site,definition) => ['Stage ft','cfs'].includes(definition.unit) ? site.color : seriesPalette[sites.indexOf(site)][definition.key==='mx-temp' ? 1 : metricDefs.indexOf(definition)];
   const selectedSites = new Set();
   const selectedMetrics = new Set();
   const seriesRows = site => state.readings.filter(r => Number(r.node_num)===site.node &&
     (!site.since || Date.parse(r.observed_at)>=site.since));
   const temperatureTypes = new Set(['environment','mx2001','rock_test']);
   const valueFor = (r,key) => {
+    if(key==='discharge'){
+      if(Number(r.node_num)!==1949224949 || !['mx2001','water_distance'].includes(r.telemetry_type))return null;
+      const value=num(r.discharge_cfs);
+      return value!==null ? {value,unit:'cfs',sensor:r.telemetry_type==='mx2001'?'MX2001':'SEN0313'} : null;
+    }
     if(key==='voltage'){
       const value=batteryV(r);
       return r.telemetry_type==='device' && value!==null && value>0 ? {value,unit:'V'} : null;
@@ -203,7 +209,7 @@
   }
   document.getElementById('combinedExpand')?.addEventListener('click',()=>{
     const dialog=document.getElementById('expandDialog'),target=document.getElementById('expandedChart');
-    setText('expandTitle','Battery, Temperature, Moisture & Stage');document.getElementById('expandedMap').hidden=true;target.hidden=false;target.dataset.rangeSource='combinedChart';dialog.showModal();setTimeout(()=>renderCombined(target),40);
+    setText('expandTitle','Battery, Temperature, Moisture, Stage & Discharge');document.getElementById('expandedMap').hidden=true;target.hidden=false;target.dataset.rangeSource='combinedChart';dialog.showModal();setTimeout(()=>renderCombined(target),40);
   });
   const earlierRenderAll=renderAll;
   renderAll=function(){earlierRenderAll();renderCombined();renderFishlakeTemperature();renderNewCards();if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='combinedChart')renderCombined(document.getElementById('expandedChart'));if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='fishlakeTemperatureChart')renderFishlakeTemperature(document.getElementById('expandedChart'));};

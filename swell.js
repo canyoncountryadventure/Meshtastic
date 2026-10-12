@@ -34,6 +34,7 @@
         <div class="station-heading"><span class="station-dot sw"></span><div><strong>Pack Creek</strong><small>RAK4631 · Firmware V4 · SWRP · !742ecff5</small></div></div>
         <div class="big-temp"><span id="swTemp">—</span><small>°F</small></div>
         <div class="sw-water-now"><span>Water level</span><strong id="swWaterLevel">—</strong></div>
+        <div class="sw-water-now"><span>Discharge</span><strong id="swDischarge">—</strong></div>
         <div class="station-meta"><span id="swUpdated">Waiting for temperature / water level</span><span id="swHeroBattery">Battery —</span></div>
         <div class="station-state offline" id="swState">No temperature or water level yet</div>
       </article>`);
@@ -220,8 +221,9 @@
     if (dischargeTarget) {
       dischargeTarget.style.display = swSeriesEnabled.discharge ? '' : 'none';
       if (swSeriesEnabled.discharge) renderLineChart(dischargeTarget,
-        [{name:'MX2001 rated discharge',color:'#b99aff',points:swPoints('mx2001','discharge_cfs',r=>num(r.discharge_cfs)),maxGapMs:3*3600000}],
-        {axisLabel:'Discharge cfs',tooltipValue:v=>`${v.toFixed(3)} cfs`,empty:'Waiting for rated MX2001 stage.',pointRadius:3.4,strokeWidth:3.2});
+        [{name:'MX2001 rated discharge',color:'#b99aff',points:swPoints('mx2001','discharge_cfs',r=>num(r.discharge_cfs)),maxGapMs:3*3600000},
+         {name:'SEN0313 rated discharge',color:'#55d9b7',points:swPoints('water_distance','discharge_cfs',r=>num(r.discharge_cfs)),maxGapMs:3*3600000}],
+        {axisLabel:'Discharge cfs',tooltipValue:v=>`${v.toFixed(3)} cfs`,empty:'Waiting for rated Pack Creek stage.',pointRadius:3.4,strokeWidth:3.2});
     }
     const temps = swPoints('mx2001','temperature',swTempValue);
     const tempTarget = target.id === 'expandedChart' ? null : document.getElementById('swWaterTempChart');
@@ -275,6 +277,7 @@
     const water = swWaterLatest();
     setText('swTemp', sw ? tempF(sw).toFixed(1) : '—');
     setText('swWaterLevel', water ? num(metric(water,'water_level_ft')).toFixed(2) + ' ft' : '—');
+    setText('swDischarge', water?.discharge_cfs != null ? Number(water.discharge_cfs).toFixed(2) + ' cfs' : '—');
     const freshest = [sw, water].filter(Boolean).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at))[0] || null;
     setText('swUpdated', freshest ? `Updated ${ageText(freshest.observed_at)}` : 'Waiting for temperature / water level');
     const stateEl = document.getElementById('swState');
