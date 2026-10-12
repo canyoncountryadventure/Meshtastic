@@ -88,9 +88,9 @@
   const recentText = document.querySelector('.recent-panel .panel-head p');
   if (recentText) recentText.textContent = 'Combined history from all five permanent temperature stations.';
   const mapText = document.querySelector('.map-panel .panel-head p');
-  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, It's a Swell Day, Thousand Lake Mountain, and approximate Moab locations";
+  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, Pack Creek, Thousand Lake Mountain, and approximate Moab locations";
   const footer = document.querySelector('footer span:first-child');
-  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day + Thousand Lake Mountain";
+  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + Pack Creek + Thousand Lake Mountain";
 
   function addSeedMarkerToMainMap() {
     if (!window.L || !state.map || window.__seedMainMapMarker) return;
@@ -230,7 +230,7 @@
     const stations = [
       {station:STATIONS.hv,reading:latestTemp('hv')}, {station:STATIONS.home,reading:latestTemp('home')},
       {station:STATIONS.fl,reading:latestTemp('fl')},
-      {station:{name:"It's a Swell Day",node:1949224949},reading:state.readings.filter(r=>num(r?.node_num)===1949224949&&r.telemetry_type==='environment'&&tempF(r)!==null).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at))[0]||null},
+      {station:{name:"Pack Creek",node:1949224949},reading:state.readings.filter(r=>num(r?.node_num)===1949224949&&r.telemetry_type==='environment'&&tempF(r)!==null).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at))[0]||null},
       {station:SEED,reading},
     ].filter(x=>x.reading);
     if (stations.length >= 2) {
@@ -249,7 +249,7 @@
     const series = [
       {name:'Hidden Valley',color:STATIONS.hv.color,rows:tempRows('hv')}, {name:'Moab',color:STATIONS.home.color,rows:tempRows('home')},
       {name:'Fishlake Hightop',color:STATIONS.fl.color,rows:tempRows('fl')},
-      {name:"It's a Swell Day",color:'#57b7ff',rows:state.readings.filter(r=>num(r?.node_num)===1949224949&&r.telemetry_type==='environment'&&tempF(r)!==null)},
+      {name:"Pack Creek",color:'#57b7ff',rows:state.readings.filter(r=>num(r?.node_num)===1949224949&&r.telemetry_type==='environment'&&tempF(r)!==null)},
       {name:'Thousand Lake Mountain',color:SEED.color,rows:seedTempRows()},
     ].map(s=>({...s,points:s.rows.map(r=>({x:new Date(r.observed_at).getTime(),y:tempF(r),iso:r.observed_at}))}));
     renderLineChart(target, series.map(({name,color,points})=>({name,color,points})), {axisLabel:'Temperature °F',tooltipValue:v=>`${v.toFixed(1)} °F`,strokeWidth:3.3,pointRadius:3.5,empty:'Waiting for temperature telemetry.'});
@@ -257,7 +257,7 @@
   };
 
   renderRecent = function() {
-    const stations = new Map([[STATIONS.hv.node,['hv',STATIONS.hv]],[STATIONS.home.node,['home',STATIONS.home]],[STATIONS.fl.node,['fl',STATIONS.fl]],[1949224949,['sw',{name:"It's a Swell Day"}]],[SEED.node,['seed',SEED]]]);
+    const stations = new Map([[STATIONS.hv.node,['hv',STATIONS.hv]],[STATIONS.home.node,['home',STATIONS.home]],[STATIONS.fl.node,['fl',STATIONS.fl]],[1949224949,['sw',{name:"Pack Creek"}]],[SEED.node,['seed',SEED]]]);
     const rows=state.readings.filter(r=>r.telemetry_type==='environment'&&tempF(r)!==null&&stations.has(num(r.node_num))).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)).slice(0,50);
     const tbody=document.getElementById('recent'); if(!rows.length){tbody.innerHTML='<tr><td colspan="8">Waiting for telemetry.</td></tr>';return;}
     tbody.innerHTML=rows.map(r=>{const [key,station]=stations.get(num(r.node_num)),remote=key!=='home',p=remote?batteryPct(r):null,v=remote?batteryV(r):null,rv=remote?rssi(r):null,sv=remote?snr(r):null,h=remote?hops(r):null;return `<tr><td>${esc(fmtTime(r.observed_at))}</td><td><span class="station-cell"><i class="legend-swatch ${key}"></i>${esc(station.name)}</span></td><td class="right">${tempF(r).toFixed(1)}</td><td class="right">${p===null?'—':Math.round(p)+'%'}</td><td class="right">${v===null?'—':v.toFixed(3)}</td><td class="right">${rv===null?'—':Math.round(rv)}</td><td class="right">${sv===null?'—':sv.toFixed(1)}</td><td class="right">${h===null?'—':Math.round(h)}</td></tr>`;}).join('');

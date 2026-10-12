@@ -6,7 +6,7 @@
     {node:1252758033,name:'Hidden Valley',color:'#55d9b7'},
     {node:2740603892,name:'Moab',color:'#ff9a67'},
     {node:2004386937,name:'Soil Moisture',color:'#d9b873'},
-    {node:1949224949,name:"It's a Swell Day",color:'#57b7ff'},
+    {node:1949224949,name:"Pack Creek",color:'#57b7ff'},
     {node:4241345683,name:'SMLA',short:'SMLA',id:'!fccdcc93',color:'#f5d05f',since:REPURPOSED_AT},
     {node:3044869407,name:'Revived',short:'RVV1',id:'!b57d051f',color:'#fa86ac',since:REPURPOSED_AT},
     {node:1577197109,name:'Fishlake Hightop',color:'#60e5f5'},
@@ -207,6 +207,6 @@
   });
   const earlierRenderAll=renderAll;
   renderAll=function(){earlierRenderAll();renderCombined();renderFishlakeTemperature();renderNewCards();if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='combinedChart')renderCombined(document.getElementById('expandedChart'));if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='fishlakeTemperatureChart')renderFishlakeTemperature(document.getElementById('expandedChart'));};
-  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Swell · SMLA · Revived · Cottonwood Creek · Cottonwood Relay';
+  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Pack Creek · SMLA · Revived · Cottonwood Creek · Cottonwood Relay';
   renderAll();
 })();

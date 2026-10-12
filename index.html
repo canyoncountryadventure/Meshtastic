@@ -28,8 +28,8 @@
     <div class="hero-intro">
       <div class="eyebrow">Live station comparison</div>
       <h1>Meshtastic Command Dashboard</h1>
-      <p>Hidden Valley, Rock Moisture, Fishlake Hightop, It's a Swell Day, SMLA, and Revived feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
-      <div class="pipeline"><strong>Data path</strong><span>Field air temperature, Swell Day water level, and rock moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
+      <p>Hidden Valley, Rock Moisture, Fishlake Hightop, Pack Creek, SMLA, and Revived feed the mesh. Moab forwards decoded readings by node ID to the cloud.</p>
+      <div class="pipeline"><strong>Data path</strong><span>Field air temperature, Pack Creek water level, and rock moisture → LoRa mesh → Heltec Wi-Fi → Vercel ingest → Neon history → dashboard</span></div>
     </div>
     <div class="station-hero-grid">
       <article class="station-hero hv-card">
@@ -81,17 +81,17 @@
       <fieldset><legend>Sites</legend><div id="combinedSiteControls" class="combined-options"></div></fieldset>
     </div>
     <div id="combinedLegend" class="combined-legend" aria-live="polite"></div>
-    <div class="chart-note">Select sites, then measurements. MX2001 stage is available for Swell Day and Cottonwood Creek; MB stage is Cottonwood Creek, and SEN0313 stage is Swell Day. Each measurement has its own labeled scale. Rock Moisture is in experimental phase: raw ADC10, lower = wetter. Missing readings stay missing.</div>
+    <div class="chart-note">Select sites, then measurements. MX2001 stage is available for Pack Creek and Cottonwood Creek; MB stage is Cottonwood Creek, and SEN0313 stage is Pack Creek. Each measurement has its own labeled scale. Rock Moisture is in experimental phase: raw ADC10, lower = wetter. Missing readings stay missing.</div>
     <div class="chart xlarge" id="combinedChart"><div class="empty">Waiting for station telemetry.</div></div>
   </section>
 
   <section class="panel primary-monitor-panel sw-water-panel">
     <div class="panel-head monitor-head">
-      <div><span class="eyebrow">It's a Swell Day · !742ecff5</span><h2>Swell Day Water Stage &amp; Temperature</h2><p id="swWaterLevelChartCount">Waiting for water-level readings</p></div>
+      <div><span class="eyebrow">Pack Creek · !742ecff5</span><h2>Pack Creek Stage, Discharge &amp; Temperature</h2><p id="swWaterLevelChartCount">Waiting for water-level readings</p></div>
       <button type="button" class="expand-btn" id="swWaterLevelExpand">Expand</button>
     </div>
-    <div class="combined-options" id="swSensorControls" style="padding:0 20px 12px;display:flex;flex-wrap:wrap;gap:16px"><label><input type="checkbox" data-sw-series="mx-stage" checked> MX2001 stage</label><label><input type="checkbox" data-sw-series="sen-stage" checked> SEN0313 stage</label><label><input type="checkbox" data-sw-series="mx-temp"> MX2001 temperature</label></div><div class="chart-note">Stage in feet; temperature in °F on its own chart and scale. Each sensor is shown independently; missing readings are not interpolated.</div>
-    <div class="chart xlarge" id="swWaterLevelChart"><div class="empty">Waiting for Swell Day water-level telemetry.</div></div><div class="chart xlarge" id="swWaterTempChart" style="display:none"><div class="empty">Waiting for MX2001 temperature.</div></div>
+    <div class="combined-options" id="swSensorControls" style="padding:0 20px 12px;display:flex;flex-wrap:wrap;gap:16px"><label><input type="checkbox" data-sw-series="mx-stage" checked> MX2001 stage</label><label><input type="checkbox" data-sw-series="sen-stage" checked> SEN0313 stage</label><label><input type="checkbox" data-sw-series="mx-temp"> MX2001 temperature</label><label><input type="checkbox" data-sw-series="discharge" checked> Rated discharge</label></div><div class="chart-note">Stage in feet; rated discharge in cfs and temperature in °F have separate charts and scales. Each sensor is shown independently; missing readings are not interpolated.</div>
+    <div class="chart xlarge" id="swWaterLevelChart"><div class="empty">Waiting for Pack Creek water-level telemetry.</div></div><div class="chart xlarge" id="swWaterDischargeChart"><div class="empty">Waiting for rated discharge.</div></div><div class="chart xlarge" id="swWaterTempChart" style="display:none"><div class="empty">Waiting for MX2001 temperature.</div></div>
   </section>
 
 
@@ -144,7 +144,7 @@
     <div class="table-wrap"><table><thead><tr><th>Time</th><th>Station</th><th class="right">Air temp °F</th><th class="right">RSSI</th><th class="right">SNR</th><th class="right">Hops</th></tr></thead><tbody id="recent"><tr><td colspan="6">Waiting for telemetry.</td></tr></tbody></table></div>
   </section>
 
-  <footer><span>Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Swell</span><span id="updated">Not yet refreshed</span></footer>
+  <footer><span>Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Pack Creek</span><span id="updated">Not yet refreshed</span></footer>
 </main>
 
 <dialog id="expandDialog" class="expand-dialog"><div class="dialog-head"><div><span class="eyebrow">Expanded view</span><h2 id="expandTitle">Chart</h2></div><button type="button" id="expandClose" aria-label="Close expanded view">Close</button></div><div id="expandedChart" class="expanded-chart"></div><div id="expandedMap" class="expanded-map" hidden></div></dialog>
@@ -161,10 +161,10 @@
 </script>
 <script src="/dashboard.js?v=20261011-hv-voltage"></script>
 <script src="/fishlake.js?v=20260929-firmware-labels"></script>
-<script src="/swell.js?v=20261011-mx-visible"></script>
-<script src="/swell-map.js?v=20260910-preserve-copy"></script>
-<script src="/network-sensors.js?v=20261011-retired-pack"></script>
-<script src="/combined-monitor.js?v=20261011-hv-voltage"></script>
+<script src="/swell.js?v=20261011-pack-creek"></script>
+<script src="/swell-map.js?v=20261011-pack-creek"></script>
+<script src="/network-sensors.js?v=20261011-pack-creek"></script>
+<script src="/combined-monitor.js?v=20261011-pack-creek"></script>
 <script src="/cottonwood.js?v=20261011-cottonwood"></script>
 <script>
 if (window.__meshtasticNativeSetInterval) {

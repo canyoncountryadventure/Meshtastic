@@ -2,7 +2,7 @@
   const SWELL = {
     node: 1949224949,
     id: '!742ecff5',
-    name: "It's a Swell Day",
+    name: "Pack Creek",
     short: 'SWRP',
     color: '#57b7ff',
     battery: true,
@@ -31,7 +31,7 @@
   if (heroGrid && !document.getElementById('swTemp')) {
     heroGrid.insertAdjacentHTML('beforeend', `
       <article class="station-hero sw-card">
-        <div class="station-heading"><span class="station-dot sw"></span><div><strong>It's a Swell Day</strong><small>RAK4631 · Firmware V4 · SWRP · !742ecff5</small></div></div>
+        <div class="station-heading"><span class="station-dot sw"></span><div><strong>Pack Creek</strong><small>RAK4631 · Firmware V4 · SWRP · !742ecff5</small></div></div>
         <div class="big-temp"><span id="swTemp">—</span><small>°F</small></div>
         <div class="sw-water-now"><span>Water level</span><strong id="swWaterLevel">—</strong></div>
         <div class="station-meta"><span id="swUpdated">Waiting for temperature / water level</span><span id="swHeroBattery">Battery —</span></div>
@@ -43,7 +43,7 @@
   if (detailGrid && !document.getElementById('swHigh')) {
     detailGrid.insertAdjacentHTML('beforeend', `
       <article class="panel station-detail sw-detail">
-        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>It's a Swell Day</h2><p>RAK WisBlock 4631 · Temperature Sensor · location pending</p></div><span class="station-badge sw">SWRP</span></div>
+        <div class="panel-head station-panel-head"><div><span class="eyebrow">Remote mesh station</span><h2>Pack Creek</h2><p>RAK WisBlock 4631 · Temperature Sensor · location pending</p></div><span class="station-badge sw">SWRP</span></div>
         <div class="detail-metrics">
           <div><span>24h high</span><strong id="swHigh">—</strong></div>
           <div><span>24h low</span><strong id="swLow">—</strong></div>
@@ -52,7 +52,7 @@
           <div><span>Packet reliability</span><strong id="swReliability">—</strong><small id="swReliabilityDetail">—</small></div>
           <div><span>Longest gap</span><strong id="swGap">—</strong></div>
         </div>
-        <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → It's a Swell Day RAK → LoRa mesh → Moab → internet</span></div>
+        <div class="path-note"><strong>Sensor path</strong><span>Temperature Sensor → BLE → Pack Creek RAK → LoRa mesh → Moab → internet</span></div>
       </article>`);
   }
 
@@ -60,28 +60,28 @@
   if (chartGrid && !document.getElementById('swBatteryChart')) {
     chartGrid.insertAdjacentHTML('beforeend', `
       <article class="panel sw-battery-panel">
-        <div class="panel-head"><div><h2>It's a Swell Day battery</h2><p id="swBatteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" id="swBatteryExpand">Expand</button></div>
+        <div class="panel-head"><div><h2>Pack Creek battery</h2><p id="swBatteryChartCount">Battery telemetry pending</p></div><button type="button" class="expand-btn" id="swBatteryExpand">Expand</button></div>
         <div class="battery-summary">
           <div><span>Latest</span><strong id="swBatteryNow">—</strong><small id="swBatteryNowDetail">—</small></div>
           <div><span>Voltage change</span><strong id="swBatteryChange">—</strong><small id="swBatteryChangeDetail">selected window</small></div>
           <div><span>Solar activity</span><strong id="swSolarHours">—</strong><small id="swSolarDetail">estimated from voltage rise</small></div>
         </div>
-        <div class="chart" id="swBatteryChart"><div class="empty">Waiting for It's a Swell Day battery telemetry.</div></div>
+        <div class="chart" id="swBatteryChart"><div class="empty">Waiting for Pack Creek battery telemetry.</div></div>
       </article>`);
   }
 
   const legend = document.querySelector('.temp-comparison-panel .legend');
   if (legend && !legend.querySelector('.legend-swatch.sw')) {
-    legend.insertAdjacentHTML('beforeend', '<span><i class="legend-swatch sw"></i>It\'s a Swell Day</span>');
+    legend.insertAdjacentHTML('beforeend', '<span><i class="legend-swatch sw"></i>Pack Creek</span>');
   }
 
   // Introductory copy is owned by index.html; station modules must not overwrite it.
   const mapText = document.querySelector('.map-panel .panel-head p');
-  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, and approximate Moab locations · It's a Swell Day location pending";
+  if (mapText) mapText.textContent = "Hidden Valley, Fishlake Hightop, and approximate Moab locations · Pack Creek location pending";
   const recentText = document.querySelector('.recent-panel .panel-head p');
   if (recentText) recentText.textContent = 'Combined history from the permanent temperature stations.';
   const footer = document.querySelector('footer span:first-child');
-  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + It's a Swell Day · refreshes only on demand to conserve Neon compute";
+  if (footer) footer.textContent = "Meshtastic environmental network · Hidden Valley + Moab + Fishlake Hightop + Pack Creek · refreshes only on demand to conserve Neon compute";
 
   const swRows = () => state.readings.filter(r => num(r?.node_num) === SWELL.node);
   const swTempRows = () => swRows().filter(r => tempF(r) !== null && (r.telemetry_type === 'environment' || r.telemetry_type === 'mx2001')).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at));
@@ -162,16 +162,16 @@
       setText('swSolarDetail', rises ? `${rises} rising-voltage interval${rises === 1 ? '' : 's'}` : 'no clear voltage rise yet');
     }
 
-    setText('swBatteryChartCount', vals.length ? `${vals.length} voltage samples · It's a Swell Day` : 'Battery telemetry pending');
+    setText('swBatteryChartCount', vals.length ? `${vals.length} voltage samples · Pack Creek` : 'Battery telemetry pending');
     const points = vals.map(r => ({x:new Date(batteryTime(r)).getTime(), y:batteryV(r), iso:batteryTime(r)}));
-    renderLineChart(target, [{name:"It's a Swell Day voltage", color:SWELL.color, points}], {
-      axisLabel:'Battery V', tooltipValue:v=>`${v.toFixed(3)} V`, empty:"Waiting for It's a Swell Day battery telemetry.", pointRadius:3,
+    renderLineChart(target, [{name:"Pack Creek voltage", color:SWELL.color, points}], {
+      axisLabel:'Battery V', tooltipValue:v=>`${v.toFixed(3)} V`, empty:"Waiting for Pack Creek battery telemetry.", pointRadius:3,
     });
   }
 
   // Show both HOBO MX2001 measurements by default. The combined mesh graph
   // deliberately retains its independent, initially unchecked selectors.
-  const swSeriesEnabled = { 'mx-stage': true, 'sen-stage': true, 'mx-temp': true };
+  const swSeriesEnabled = { 'mx-stage': true, 'sen-stage': true, 'mx-temp': true, discharge: true };
   const mxTempToggle = document.querySelector('#swSensorControls input[data-sw-series="mx-temp"]');
   if (mxTempToggle) mxTempToggle.checked = true;
   const swPanelHead = document.querySelector('.sw-water-panel .panel-head');
@@ -181,6 +181,7 @@
         <span class="sw-mx-label">HOBO MX2001</span>
         <span>Stage <strong id="swMxStageNow">—</strong></span>
         <span>Temperature <strong id="swMxTempNow">—</strong></span>
+        <span>Rated discharge <strong id="swMxDischargeNow">—</strong></span>
         <span class="sw-mx-time" id="swMxLastSeen">Waiting for MX2001 telemetry</span>
       </div>`);
   }
@@ -195,6 +196,7 @@
     const mxLatest = swSensorRows('mx2001').at(-1) || null;
     const mxStage = mxLatest ? num(metric(mxLatest, 'water_level_ft')) : null;
     const mxTemp = mxLatest ? tempF(mxLatest) : null;
+    setText('swMxDischargeNow', mxLatest?.discharge_cfs != null ? Number(mxLatest.discharge_cfs).toFixed(3) + ' cfs' : '—');
     setText('swMxStageNow', mxStage !== null ? mxStage.toFixed(3) + ' ft' : '—');
     setText('swMxTempNow', mxTemp !== null ? mxTemp.toFixed(1) + ' °F' : '—');
     const mxLastSeen = document.getElementById('swMxLastSeen');
@@ -214,6 +216,13 @@
       empty:series.length?'No stage readings for selected sensors.':'Select a stage sensor above.',
       pointRadius:3.4,strokeWidth:3.2
     });
+    const dischargeTarget = target.id === 'expandedChart' ? null : document.getElementById('swWaterDischargeChart');
+    if (dischargeTarget) {
+      dischargeTarget.style.display = swSeriesEnabled.discharge ? '' : 'none';
+      if (swSeriesEnabled.discharge) renderLineChart(dischargeTarget,
+        [{name:'MX2001 rated discharge',color:'#b99aff',points:swPoints('mx2001','discharge_cfs',r=>num(r.discharge_cfs)),maxGapMs:3*3600000}],
+        {axisLabel:'Discharge cfs',tooltipValue:v=>`${v.toFixed(3)} cfs`,empty:'Waiting for rated MX2001 stage.',pointRadius:3.4,strokeWidth:3.2});
+    }
     const temps = swPoints('mx2001','temperature',swTempValue);
     const tempTarget = target.id === 'expandedChart' ? null : document.getElementById('swWaterTempChart');
     if(tempTarget){
@@ -238,7 +247,7 @@
     const chart = document.getElementById('expandedChart');
     const mapEl = document.getElementById('expandedMap');
     if (!dialog || !title || !chart || !mapEl) return;
-    title.textContent = "It's a Swell Day water level";
+    title.textContent = "Pack Creek water level";
     mapEl.hidden = true;
     chart.hidden = false;
     chart.dataset.rangeSource = 'swWaterLevelChart';
@@ -252,7 +261,7 @@
     const chart = document.getElementById('expandedChart');
     const mapEl = document.getElementById('expandedMap');
     if (!dialog || !title || !chart || !mapEl) return;
-    title.textContent = "It's a Swell Day battery";
+    title.textContent = "Pack Creek battery";
     mapEl.hidden = true;
     chart.hidden = false;
     dialog.showModal();
@@ -340,7 +349,7 @@
       {name:'Fishlake Hightop', color:STATIONS.fl.color, points:fl},
       {name:SWELL.name, color:SWELL.color, points:sw},
     ], {axisLabel:'Temperature °F', tooltipValue:v=>`${v.toFixed(1)} °F`, strokeWidth:3.3, pointRadius:3.5, empty:'Waiting for temperature telemetry.'});
-    setText('tempChartCount', `${hv.length} Hidden Valley · ${home.length} Moab · ${fl.length} Fishlake · ${sw.length} Swell readings`);
+    setText('tempChartCount', `${hv.length} Hidden Valley · ${home.length} Moab · ${fl.length} Fishlake · ${sw.length} Pack Creek readings`);
   };
 
   renderRecent = function() {

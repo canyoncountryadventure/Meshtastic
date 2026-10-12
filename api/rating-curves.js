@@ -1,6 +1,7 @@
-const PACK_CREEK_NODE = 4241345683;
+const PACK_CREEK_NODE = 1949224949;
+const LEGACY_PACK_CREEK_NODE = 4241345683;
 const PACK_CREEK_NAME = 'Pack Creek';
-const PACK_CREEK_CURVE_VERSION = 1;
+const PACK_CREEK_CURVE_VERSION = 2;
 const PACK_CREEK_RESET_CUTOFF = '2026-09-25T21:43:23.000Z';
 const PACK_CREEK_RESET_MIGRATION = '20260925_pack_creek_reset_v1';
 const WINGATE_SOIL_NODE = 2004386937;
@@ -73,6 +74,15 @@ async function prepareRatingCurveTables(sql) {
 }
 
 async function storePackCreekCurve(sql) {
+  await sql`UPDATE rating_curves SET active = FALSE, updated_at = NOW()
+    WHERE node_num = ${LEGACY_PACK_CREEK_NODE} AND active`;
+  await sql`WITH claimed AS (
+    INSERT INTO app_migrations (migration_key, details)
+    VALUES ('20261011_swell_to_pack_creek', '{"node_num":1949224949,"station_name":"Pack Creek"}'::jsonb)
+    ON CONFLICT (migration_key) DO NOTHING RETURNING migration_key
+  ) UPDATE telemetry_readings SET station_name = ${PACK_CREEK_NAME}
+    WHERE node_num = ${PACK_CREEK_NODE} AND station_name IS DISTINCT FROM ${PACK_CREEK_NAME}
+      AND EXISTS (SELECT 1 FROM claimed)`;
   await sql`
     UPDATE rating_curves
     SET active = FALSE, updated_at = NOW()
@@ -88,9 +98,9 @@ async function storePackCreekCurve(sql) {
        valid_stage_min_ft, valid_stage_max_ft, active, source_notes)
     VALUES
       (${PACK_CREEK_NODE}, ${PACK_CREEK_NAME}, ${PACK_CREEK_CURVE_VERSION}, 'power_offset',
-       6.07187614, 0.22259098, 1.04237977,
+       7.267444447156445, 0.13524667317675848, 1.6797133086215867,
        0.2444, 0.6904, TRUE,
-       'Five finalized Pack Creek Lower rating points; April 27 discharge modeled to 2.75 cfs while preserving the 2.3905 cfs field value.')
+       'Six Pack Creek Lower rating points, refit by unweighted discharge-space least squares; October 11 observed stage 0.57 ft and discharge 1.5 cfs. April 27 modeled 2.75 cfs retains observed 2.3905 cfs. Historical stage datum assumed unchanged.')
     ON CONFLICT (node_num, curve_version) DO UPDATE SET
       station_name = EXCLUDED.station_name,
       equation_type = EXCLUDED.equation_type,
@@ -121,7 +131,10 @@ async function storePackCreekCurve(sql) {
        0.2444, 0.1235, 0.1235, 'observed', TRUE, 'Accepted Survey123 manual discharge.'),
       (${PACK_CREEK_NODE}, ${PACK_CREEK_CURVE_VERSION}, '2026-09-25', NULL,
        0.4500, 1.3000, 1.3000, 'observed', TRUE,
-       'Initial permanent-station measurement; MX2001 stage 0.45 ft and manual discharge 1.3 cfs.')
+       'Initial permanent-station measurement; MX2001 stage 0.45 ft and manual discharge 1.3 cfs.'),
+      (${PACK_CREEK_NODE}, ${PACK_CREEK_CURVE_VERSION}, '2026-10-11', NULL,
+       0.5700, 1.5000, 1.5000, 'observed', TRUE,
+       'User supplied stage 0.57 ft and discharge 1.5 cfs; measurement time not specified.')
     ON CONFLICT (node_num, curve_version, stage_ft) DO UPDATE SET
       measurement_date = EXCLUDED.measurement_date,
       measurement_time_local = EXCLUDED.measurement_time_local,
@@ -150,7 +163,7 @@ async function resetPackCreekTestData(sql) {
     ),
     deleted AS (
       DELETE FROM telemetry_readings
-      WHERE (node_num = ${PACK_CREEK_NODE} OR station_name = ${PACK_CREEK_NAME})
+      WHERE (node_num = ${LEGACY_PACK_CREEK_NODE} OR station_name = ${PACK_CREEK_NAME})
         AND observed_at < ${PACK_CREEK_RESET_CUTOFF}::timestamptz
         AND EXISTS (SELECT 1 FROM claimed)
       RETURNING id
@@ -388,7 +401,7 @@ export function calculateDischarge(stageValue, curve) {
 }
 
 export function rateReading(reading, curve) {
-  if (!reading || reading.telemetry_type !== 'water_distance' || !curve) return reading;
+  if (!reading || !['water_distance', 'mx2001'].includes(reading.telemetry_type) || !curve) return reading;
   if (reading.metrics?.stage_calibrated === false) return reading;
   const stage = finite(reading.metrics?.water_level_ft);
   const discharge = calculateDischarge(stage, curve);

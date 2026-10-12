@@ -5,7 +5,7 @@ const KNOWN_STATIONS = new Map([
   [1252758033, 'Hidden Valley'], // !4aab9211, replacement radio
   [2740603892, 'Moab'],
   [1577197109, 'Fishlake Hightop'],
-  [1949224949, "It's a Swell Day"],
+  [1949224949, "Pack Creek"],
   [2650172798, 'Thousand Lake Mountain'],
   [4241345683, 'SMLA'], // !fccdcc93, repurposed station
   [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
@@ -127,7 +127,7 @@ function validate(body) {
     throw new Error('Invalid soil moisture reading or source node');
   }
   if (body.type === 'water_distance' && ![1949224949, 1695962694].includes(nodeNum)) {
-    throw new Error('Water-distance packets are only approved for Swell Day and Cottonwood Creek');
+    throw new Error('Water-distance packets are only approved for Pack Creek and Cottonwood Creek');
   }
 
   return nodeNum;

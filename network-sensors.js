@@ -352,13 +352,13 @@
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
     if (!small || !name || name === 'Rock Moisture') return;
-    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"It's a Swell Day"].includes(name)) {
+    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"Pack Creek"].includes(name)) {
       small.textContent += ' · air temperature';
     }
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Swell';
+    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Pack Creek';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');

@@ -11,7 +11,7 @@ const STATIONS = [
   { node: 1252758033, name: 'Hidden Valley', battery: true },
   { node: 2740603892, name: 'Moab', battery: false },
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
-  { node: 1949224949, name: "It's a Swell Day", battery: true },
+  { node: 1949224949, name: "Pack Creek", battery: true, stage: true },
   { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
   { node: 4241345683, name: 'SMLA', battery: true, measure: 'any' },
   { node: 2004386937, name: 'Wingate Moisture', battery: true, measure: 'soil' },
@@ -46,7 +46,7 @@ function batteryFields(device) {
 
 function resultFor(station, environment, device, stage, curve) {
   const stageValue = stage?.metrics?.water_level_ft ?? null;
-  const discharge = stage?.telemetry_type === 'water_distance' && stage?.metrics?.stage_calibrated !== false ?
+  const discharge = ['water_distance', 'mx2001'].includes(stage?.telemetry_type) && stage?.metrics?.stage_calibrated !== false ?
     calculateDischarge(stageValue, curve) : null;
   const stageFields = station.stage ? {
     water_level_ft: stageValue,
