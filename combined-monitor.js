@@ -91,7 +91,7 @@
           if(!groups.has(groupKey))groups.set(groupKey,{unit:result.unit,sensor:result.sensor,points:[]});
           groups.get(groupKey).points.push({x:time,y:result.value,iso:row.observed_at});
         }
-        for(const {unit,sensor,points} of groups.values())series.push({site,definition:sensor?{...definition,name:sensor+' stage'}:definition,unit,color:sensor?(sensor==='MX2001'?(site.node===1695962694?'#ead7ff':'#57b7ff'):sensor==='MB'?'#b49cff':'#55d9b7'):seriesColor(site,definition),points:points.sort((a,b)=>a.x-b.x)});
+        for(const {unit,sensor,points} of groups.values())series.push({site,definition:sensor?{...definition,name:sensor+(definition.key==='discharge'?' rated discharge':' stage')}:definition,unit,color:sensor?(sensor==='MX2001'?(site.node===1695962694?'#ead7ff':'#57b7ff'):sensor==='MB'?'#b49cff':'#55d9b7'):seriesColor(site,definition),points:points.sort((a,b)=>a.x-b.x)});
       }
     }
     return series;
