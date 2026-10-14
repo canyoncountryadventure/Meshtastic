@@ -1,7 +1,7 @@
 const PACK_CREEK_NODE = 1949224949;
 const LEGACY_PACK_CREEK_NODE = 4241345683;
 const PACK_CREEK_NAME = 'Pack Creek';
-const PACK_CREEK_CURVE_VERSION = 4;
+const PACK_CREEK_CURVE_VERSION = 5;
 const PACK_CREEK_RESET_CUTOFF = '2026-09-25T21:43:23.000Z';
 const PACK_CREEK_RESET_MIGRATION = '20260925_pack_creek_reset_v1';
 const WINGATE_SOIL_NODE = 2004386937;
@@ -98,9 +98,9 @@ async function storePackCreekCurve(sql) {
        valid_stage_min_ft, valid_stage_max_ft, active, source_notes)
     VALUES
       (${PACK_CREEK_NODE}, ${PACK_CREEK_NAME}, ${PACK_CREEK_CURVE_VERSION}, 'power_offset',
-       9.702169882619652, 0.24439998999999998, 1.4452884962804833,
-       0.2444, 3.940, TRUE,
-       'Eight Pack Creek Lower rating points, refit by unweighted discharge-space least squares; October 11 observed stage 0.57 ft and discharge 1.5 cfs. April 27 modeled 2.75 cfs retains observed 2.3905 cfs. October 14 manual discharge 40 cfs at 15:00 MDT paired with nearest calibrated SEN0313 stage 2.894 ft at 14:57:29 MDT (telemetry ID 7521; 151 seconds earlier). Stage is telemetry-derived, not a manual stage measurement. October 14 measured peak discharge 64 cfs at 13:25 MDT paired with nearest calibrated SEN0313 stage 3.940 ft at 13:19:38 MDT (telemetry ID 7473; 322 seconds earlier). Fitted offset constrained below the lowest measured stage. Historical stage datum assumed unchanged.')
+       7.2679208850457435, 0.13511013209933276, 1.6804902295212576,
+       0.2444, 2.894, TRUE,
+       'Seven included Pack Creek Lower rating points, refit by unweighted discharge-space least squares; October 11 observed stage 0.57 ft and discharge 1.5 cfs. April 27 modeled 2.75 cfs retains observed 2.3905 cfs. October 14 manual discharge 40 cfs at 15:00 MDT paired with nearest calibrated SEN0313 stage 2.894 ft at 14:57:29 MDT (telemetry ID 7521; 151 seconds earlier). Stage is telemetry-derived, not a manual stage measurement. October 14 peak estimate 68.6 cfs at 13:25 MDT retained as approximately field-checked but excluded from fitting: it is model-derived, not an independent precise manual measurement. The previous 64 cfs calibration point was withdrawn by the user due to sloppy measurement. Historical stage datum assumed unchanged.')
     ON CONFLICT (node_num, curve_version) DO UPDATE SET
       station_name = EXCLUDED.station_name,
       equation_type = EXCLUDED.equation_type,
@@ -139,8 +139,8 @@ async function storePackCreekCurve(sql) {
        2.8940, 40.0000, 40.0000, 'observed', TRUE,
        'Manual discharge measured by user at 15:00 MDT. Paired stage is nearest calibrated SEN0313 telemetry: 2.894 ft at 14:57:29 MDT, source ID 7521, 151 seconds earlier; not a manual stage measurement.'),
       (${PACK_CREEK_NODE}, ${PACK_CREEK_CURVE_VERSION}, '2026-10-14', '13:25 MDT',
-       3.9400, 64.0000, 64.0000, 'observed', TRUE,
-       'User reported measured peak discharge exactly 64 cfs at 13:25 MDT. Paired stage is nearest calibrated SEN0313 telemetry: 3.940 ft at 13:19:38 MDT, source ID 7473, 322 seconds earlier; not a manual stage measurement.')
+       3.9400, NULL, 68.6000, 'field_checked_estimate', FALSE,
+       'Model-derived peak estimate 68.6 cfs at 13:25 MDT, approximately corroborated by user field check. Excluded from rating fit to avoid using modeled discharge as independent calibration. Nearest SEN0313 stage 3.940 ft at 13:19:38 MDT, source ID 7473, 322 seconds earlier.')
     ON CONFLICT (node_num, curve_version, stage_ft) DO UPDATE SET
       measurement_date = EXCLUDED.measurement_date,
       measurement_time_local = EXCLUDED.measurement_time_local,
