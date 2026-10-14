@@ -280,17 +280,9 @@
     setText('swDischarge', water?.discharge_cfs != null ? Number(water.discharge_cfs).toFixed(2) + ' cfs' : '—');
     const freshest = [sw, water].filter(Boolean).sort((a,b) => new Date(b.observed_at) - new Date(a.observed_at))[0] || null;
     setText('swUpdated', freshest ? `Updated ${ageText(freshest.observed_at)}` : 'Waiting for temperature / water level');
+    // Pack Creek card: suppress the status badge only; preserve telemetry and timestamps.
     const stateEl = document.getElementById('swState');
-    if (stateEl) {
-      if (!sw) {
-        stateEl.className = 'station-state offline';
-        stateEl.textContent = 'No temperature yet';
-      } else {
-        const online = ageHours(sw.observed_at) <= STALE_AFTER_HOURS;
-        stateEl.className = `station-state ${online ? 'online' : 'stale'}`;
-        stateEl.textContent = online ? 'Reporting normally' : `Stale · ${ageText(sw.observed_at)}`;
-      }
-    }
+    if (stateEl) stateEl.hidden = true;
 
     const device = swDeviceRows()[0] || null;
     if (device) {
