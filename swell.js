@@ -202,10 +202,10 @@
     setText('swMxTempNow', mxTemp !== null ? mxTemp.toFixed(1) + ' °F' : '—');
     const mxLastSeen = document.getElementById('swMxLastSeen');
     const mxLatestBox = document.getElementById('swMxLatest');
-    if (mxLatestBox) mxLatestBox.classList.toggle('stale', !mxLatest || ageHours(mxLatest.observed_at) > STALE_AFTER_HOURS);
+    if (mxLatestBox) mxLatestBox.classList.remove('stale');
     if (mxLastSeen) mxLastSeen.textContent = mxLatest
       ? 'Last MX2001 packet: ' + fmtTime(mxLatest.observed_at) + ' (' + ageText(mxLatest.observed_at) + ')' +
-        (ageHours(mxLatest.observed_at) > STALE_AFTER_HOURS ? ' · STALE: logger telemetry has stopped updating' : ' · Reporting')
+        ''
       : 'No MX2001 stage or temperature packets in the last 30 days';
     const mx = swPoints('mx2001','water_level_ft',swStageValue);
     const sen = swPoints('water_distance','water_level_ft',swStageValue);
