@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    {
+      "source": "/watershed",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 30
+    }
+  }
+}

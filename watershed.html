@@ -1,113 +1,34 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07161b">
-  <meta name="description" content="Live watershed conditions from six remote monitoring stations in Grand County, Utah.">
-  <title>Moab Watershed Monitoring Network</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/watershed.css?v=20260923-1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#173f3a"><meta name="description" content="Pack Creek stream monitoring near Moab, Utah. Explore measured stage, estimated discharge, water temperature, and the observation record.">
+<title>Moab Watersheds · Pack Creek</title>
+<link rel="stylesheet" href="/watershed.css?v=20261014-2">
+<script src="/watershed.js?v=20261014-2" defer></script>
 </head>
 <body>
-  <header class="site-header">
-    <a class="identity" href="/watershed" aria-label="Moab Watershed Monitoring Network home">
-      <span class="identity-mark" aria-hidden="true">
-        <svg viewBox="0 0 48 48"><path d="M7 34c7-1 9-8 16-9 7-1 10 5 18 3"/><path d="M7 40c7-1 10-7 17-8 7-1 10 4 17 2"/><path d="M14 21 24 7l10 14"/><path d="m20 15 4 5 4-5"/></svg>
-      </span>
-      <span><strong>Moab Watershed Network</strong><small>Remote surface-water monitoring</small></span>
-    </a>
-    <div class="header-actions">
-      <span class="live-status"><i></i>Network online</span>
-      <button class="icon-button" id="refreshButton" type="button" aria-label="Refresh station readings">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5"/><path d="M18.2 15a7 7 0 1 1-.6-7.3L20 11"/></svg>
-      </button>
-    </div>
-  </header>
-
-  <main>
-    <section class="network-heading">
-      <div>
-        <span class="kicker">Grand County, Utah</span>
-        <h1>Current watershed conditions</h1>
-        <p>Continuous stage and water-quality observations from upper and lower monitoring stations on Pack Creek, Mill Creek, and Castle Creek.</p>
-      </div>
-      <div class="updated-block"><span>Last network update</span><strong id="networkUpdate">—</strong><small>Mountain Time</small></div>
-    </section>
-
-    <section class="network-summary" aria-label="Network summary">
-      <article><span class="summary-icon blue"><svg viewBox="0 0 24 24"><path d="M12 3v18M7 8l5-5 5 5"/></svg></span><div><small>Stations reporting</small><strong>6 <em>/ 6</em></strong></div><b>100%</b></article>
-      <article><span class="summary-icon cyan"><svg viewBox="0 0 24 24"><path d="M12 3C8 8 5 11 5 15a7 7 0 0 0 14 0c0-4-3-7-7-12Z"/></svg></span><div><small>Highest stage</small><strong id="highestStage">—</strong></div><b id="highestStageSite">—</b></article>
-      <article><span class="summary-icon amber"><svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01"/><path d="m10.3 4.2-7 12A2 2 0 0 0 5 19h14a2 2 0 0 0 1.7-2.8l-7-12a2 2 0 0 0-3.4 0Z"/></svg></span><div><small>Active advisories</small><strong>0</strong></div><b>Normal</b></article>
-      <article><span class="summary-icon green"><svg viewBox="0 0 24 24"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg></span><div><small>Network health</small><strong>99.2%</strong></div><b>30 days</b></article>
-    </section>
-
-    <section class="workspace-grid">
-      <article class="panel map-panel">
-        <div class="panel-header">
-          <div><span class="kicker">Network extent</span><h2>Station locations</h2></div>
-          <div class="map-legend"><span><i class="upper"></i>Upper</span><span><i class="lower"></i>Lower</span></div>
-        </div>
-        <div id="stationMap" class="station-map" aria-label="Map of watershed monitoring stations"></div>
-      </article>
-
-      <article class="panel conditions-panel">
-        <div class="panel-header">
-          <div><span class="kicker">Latest observations</span><h2>Network conditions</h2></div>
-          <span class="quality-badge"><i></i>All values in range</span>
-        </div>
-        <div class="condition-list" id="conditionList"></div>
-      </article>
-    </section>
-
-    <section class="station-section">
-      <div class="section-heading">
-        <div><span class="kicker">Station observations</span><h2>Upper and lower watershed stations</h2></div>
-        <div class="station-filters" role="group" aria-label="Filter stations">
-          <button class="active" data-filter="all" type="button">All creeks</button>
-          <button data-filter="pack" type="button">Pack</button>
-          <button data-filter="mill" type="button">Mill</button>
-          <button data-filter="castle" type="button">Castle</button>
-        </div>
-      </div>
-      <div class="station-grid" id="stationGrid"></div>
-    </section>
-
-    <section class="panel trend-panel">
-      <div class="panel-header trend-header">
-        <div><span class="kicker">24-hour record</span><h2 id="trendTitle">Pack Creek · Stage</h2><p id="trendSubtitle">Upper and lower station comparison</p></div>
-        <div class="trend-controls">
-          <label>Watershed<select id="creekSelect"><option value="pack">Pack Creek</option><option value="mill">Mill Creek</option><option value="castle">Castle Creek</option></select></label>
-          <div class="metric-tabs" id="metricTabs" role="group" aria-label="Chart metric">
-            <button class="active" data-metric="stage" type="button">Stage</button>
-            <button data-metric="temp" type="button">Temp</button>
-            <button data-metric="ph" type="button">pH</button>
-            <button data-metric="ec" type="button">EC</button>
-            <button data-metric="do" type="button">DO</button>
-          </div>
-        </div>
-      </div>
-      <div class="chart-legend"><span><i class="upper"></i>Upper station</span><span><i class="lower"></i>Lower station</span></div>
-      <div class="trend-chart" id="trendChart"></div>
-    </section>
-
-    <section class="panel observations-panel">
-      <div class="panel-header"><div><span class="kicker">Field record</span><h2>Recent observations</h2></div><button class="text-button" type="button">Export CSV <svg viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 19h14"/></svg></button></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Station</th><th>Observed</th><th>Stage</th><th>Water temp.</th><th>pH</th><th>EC</th><th>Dissolved oxygen</th><th>Status</th></tr></thead>
-          <tbody id="observationRows"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <footer><div><strong>Moab Watershed Monitoring Network</strong><span>Low-power radio telemetry for remote watershed intelligence</span></div><div><span>Data interval: 15 minutes</span><span>Quality control: automated</span></div></footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/watershed.js?v=20260923-1"></script>
-</body>
-</html>
+<header class="masthead"><a class="brand" href="/watershed"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="m5 23 11-15 9 12 6-8 8 11M4 30c8-6 14 6 22 0s10-1 14-1M4 37c8-6 14 6 22 0s10-1 14-1"/></svg><span>MOAB<span>WATERSHEDS</span></span></a><nav aria-label="Main navigation"><a href="#conditions">Conditions</a><a href="#record">Observation record</a><a href="#about">About</a></nav><span class="network-label">UTAH · STREAM MONITORING</span></header>
+<main>
+<section class="hero">
+<div class="hero-copy"><p class="eyebrow">The creek, in real numbers</p><h1>Follow the flow.<br><em>Pack Creek.</em></h1><p class="intro">A closer look at the water moving through Moab’s landscape. Measured creek stage, estimated streamflow, and water temperature — together in one place.</p><a class="hero-link" href="#conditions">Explore current conditions <span aria-hidden="true">↓</span></a></div>
+<div class="landscape" aria-hidden="true"><svg viewBox="0 0 660 410" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e4e9d9"/><stop offset="1" stop-color="#f5eee1"/></linearGradient><linearGradient id="river" x2="1" y2="1"><stop stop-color="#609e91"/><stop offset="1" stop-color="#173f3a"/></linearGradient></defs><path fill="url(#sky)" d="M0 0h660v410H0z"/><circle cx="489" cy="91" r="33" fill="#e4bb85"/><path fill="#a2aaa0" d="m0 232 93-95 59 24 76-96 110 122 56-65 104 121 62-51 100 32v186H0Z"/><path fill="#bd8966" d="m0 192 107 13 57 77 79-42 36 49 109-60 64 37 93-122 46 4 24 52 45-8v218H0Z"/><path fill="#d0a17c" d="m0 217 100 20 72 63 90-40 119 63 76-34 90-119 47 15 25 63 41-23v185H0Z"/><path fill="#807c59" d="m0 323 98-25 78 46 79-10 93 34 124-81 94 38 94-18v103H0Z"/><path fill="url(#river)" d="M380 275c-82 30-2 49-47 63-24 7-92 7-91 23 1 23 104 8 83 49h112c-9-50-124-39-116-53 9-16 93-17 97-37 5-20-62-18-38-45Z"/><g fill="none" stroke="#efe1c9" opacity=".34" stroke-width="1.5"><path d="m0 246 95 19 77 61 90-35 115 58M0 265l89 18 77 63M465 292l87-99 30 13 24 58 54-17M482 308l73-88 22 8 20 56 63-13"/></g></svg><div class="landscape-caption">MOAB, UTAH <span>01 / PACK CREEK</span></div></div>
+</section>
+<section id="conditions" class="conditions">
+<div class="section-title"><div><p class="eyebrow">One creek. One monitoring station.</p><h2>Pack Creek conditions</h2></div><button id="refresh" type="button">↻ Refresh readings</button></div>
+<div class="observation-bar"><span id="observationStatus" role="status">Loading creek observations…</span><span>All times Mountain Time</span></div>
+<div id="error" class="error" role="alert" hidden></div>
+<div class="readings">
+<article class="reading flow"><p class="eyebrow">Estimated streamflow</p><div class="number"><strong id="flow">—</strong><span>cfs</span></div><p id="flowTime" class="timestamp">Waiting for rated stage</p><div class="reading-foot" id="ratingNote">Calculated from the station’s stage–discharge rating.</div></article>
+<article class="reading"><p class="eyebrow">Creek stage</p><div class="number"><strong id="stage">—</strong><span>ft</span></div><p id="stageTime" class="timestamp">Waiting for stage observations</p><div class="reading-foot">SEN0313 ultrasonic water-level sensor</div></article>
+<article class="reading"><p class="eyebrow">Water temperature</p><div class="number"><strong id="temp">—</strong><span>°F</span></div><p id="tempTime" class="timestamp">Waiting for water temperature</p><div class="reading-foot">HOBO MX2001 · latest available observation</div></article>
+</div>
+</section>
+<section id="record" class="record">
+<div class="section-title"><div><p class="eyebrow">The observation record</p><h2>See how the creek changes</h2></div><div class="range" role="group" aria-label="Time range"><button data-hours="24" type="button" aria-pressed="false">24 hours</button><button data-hours="168" type="button" aria-pressed="true">7 days</button><button data-hours="720" type="button" aria-pressed="false">30 days</button></div></div>
+<div class="chart-panel"><div class="chart-top"><div class="tabs" role="group" aria-label="Chart measurement"><button data-metric="flow" type="button" aria-pressed="true">Streamflow</button><button data-metric="stage" type="button" aria-pressed="false">Stage</button><button data-metric="temp" type="button" aria-pressed="false">Water temperature</button></div><span id="sampleCount">Loading observations</span></div><div id="chart" class="chart"></div><div id="chartReadout" class="chart-readout" aria-live="polite">Point to an observation to inspect its value.</div><div class="chart-foot"><span id="chartLegend">Estimated discharge · SEN0313 stage</span><span>Gaps show breaks in observations</span></div></div>
+<div class="record-bottom"><div class="panel"><div class="panel-heading"><h3>Recent measurements</h3><button id="export" type="button" disabled>Download CSV ↓</button></div><p class="muted">Latest 12 water observations in the selected period. * Flow extrapolated beyond the measured rating range.</p><div class="table-scroll"><table><thead><tr><th>Observed · MT</th><th>Sensor</th><th>Stage · ft</th><th>Flow · cfs</th><th>Water · °F</th></tr></thead><tbody id="rows"><tr><td colspan="5">Loading observations…</td></tr></tbody></table></div></div><aside class="station-note"><p class="eyebrow">Station notebook</p><h3>Two ways to<br>watch the water.</h3><p>The ultrasonic sensor measures creek stage. A station rating curve translates stage into an estimated flow.</p><p>The HOBO MX2001 adds water temperature and a separate pressure-based stage record.</p><dl><dt>Latest HOBO stage</dt><dd id="hoboStage">—</dd><dt>HOBO observation time</dt><dd id="hoboTime">No observation available</dd></dl><p class="note">Each measurement keeps its own timestamp, so older temperature data stays identifiable.</p></aside></div>
+</section>
+<section id="about" class="about"><p class="eyebrow">Moab Watersheds</p><h2>A growing record of<br>our local creeks.</h2><div><p>Pack Creek is the first stream station in this watershed monitoring network. Additional creek stations will join as they are installed.</p><p>Observations arrive through a low-power radio mesh. Streamflow is a rating-curve estimate; values outside the measured rating range are labeled as extrapolated. Stage is relative to the station’s local calibration.</p></div></section>
+</main><footer><a class="footer-name" href="/watershed">MOAB WATERSHEDS</a><span>Pack Creek · Utah</span><span>Measured water. A clearer picture.</span></footer>
+</body></html>

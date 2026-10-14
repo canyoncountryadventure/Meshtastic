@@ -1,4 +1,5 @@
 import { getSql } from './db.js';
+import { mirrorCreekReadings } from '../lib/watershed-store.js';
 import { ensureDatabaseReady } from './rating-curves.js';
 import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
 
@@ -196,6 +197,11 @@ export default async function handler(req, res) {
     for (const body of activeBodies) {
       readings.push(await insertReading(sql, body));
     }
+
+    // Only registered creek stations are mirrored into the separate database.
+    // A failed mirror is repaired by the watershed reconciliation cursor.
+    try { await mirrorCreekReadings(readings); }
+    catch (error) { console.error('Watershed mirror failed', error.name); }
 
     // Alert failures must never reject successfully stored station telemetry.
     let alerts;
