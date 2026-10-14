@@ -1,7 +1,7 @@
 const PACK_CREEK_NODE = 1949224949;
 const LEGACY_PACK_CREEK_NODE = 4241345683;
 const PACK_CREEK_NAME = 'Pack Creek';
-const PACK_CREEK_CURVE_VERSION = 2;
+const PACK_CREEK_CURVE_VERSION = 3;
 const PACK_CREEK_RESET_CUTOFF = '2026-09-25T21:43:23.000Z';
 const PACK_CREEK_RESET_MIGRATION = '20260925_pack_creek_reset_v1';
 const WINGATE_SOIL_NODE = 2004386937;
@@ -98,9 +98,9 @@ async function storePackCreekCurve(sql) {
        valid_stage_min_ft, valid_stage_max_ft, active, source_notes)
     VALUES
       (${PACK_CREEK_NODE}, ${PACK_CREEK_NAME}, ${PACK_CREEK_CURVE_VERSION}, 'power_offset',
-       7.267444447156445, 0.13524667317675848, 1.6797133086215867,
-       0.2444, 0.6904, TRUE,
-       'Six Pack Creek Lower rating points, refit by unweighted discharge-space least squares; October 11 observed stage 0.57 ft and discharge 1.5 cfs. April 27 modeled 2.75 cfs retains observed 2.3905 cfs. Historical stage datum assumed unchanged.')
+       7.2679208850457435, 0.13511013209933276, 1.6804902295212576,
+       0.2444, 2.894, TRUE,
+       'Seven Pack Creek Lower rating points, refit by unweighted discharge-space least squares; October 11 observed stage 0.57 ft and discharge 1.5 cfs. April 27 modeled 2.75 cfs retains observed 2.3905 cfs. October 14 manual discharge 40 cfs at 15:00 MDT paired with nearest calibrated SEN0313 stage 2.894 ft at 14:57:29 MDT (telemetry ID 7521; 151 seconds earlier). Stage is telemetry-derived, not a manual stage measurement. Historical stage datum assumed unchanged.')
     ON CONFLICT (node_num, curve_version) DO UPDATE SET
       station_name = EXCLUDED.station_name,
       equation_type = EXCLUDED.equation_type,
@@ -134,7 +134,10 @@ async function storePackCreekCurve(sql) {
        'Initial permanent-station measurement; MX2001 stage 0.45 ft and manual discharge 1.3 cfs.'),
       (${PACK_CREEK_NODE}, ${PACK_CREEK_CURVE_VERSION}, '2026-10-11', NULL,
        0.5700, 1.5000, 1.5000, 'observed', TRUE,
-       'User supplied stage 0.57 ft and discharge 1.5 cfs; measurement time not specified.')
+       'User supplied stage 0.57 ft and discharge 1.5 cfs; measurement time not specified.'),
+      (${PACK_CREEK_NODE}, ${PACK_CREEK_CURVE_VERSION}, '2026-10-14', '15:00 MDT',
+       2.8940, 40.0000, 40.0000, 'observed', TRUE,
+       'Manual discharge measured by user at 15:00 MDT. Paired stage is nearest calibrated SEN0313 telemetry: 2.894 ft at 14:57:29 MDT, source ID 7521, 151 seconds earlier; not a manual stage measurement.')
     ON CONFLICT (node_num, curve_version, stage_ft) DO UPDATE SET
       measurement_date = EXCLUDED.measurement_date,
       measurement_time_local = EXCLUDED.measurement_time_local,
@@ -355,8 +358,8 @@ export async function getRatingCurvePoints(sql, node = null) {
       SELECT node_num, curve_version, measurement_date, measurement_time_local,
              stage_ft, observed_discharge_cfs, final_discharge_cfs,
              point_type, included, notes
-      FROM rating_curve_points
-      WHERE included
+      FROM rating_curve_points p
+      WHERE included AND EXISTS (SELECT 1 FROM rating_curves c WHERE c.node_num=p.node_num AND c.curve_version=p.curve_version AND c.active)
       ORDER BY measurement_date ASC, stage_ft ASC
     `;
   }
@@ -364,8 +367,9 @@ export async function getRatingCurvePoints(sql, node = null) {
     SELECT node_num, curve_version, measurement_date, measurement_time_local,
            stage_ft, observed_discharge_cfs, final_discharge_cfs,
            point_type, included, notes
-    FROM rating_curve_points
+    FROM rating_curve_points p
     WHERE included AND node_num = ${node}
+      AND EXISTS (SELECT 1 FROM rating_curves c WHERE c.node_num=p.node_num AND c.curve_version=p.curve_version AND c.active)
     ORDER BY measurement_date ASC, stage_ft ASC
   `;
 }
