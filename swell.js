@@ -282,7 +282,7 @@
     setText('swUpdated', freshest ? `Updated ${ageText(freshest.observed_at)}` : 'Waiting for temperature / water level');
     // Pack Creek card: suppress the status badge only; preserve telemetry and timestamps.
     const stateEl = document.getElementById('swState');
-    if (stateEl) stateEl.hidden = true;
+    if (stateEl) stateEl.style.display = 'none';
 
     const device = swDeviceRows()[0] || null;
     if (device) {
