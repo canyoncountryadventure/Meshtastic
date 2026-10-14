@@ -1,5 +1,6 @@
 import { getSql } from './db.js';
 import { ensureDatabaseReady } from './rating-curves.js';
+import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
 
 const KNOWN_STATIONS = new Map([
   [1252758033, 'Hidden Valley'], // !4aab9211, replacement radio
@@ -149,7 +150,7 @@ async function insertReading(sql, body) {
     VALUES
       (${observedAt}, ${nodeNum}, ${name}, ${type}, ${tempC},
        ${metrics}::jsonb, ${radio}::jsonb, ${raw}::jsonb)
-    RETURNING id, received_at, observed_at, node_num, station_name, telemetry_type, temperature_c
+    RETURNING id, received_at, observed_at, node_num, station_name, telemetry_type, temperature_c, metrics
   `;
 
   return rows[0];
@@ -196,9 +197,20 @@ export default async function handler(req, res) {
       readings.push(await insertReading(sql, body));
     }
 
+    // Alert failures must never reject successfully stored station telemetry.
+    let alerts;
+    try {
+      await evaluateReadings(sql, readings);
+      alerts = await dispatchEmails(sql);
+    } catch (error) {
+      console.error('Alert processing failed', error.name);
+      alerts = { processing: 'failed' };
+    }
+
     return res.status(201).json({
       ok: true,
       stored: readings.length,
+      alerts,
       paused: paused.length,
       paused_nodes: paused.length ? paused : undefined,
       reading: readings.length === 1 ? readings[0] : undefined,

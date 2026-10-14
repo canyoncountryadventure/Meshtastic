@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/alerts", "destination": "/alerts.html" },
     {
       "source": "/watershed",
       "destination": "/watershed.html"
@@ -7,7 +8,7 @@
   ],
   "functions": {
     "api/*.js": {
-      "maxDuration": 10
+      "maxDuration": 30
     }
   },
   "headers": [
