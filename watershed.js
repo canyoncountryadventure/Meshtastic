@@ -10,7 +10,7 @@ const flow=r=>stage(r)!==null?n(r?.discharge_cfs):null;
 const date=iso=>new Date(iso).toLocaleString('en-US',{timeZone:'America/Denver',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
 const shortDate=ms=>new Date(ms).toLocaleString('en-US',{timeZone:'America/Denver',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const value=(v,d=2)=>v===null?'—':v.toFixed(d);
-const metrics={flow:{label:'Estimated streamflow',unit:'cfs',convert:flow,color:'#2c7e70',decimals:2},stage:{label:'Creek stage',unit:'ft',convert:stage,color:'#2c7e70',decimals:2},temp:{label:'Water temperature',unit:'°F',convert:temp,color:'#a26743',decimals:1}};
+const metrics={flow:{label:'Estimated discharge',unit:'cfs',convert:flow,color:'#2c7e70',decimals:2},stage:{label:'Creek stage',unit:'ft',convert:stage,color:'#2c7e70',decimals:2},temp:{label:'Water temperature',unit:'°F',convert:temp,color:'#a26743',decimals:1}};
 function latest(type,convert){return state.latest.find(r=>r.telemetry_type===type&&convert(r)!==null);}
 function renderConditions(){
  const water=latest('water_distance',stage), rated=latest('water_distance',flow), hobo=latest('mx2001',temp), hs=latest('mx2001',stage);
@@ -26,7 +26,7 @@ function series(){const m=metrics[state.metric];return (state.metric==='stage'?[
 function renderChart(){
  const m=metrics[state.metric],data=series(),pts=data.flatMap(s=>s.points);$('sampleCount').textContent=pts.length+' observations · '+(state.hours===24?'24 hours':state.hours/24+' days');
  $('chartLegend').textContent=state.metric==='stage'?'SEN0313 stage (teal) · HOBO MX2001 stage (clay)':state.metric==='flow'?'Estimated discharge · SEN0313 stage':'Water temperature · HOBO MX2001';
- $('chartReadout').textContent='Point to an observation to inspect its value.';
+ $('chartReadout').textContent='Select an observation to view its time and value.';
  if(!pts.length){$('chart').innerHTML='<div class="empty">No '+m.label.toLowerCase()+' observations in this period. Try a longer time range.</div>';return;}
  const end=Date.now(),start=end-state.hours*3600000,W=1100,H=300,L=65,R=22,T=20,B=42;
  const vals=pts.map(p=>p.y),lo=Math.min(...vals),hi=Math.max(...vals),pad=Math.max((hi-lo)*.15,m.unit==='cfs'?.5:m.unit==='ft'?.05:.5),min=m.unit==='cfs'?Math.max(0,lo-pad):lo-pad,max=hi+pad;
