@@ -7,7 +7,7 @@ export function watershedSql(){
 }
 export async function mirrorCreekReadings(readings,sourceSql){
  if(!process.env.WATERSHED_DATABASE_URL)return;
- const rows=readings.filter(r=>([1949224949,1695962694].includes(Number(r.node_num))&&['water_distance','mx2001'].includes(r.telemetry_type))||(Number(r.node_num)===2425602407&&r.telemetry_type==='environment'));
+ const rows=readings.filter(r=>([1949224949,1695962694].includes(Number(r.node_num))&&['water_distance','mx2001','device'].includes(r.telemetry_type))||(Number(r.node_num)===2425602407&&['environment','device'].includes(r.telemetry_type)));
  if(!rows.length)return;
  const sql = neon(process.env.WATERSHED_DATABASE_URL, { fetchOptions: { signal: AbortSignal.timeout(12000) } });
  await writeCreekRows(sql,rows);
@@ -23,7 +23,7 @@ export function writeCreekRows(sql,rows){
  SELECT r.id,r.node_num,r.observed_at,r.received_at,r.telemetry_type,r.temperature_c,r.metrics
  FROM jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) AS r(id bigint,node_num bigint,observed_at timestamptz,received_at timestamptz,telemetry_type text,temperature_c double precision,metrics jsonb)
  JOIN creek_stations s ON s.node_num=r.node_num AND s.enabled
- WHERE (s.station_type='creek' AND r.telemetry_type IN ('water_distance','mx2001')) OR (s.station_type='relay' AND r.telemetry_type='environment')
+ WHERE (s.station_type='creek' AND r.telemetry_type IN ('water_distance','mx2001','device')) OR (s.station_type='relay' AND r.telemetry_type IN ('environment','device'))
  ON CONFLICT(source_id) DO UPDATE SET metrics=EXCLUDED.metrics, temperature_c=EXCLUDED.temperature_c`;
 }
 // Independent cursor: direct ingest mirrors never advance it, so a failed mirror
@@ -34,7 +34,7 @@ export async function reconcileCreekReadings(sourceSql,targetSql){
  const cursor=await targetSql`SELECT last_source_id FROM creek_sync_state WHERE name='mesh'`;
  let last=Number(cursor[0]?.last_source_id||0);
  for(let batch=0;batch<5;batch++){
-  const rows=await sourceSql`SELECT id,node_num,observed_at,received_at,telemetry_type,temperature_c,metrics FROM telemetry_readings WHERE id>${last} AND node_num=ANY(${nodes}) AND telemetry_type IN ('water_distance','mx2001','environment') ORDER BY id LIMIT 2000`;
+  const rows=await sourceSql`SELECT id,node_num,observed_at,received_at,telemetry_type,temperature_c,metrics FROM telemetry_readings WHERE id>${last} AND node_num=ANY(${nodes}) AND telemetry_type IN ('water_distance','mx2001','environment','device') ORDER BY id LIMIT 2000`;
   if(!rows.length)break;
   const end=Number(rows.at(-1).id);
   await targetSql.transaction([writeCreekRows(targetSql,rows),targetSql`UPDATE creek_sync_state SET last_source_id=GREATEST(last_source_id,${end}),updated_at=now() WHERE name='mesh'`]);

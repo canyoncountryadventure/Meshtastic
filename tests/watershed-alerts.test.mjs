@@ -4,6 +4,7 @@ import { createHmac } from 'node:crypto';
 import handler from '../api/watershed-alerts.js';
 import proxy from '../lib/watershed-alerts-proxy.js';
 import { validateRule,displayRule,storedRule } from '../lib/watershed-alert-values.js';
+import { readingValue,nextActive } from '../lib/alert-values.js';
 import { evaluateReadings,dispatchEmails } from '../lib/alerts.js';
 const response=()=>({statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(n){this.statusCode=n;return this;},json(v){this.body=v;return this;}});
 test('watershed rules allow only the requested stations and measurements',()=>{
@@ -42,4 +43,16 @@ test('watershed delivery uses a distinct provider idempotency key without real e
  const sql=async(parts,...args)=>{const q=parts.join('?');if(q.includes('RETURNING d.*')&&!selected){selected=true;return [{id:1,recipient:'example@example.com',subject:'Test',body:'Test',created_at:new Date().toISOString(),attempts:1}];}return [];};
  globalThis.fetch=async(url,opts)=>{calls.push(opts);return {ok:true,json:async()=>({id:'mock'})};};
  try{assert.equal((await dispatchEmails(sql,1,{config:{sender:'alerts@example.com',key:'mock'},idempotencyPrefix:'watershed-alert'})).sent,1);assert.equal(calls[0].headers['Idempotency-Key'],'watershed-alert-1');}finally{globalThis.fetch=realFetch;}
+});
+
+test('battery alerts accept reported percentages only and recover before a new event',()=>{
+ const rule={node_num:2425602407,parameter:'battery_percent',direction:'below',threshold:20,reset_value:30,enabled:true};
+ assert.equal(validateRule(rule).parameter,'battery_percent');
+ assert.throws(()=>validateRule({...rule,reset_value:101}));
+ for(const value of [0,20,100])assert.equal(readingValue({telemetry_type:'device',metrics:{battery_level:value}},'battery_percent'),value);
+ for(const value of [-1,101,null])assert.equal(readingValue({telemetry_type:'device',metrics:{battery_level:value}},'battery_percent'),null);
+ assert.equal(readingValue({telemetry_type:'environment',metrics:{battery_level:10}},'battery_percent'),null);
+ assert.equal(readingValue({telemetry_type:'device',metrics:{voltage:3.7}},'battery_percent'),null);
+ let active=false;const results=[19,21,30,31,19].map(value=>active=nextActive({...rule,active},value));
+ assert.deepEqual(results,[true,true,true,false,true]);
 });

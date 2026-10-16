@@ -361,7 +361,7 @@
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · Pack Creek';
+    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');

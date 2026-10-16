@@ -299,7 +299,7 @@ async function loadData(){
     const res=await fetch(`/api/readings?hours=${state.hours}&limit=10000`,{cache:'no-store'});
     const data=await res.json();
     if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);
-    state.allReadings=Array.isArray(data.readings)?data.readings:[];
+    state.allReadings=Array.isArray(data.readings)?data.readings.filter(r=>![1949224949,1695962694,2425602407].includes(Number(r.node_num))):[];
     state.ratingCurves=Array.isArray(data.rating_curves)?data.rating_curves:[];
     state.ratingCurvePoints=Array.isArray(data.rating_curve_points)?data.rating_curve_points:[];
     applyPlaybackFilter();
