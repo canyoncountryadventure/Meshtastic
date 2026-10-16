@@ -37,7 +37,7 @@ function selectStation(){
 }
 function series(){const m=metrics[state.metric];return (state.metric==='stage'?['water_distance','mx2001']:[state.metric==='temp'?(site().kind==='relay'?'environment':'mx2001'):'water_distance']).map(type=>({type,color:type==='mx2001'&&state.metric==='stage'?'#b47b4e':m.color,points:state.readings.filter(r=>r.telemetry_type===type&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}));}
 function renderChart(){
- const m=metrics[state.metric],data=series(),pts=data.flatMap(s=>s.points);$('sampleCount').textContent=pts.length+' observations · '+(state.hours===24?'24 hours':state.hours/24+' days');
+ const m=metrics[state.metric],data=series(),pts=data.flatMap(s=>s.points);$('sampleCount').textContent=pts.length+' observations · '+(state.hours<=24?state.hours+' hours':state.hours/24+' days');
  $('chartLegend').textContent=state.metric==='stage'?site().sensor+' stage (teal) · HOBO MX2001 stage (clay)':state.metric==='flow'?'Estimated discharge · SEN0313 stage':(site().kind==='relay'?'Air temperature · Cottonwood Relay':'Water temperature · HOBO MX2001');
  $('chartReadout').textContent='Select an observation to view its time and value.';
  if(!pts.length){$('chart').innerHTML='<div class="empty">No '+m.label.toLowerCase()+' observations in this period. Try a longer time range.</div>';return;}

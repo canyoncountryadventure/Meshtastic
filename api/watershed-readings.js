@@ -3,7 +3,7 @@ import { watershedSql, reconcileCreekReadings, readCreekData } from '../lib/wate
 export default async function handler(req,res){
  if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'GET required'});}
  const requested=Number(new URL(req.url||'/','http://localhost').searchParams.get('hours')||168);
- const hours=[24,168,720].includes(requested)?requested:168;
+ const hours=[6,12,24,168,720].includes(requested)?requested:168;
  try{
   const sql=watershedSql();
   if(process.env.DATABASE_URL){
