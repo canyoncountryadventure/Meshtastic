@@ -200,7 +200,7 @@ export default async function handler(req, res) {
 
     // Only registered creek stations are mirrored into the separate database.
     // A failed mirror is repaired by the watershed reconciliation cursor.
-    try { await mirrorCreekReadings(readings); }
+    try { await mirrorCreekReadings(readings,sql); }
     catch (error) { console.error('Watershed mirror failed', error.name); }
 
     // Alert failures must never reject successfully stored station telemetry.

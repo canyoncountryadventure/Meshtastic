@@ -3,6 +3,10 @@
     {
       "source": "/watershed",
       "destination": "/index.html"
+    },
+    {
+      "source": "/notifications",
+      "destination": "/notifications.html"
     }
   ],
   "functions": {
