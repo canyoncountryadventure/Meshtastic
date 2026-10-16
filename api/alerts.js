@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSql } from './db.js';
-import { validateRule, normalizeEmails, STATIONS, PARAMETERS } from '../lib/alert-values.js';
+import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, storedRule } from '../lib/alert-values.js';
 import { encryptKey, dispatchEmails } from '../lib/alerts.js';
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
@@ -40,10 +40,10 @@ export default async function handler(req,res) {
         sql`SELECT id,rule_id,recipient,subject,status,attempts,error,created_at,sent_at FROM alert_deliveries ORDER BY id DESC LIMIT 50`,
         sql`SELECT sender,updated_at FROM alert_email_config WHERE id=1`,
       ]);
-      return res.status(200).json({ok:true,rules,history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS});
+      return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS});
     }
     if (body.action==='save_rule') {
-      const rule=validateRule(body),emails=normalizeEmails(body.recipients || []);
+      const rule=validateRule(storedRule(body)),emails=normalizeEmails(body.recipients || []);
       const args=JSON.stringify(emails);
       if (body.id) {
         const rows=await sql`UPDATE alert_rules SET node_num=${rule.node_num},station_name=${rule.station_name},parameter=${rule.parameter},

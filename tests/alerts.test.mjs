@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readingValue, nextActive, validateRule, normalizeEmails } from '../lib/alert-values.js';
+import { readingValue, nextActive, validateRule, normalizeEmails, displayRule, storedRule, temperatureAlertText } from '../lib/alert-values.js';
 import handler from '../api/alerts.js';
 
 test('strict crossing and hysteresis in both directions',()=>{
@@ -34,4 +34,24 @@ test('owner access rejects anonymous and cross-origin writes; login creates secu
   assert.equal(login.statusCode,200);assert.match(login.headers['Set-Cookie'],/HttpOnly; Secure; SameSite=Strict/);
   const logout=response();await handler({method:'POST',headers:{cookie:login.headers['Set-Cookie'].split(';')[0]},body:{action:'logout'}},logout);
   assert.equal(logout.statusCode,200);
+});
+
+test('Fahrenheit alert editing preserves Celsius thresholds and crossing behavior',()=>{
+  const saved={node_num:1949224949,parameter:'temperature_c',direction:'below',threshold:0,reset_value:2,active:false};
+  const display=displayRule(saved);
+  assert.equal(display.threshold,32); assert.equal(display.reset_value,35.6);
+  const restored=storedRule(display);
+  assert.equal(restored.threshold,0); assert(Math.abs(restored.reset_value-2)<1e-10);
+  const edited=validateRule(storedRule({...display,threshold:50,reset_value:53.6}));
+  assert.equal(edited.threshold,10); assert(Math.abs(edited.reset_value-12)<1e-10);
+  assert.equal(nextActive({...edited,active:false},10),false);
+  assert.equal(nextActive({...edited,active:false},9.9),true);
+  const flow={parameter:'discharge_cfs',threshold:10,reset_value:9};
+  assert.deepEqual(displayRule(flow),flow); assert.deepEqual(storedRule(flow),flow);
+});
+test('temperature email shows converted Fahrenheit reading and threshold',()=>{
+  const text=temperatureAlertText({station_name:'Pack Creek',direction:'above',threshold:20},25,'2026-10-16T03:00:00Z');
+  assert.match(text.subject,/77.0 °F/); assert.match(text.subject,/above 68.0 °F/);
+  assert.match(text.body,/Temperature: 77.0 °F/); assert.match(text.body,/Threshold: above 68.0 °F/);
+  assert(!text.body.includes('temperature_c')); assert(!text.body.includes('°C'));
 });
