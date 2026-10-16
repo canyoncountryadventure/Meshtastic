@@ -352,7 +352,10 @@
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
     if (!small || !name || name === 'Rock Moisture') return;
-    if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop',"Pack Creek"].includes(name)) {
+    if (name === 'Pack Creek') {
+      small.textContent = small.textContent.replace(/air temperature/gi, 'water temperature');
+      if (!/water temperature/i.test(small.textContent)) small.textContent += ' · water temperature';
+    } else if (!/air temperature/i.test(small.textContent) && ['Hidden Valley','Moab','Fishlake Hightop'].includes(name)) {
       small.textContent += ' · air temperature';
     }
   });
