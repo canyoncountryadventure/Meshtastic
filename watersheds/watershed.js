@@ -54,7 +54,7 @@ function renderChart(){
  $('chart').querySelectorAll('.chart-dot').forEach(dot=>{const show=()=>{$('chartReadout').textContent=dot.getAttribute('aria-label');};dot.addEventListener('pointerenter',show);dot.addEventListener('focus',show);dot.addEventListener('click',show);});
 }
 function renderRows(){
- $('rows').innerHTML=state.readings.slice(0,12).map(r=>'<tr><td>'+date(r.observed_at)+'</td><td>'+sensorLabel(r)+'</td><td>'+value(stage(r))+'</td><td>'+value(flow(r))+(r.discharge_rating_status?.startsWith('extrapolated')?'*':'')+'</td><td>'+value(temp(r),1)+'</td><td>'+value(battery(r),0)+'</td></tr>').join('')||'<tr><td colspan="6">No observations in the selected period.</td></tr>';
+ $('rows').innerHTML=state.readings.filter(r=>r.telemetry_type==='device'?battery(r)!==null:true).slice(0,12).map(r=>'<tr><td>'+date(r.observed_at)+'</td><td>'+sensorLabel(r)+'</td><td>'+value(stage(r))+'</td><td>'+value(flow(r))+(r.discharge_rating_status?.startsWith('extrapolated')?'*':'')+'</td><td>'+value(temp(r),1)+'</td><td>'+value(battery(r),0)+'</td></tr>').join('')||'<tr><td colspan="6">No observations in the selected period.</td></tr>';
  $('export').disabled=!state.readings.length;
 }
 async function load(){
