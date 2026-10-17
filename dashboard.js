@@ -1,7 +1,7 @@
 const STATIONS = {
   hv: {
-    key: 'hv', node: 1252758033, name: 'Hidden Valley', fullName: 'Hidden Valley', short: '9211',
-    color: '#55d9b7', coords: [38.53880, -109.54090], elevationFt: 5800, battery: true,
+    key: 'hv', node: 3044869407, name: 'Hidden Valley', fullName: 'Hidden Valley', short: 'HV',
+    color: '#55d9b7', coords: [38.53880, -109.54090], elevationFt: 5800, battery: true, since: Date.parse('2026-10-05T00:00:00Z'),
   },
   home: {
     key: 'home', node: 2740603892, name: 'Moab', fullName: 'Moab', short: 'Moab',
@@ -51,8 +51,8 @@ function fmtTime(iso){return new Date(iso).toLocaleString([], {month:'short',day
 function fmtAxis(ms,span){const d=new Date(ms);return span>3*86400000?d.toLocaleDateString([],{month:'short',day:'numeric'}):d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}
 function rowMatchesStation(r,s){
   // Hardware replacement: never mix old Hidden Valley or manual backfill
-  // with !4aab9211, including battery, RSSI and historical temperatures.
-  return num(r?.node_num) === s.node;
+  // with the replacement !b57d051f, including battery, RSSI and temperatures.
+  return num(r?.node_num) === s.node && (!s.since || Date.parse(r.observed_at)>=s.since);
 }
 function stationRows(key){const s=STATIONS[key];return state.readings.filter(r=>rowMatchesStation(r,s));}
 function tempRows(key){return stationRows(key).filter(r=>tempF(r)!==null && (r.telemetry_type==='environment' || r.telemetry_type==='mx2001')).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));}
@@ -109,16 +109,17 @@ function renderSummary(){
   const voltage=latestD?batteryV(latestD):null;
   const voltsTime=latestD?batteryTime(latestD):null;
   const voltageFresh=voltage!==null && ageHours(voltsTime)<=STALE_AFTER_HOURS;
-  const batteryPctNow=latestD?batteryPct(latestD):null;
   setText('hvVoltageNow',voltage!==null?`${voltage.toFixed(3)} V`:'—');
   setText('hvVoltageAge',voltage!==null
     ? `${voltageFresh?'Measured':'Last measured'} ${fmtTime(voltsTime)} · ${ageText(voltsTime)}${voltageFresh?'':' · STALE'}`
     : 'No voltage reading in the available history');
   const voltageBox=$('hvVoltageSnapshot');
   if(voltageBox)voltageBox.classList.toggle('stale',!voltageFresh);
-  setText('hvHeroBattery',voltage!==null
-    ? `Battery ${batteryPctNow!==null?Math.round(batteryPctNow)+'% · ':''}${voltage.toFixed(3)} V${voltageFresh?'':' · stale'}`
-    : 'Battery voltage unavailable');
+  const latestBattery=dr.find(r=>r.telemetry_type==='device' && batteryPct(r)!==null)||null;
+  const percent=latestBattery?batteryPct(latestBattery):null;
+  setText('hvHeroBattery',percent===101?'External power':percent!==null && percent>=0 && percent<=100
+    ? `Battery ${Math.round(percent)}%${ageHours(batteryTime(latestBattery))>STALE_AFTER_HOURS?' · stale':''}`
+    : 'Battery —');
 
   if(hv&&home){const a=tempF(hv),b=tempF(home),spread=Math.abs(a-b),warmer=a>=b?STATIONS.hv:STATIONS.home;setText('tempSpread',`${spread.toFixed(1)}°F`);setText('tempSpreadDetail',`${warmer.name} is ${(spread).toFixed(1)}° warmer`);setText('warmestStation',warmer.name);setText('warmestDetail',`${Math.max(a,b).toFixed(1)}°F now`);}
   else {setText('tempSpread','—');setText('tempSpreadDetail','need both current readings');const only=hv?STATIONS.hv:home?STATIONS.home:null;setText('warmestStation',only?only.name:'—');setText('warmestDetail',only?'only station currently reporting':'latest readings');}
@@ -299,7 +300,7 @@ async function loadData(){
     const res=await fetch(`/api/readings?hours=${state.hours}&limit=10000`,{cache:'no-store'});
     const data=await res.json();
     if(!res.ok||!data.ok)throw new Error(data.error||`HTTP ${res.status}`);
-    state.allReadings=Array.isArray(data.readings)?data.readings.filter(r=>![1949224949,1695962694,2425602407].includes(Number(r.node_num))):[];
+    state.allReadings=Array.isArray(data.readings)?data.readings.filter(r=>![1949224949,1695962694,2425602407,1252758033].includes(Number(r.node_num))):[];
     state.ratingCurves=Array.isArray(data.rating_curves)?data.rating_curves:[];
     state.ratingCurvePoints=Array.isArray(data.rating_curve_points)?data.rating_curve_points:[];
     applyPlaybackFilter();

@@ -8,14 +8,13 @@ import {
 const STATIONS = [
   { node: 1695962694, name: 'Cottonwood Creek', battery: true, stage: true },
   { node: 2425602407, name: 'Cottonwood Relay', battery: true, measure: 'device' },
-  { node: 1252758033, name: 'Hidden Valley', battery: true },
   { node: 2740603892, name: 'Moab', battery: false },
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
   { node: 1949224949, name: "Pack Creek", battery: true, stage: true },
   { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
   { node: 4241345683, name: 'SMLA', battery: true, measure: 'any' },
   { node: 2004386937, name: 'Wingate Moisture', battery: true, measure: 'soil' },
-  { node: 3044869407, name: 'Revived', battery: true, measure: 'any', since: '2026-10-05T00:00:00Z' },
+  { node: 3044869407, name: 'Hidden Valley', battery: true, measure: 'any', since: '2026-10-05T00:00:00Z' },
 ];
 
 const EXPECTED_INTERVAL_MINUTES = 60;

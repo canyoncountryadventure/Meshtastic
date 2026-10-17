@@ -4,7 +4,7 @@ import { ensureDatabaseReady } from './rating-curves.js';
 import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
 
 const KNOWN_STATIONS = new Map([
-  [1252758033, 'Hidden Valley'], // !4aab9211, replacement radio
+  [1252758033, 'Hidden Valley (retired)'], // !4aab9211, hidden from dashboard; retain incoming history
   [2740603892, 'Moab'],
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "Pack Creek"],
@@ -13,7 +13,7 @@ const KNOWN_STATIONS = new Map([
   [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
   [1695962694, 'Cottonwood Creek'], // !65165646, CC01: MB stage and MX2001 stage/temperature
   [2425602407, 'Cottonwood Relay'], // !9093c167, CC02
-  [3044869407, 'Revived'], // !b57d051f, repurposed station
+  [3044869407, 'Hidden Valley'], // !b57d051f, formerly Revived; deployed October 16
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);

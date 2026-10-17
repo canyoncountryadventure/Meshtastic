@@ -18,10 +18,9 @@ Apply `migrations/20261014-email-alerts.sql` before deploying this feature. Run 
 
 | Display name | Node ID | Decimal node number | Data |
 |---|---|---:|---|
-| Hidden Valley | !4aab9211 | 1252758033 | HOBO temperature (MX2001; stage may be present in the source packet but is not displayed for this station) |
 | SMLA | !fccdcc93 | 4241345683 | Temperature and device telemetry |
 | Soil Moisture | !77788479 | 2004386937 | Soil ADC10 and its own HOBO temperature |
-| Revived | !b57d051f | 3044869407 | HOBO temperature and device telemetry |
+| Hidden Valley | !b57d051f | 3044869407 | Formerly Revived; temperature (°F) and battery (%) card |
 | Moab (Heltec) | !a35a4bf4 | 2740603892 | Local HOBO BLE temperature and gateway |
 | Fishlake Hightop | !5e021e35 | 1577197109 | HOBO temperature |
 | It's a Swell Day | !742ecff5 | 1949224949 | MX2001 stage/temperature and SEN0313 stage |
@@ -29,7 +28,7 @@ Apply `migrations/20261014-email-alerts.sql` before deploying this feature. Run 
 | Cottonwood Relay (CC02) | !9093c167 | 2425602407 | Device battery and radio-link telemetry |
 | Thousand Lake Mountain | !9df66d7e | 2650172798 | HOBO temperature |
 
-Pack Creek telemetry is retired. Its node `!c9f9f6e7` is acknowledged without storing new readings. Historical Pack Creek telemetry is deleted, while the stage–discharge curve and five rating points remain in `rating_curves` and `rating_curve_points`. SMLA's repurposed-node readings are retained. Revived readings before its October 5 repurposing are excluded from current health checks.
+Pack Creek telemetry is retired. Its node `!c9f9f6e7` is acknowledged without storing new readings. Historical Pack Creek telemetry is deleted, while the stage–discharge curve and five rating points remain in `rating_curves` and `rating_curve_points`. SMLA's repurposed-node readings are retained. The former Revived radio is now Hidden Valley; the old Hidden Valley `!4aab9211` is hidden from the dashboard while stored history is retained. Readings before its October 5 repurposing are excluded from current health checks.
 
 ## Packet path
 
@@ -63,7 +62,7 @@ The [watershed presentation page](https://meshtastic-ecru.vercel.app/watershed) 
 
 After installing the updated Heltec binary, check:
 
-1. A new Hidden Valley measurement is accepted under !4aab9211; the retired ID is rejected.
+1. Hidden Valley uses !b57d051f (formerly Revived); !4aab9211 is excluded from dashboard cards and comparisons.
 2. Cottonwood Creek and Swell Day temperature and calibrated stage reach \`/api/readings\` as \`environment\`/\`mx2001\` and \`water_distance\` as appropriate.
 3. Soil's \`SM\` packet becomes a single \`soil\` record containing \`soil_moisture_percent\`; approved HOBO temperature becomes an \`environment\` or \`mx2001\` record.
 4. \`/api/station-health\` shows the ten configured stations; the dashboard labels reflect those node IDs.

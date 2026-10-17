@@ -3,11 +3,10 @@
   'use strict';
   const REPURPOSED_AT = Date.parse('2026-10-05T00:00:00Z');
   const sites = [
-    {node:1252758033,name:'Hidden Valley',color:'#55d9b7'},
+    {node:3044869407,name:'Hidden Valley',color:'#55d9b7',since:REPURPOSED_AT},
     {node:2740603892,name:'Moab',color:'#ff9a67'},
     {node:2004386937,name:'Soil Moisture',color:'#d9b873'},
     {node:4241345683,name:'SMLA',short:'SMLA',id:'!fccdcc93',color:'#f5d05f',since:REPURPOSED_AT},
-    {node:3044869407,name:'Revived',short:'RVV1',id:'!b57d051f',color:'#fa86ac',since:REPURPOSED_AT},
     {node:1577197109,name:'Fishlake Hightop',color:'#60e5f5'},
   ];
   const metricDefs = [
@@ -109,7 +108,7 @@
     renderCombined();
     if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='combinedChart')renderCombined(document.getElementById('expandedChart'));
   });
-  for(const site of sites.filter(s=>s.since)){
+  for(const site of sites.filter(s=>s.short && s.since)){
     STATIONS[site.short.toLowerCase()]={...site,key:site.short.toLowerCase(),battery:true};
     document.querySelector('.station-hero-grid')?.insertAdjacentHTML('beforeend',
       `<article class="station-hero extra-station combined-new-card" style="--accent:${site.color}"><div class="station-heading"><span class="station-dot" style="background:${site.color}"></span><div><strong>${esc(site.name)}</strong><small>${esc(site.short)} · ${esc(site.id)}</small></div></div><div class="extra-reading" id="combinedTemp${site.node}">—</div><div class="combined-card-metrics"><span id="combinedBattery${site.node}">Battery —</span><span id="combinedMoisture${site.node}">Moisture —</span></div><div class="station-meta"><span id="combinedAge${site.node}">Waiting for new readings</span></div><div class="station-state offline" id="combinedState${site.node}">No new telemetry</div></article>`);
@@ -183,7 +182,7 @@
     setText('expandTitle','Fishlake Hightop Temperature');document.getElementById('expandedMap').hidden=true;target.hidden=false;target.dataset.rangeSource='fishlakeTemperatureChart';dialog.showModal();setTimeout(()=>renderFishlakeTemperature(target),40);
   });
   function renderNewCards(){
-    for(const site of sites.filter(s=>s.since)){
+    for(const site of sites.filter(s=>s.short && s.since)){
       const rows=seriesRows(site).sort((a,b)=>Date.parse(b.observed_at)-Date.parse(a.observed_at));
       const latest=rows[0],temperature=rows.find(r=>valueFor(r,'temperature')),voltage=rows.find(r=>valueFor(r,'voltage')),moisture=rows.find(r=>valueFor(r,'moisture'));
       setText('combinedTemp'+site.node,temperature?tempF(temperature).toFixed(1)+' °F':'Temperature —');
