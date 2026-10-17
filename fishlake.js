@@ -276,7 +276,8 @@
     const flDevice = flDeviceRows()[0] || null;
     if (flDevice) {
       const p = batteryPct(flDevice), v = batteryV(flDevice);
-      setText('flHeroBattery', p !== null ? `Battery ${Math.round(p)}%` : v !== null ? `${v.toFixed(3)} V` : 'Battery —');
+      const parts=[p===101?'External power':p!==null?Math.round(p)+'%':null,v!==null?v.toFixed(3)+' V':null].filter(Boolean);
+      setText('flHeroBattery',parts.length?'Battery '+parts.join(' · '):'Battery —');
     } else setText('flHeroBattery', 'Battery —');
     fillFishlakeStats();
     renderFishlakeBattery();
