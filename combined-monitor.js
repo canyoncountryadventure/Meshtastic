@@ -111,7 +111,7 @@
   for(const site of sites.filter(s=>s.short && s.since)){
     STATIONS[site.short.toLowerCase()]={...site,key:site.short.toLowerCase(),battery:true};
     document.querySelector('.station-hero-grid')?.insertAdjacentHTML('beforeend',
-      `<article class="station-hero extra-station combined-new-card" style="--accent:${site.color}"><div class="station-heading"><span class="station-dot" style="background:${site.color}"></span><div><strong>${esc(site.name)}</strong><small>${esc(site.short)} · ${esc(site.id)}</small></div></div><div class="extra-reading" id="combinedTemp${site.node}">—</div><div class="combined-card-metrics"><span id="combinedBattery${site.node}">Battery —</span><span id="combinedMoisture${site.node}">Moisture —</span></div><div class="station-meta"><span id="combinedAge${site.node}">Waiting for new readings</span></div><div class="station-state offline" id="combinedState${site.node}">No new telemetry</div></article>`);
+      `<article class="station-hero extra-station combined-new-card" style="--accent:${site.color}"><div class="station-heading"><span class="station-dot" style="background:${site.color}"></span><div><strong>${esc(site.name)}</strong><small>${esc(site.short)} · ${esc(site.id)}</small></div></div><div class="extra-reading" id="combinedTemp${site.node}">—</div><div class="combined-card-metrics"><span id="combinedBattery${site.node}">Battery —</span>${site.short === "SMLA" ? "" : `<span id="combinedMoisture${site.node}">Moisture —</span>`}</div><div class="station-meta"><span id="combinedAge${site.node}">Waiting for new readings</span></div><div class="station-state offline" id="combinedState${site.node}">No new telemetry</div></article>`);
   }
   function renderCombined(target=document.getElementById('combinedChart')){
     if(!target)return;
@@ -187,7 +187,7 @@
       const latest=rows[0],temperature=rows.find(r=>valueFor(r,'temperature')),voltage=rows.find(r=>valueFor(r,'voltage')),moisture=rows.find(r=>valueFor(r,'moisture'));
       setText('combinedTemp'+site.node,temperature?tempF(temperature).toFixed(1)+' °F':'Temperature —');
       setText('combinedBattery'+site.node,voltage?batteryV(voltage).toFixed(3)+' V':'Battery —');
-      const moistureValue=moisture && valueFor(moisture,'moisture');setText('combinedMoisture'+site.node,moistureValue?Math.round(moistureValue.value)+' '+moistureValue.unit:'Moisture —');
+      if(site.short !== 'SMLA'){const moistureValue=moisture && valueFor(moisture,'moisture');setText('combinedMoisture'+site.node,moistureValue?Math.round(moistureValue.value)+' '+moistureValue.unit:'Moisture —');}
       setText('combinedAge'+site.node,latest?'Updated '+ageText(latest.observed_at):'Waiting for new readings');
       const el=document.getElementById('combinedState'+site.node),fresh=latest && ageHours(latest.observed_at)<=STALE_AFTER_HOURS;
       if(el){el.className='station-state '+(fresh?'online':'offline');el.textContent=fresh?'Reporting':latest?'Stale':'No new telemetry';}
