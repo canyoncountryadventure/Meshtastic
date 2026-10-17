@@ -117,9 +117,8 @@ function renderSummary(){
   if(voltageBox)voltageBox.classList.toggle('stale',!voltageFresh);
   const latestBattery=dr.find(r=>r.telemetry_type==='device' && batteryPct(r)!==null)||null;
   const percent=latestBattery?batteryPct(latestBattery):null;
-  setText('hvHeroBattery',percent===101?'External power':percent!==null && percent>=0 && percent<=100
-    ? `Battery ${Math.round(percent)}%${ageHours(batteryTime(latestBattery))>STALE_AFTER_HOURS?' · stale':''}`
-    : 'Battery —');
+  const batteryParts=[percent===101?'External power':percent!==null&&percent>=0&&percent<=100?Math.round(percent)+'%':null,voltage!==null?voltage.toFixed(3)+' V':null].filter(Boolean);
+  setText('hvHeroBattery',batteryParts.length?'Battery '+batteryParts.join(' · ')+(latestD&&ageHours(batteryTime(latestD))>STALE_AFTER_HOURS?' · stale':''):'Battery —');
 
   if(hv&&home){const a=tempF(hv),b=tempF(home),spread=Math.abs(a-b),warmer=a>=b?STATIONS.hv:STATIONS.home;setText('tempSpread',`${spread.toFixed(1)}°F`);setText('tempSpreadDetail',`${warmer.name} is ${(spread).toFixed(1)}° warmer`);setText('warmestStation',warmer.name);setText('warmestDetail',`${Math.max(a,b).toFixed(1)}°F now`);}
   else {setText('tempSpread','—');setText('tempSpreadDetail','need both current readings');const only=hv?STATIONS.hv:home?STATIONS.home:null;setText('warmestStation',only?only.name:'—');setText('warmestDetail',only?'only station currently reporting':'latest readings');}
