@@ -186,7 +186,9 @@
       const rows=seriesRows(site).sort((a,b)=>Date.parse(b.observed_at)-Date.parse(a.observed_at));
       const latest=rows[0],temperature=rows.find(r=>valueFor(r,'temperature')),voltage=rows.find(r=>valueFor(r,'voltage')),moisture=rows.find(r=>valueFor(r,'moisture'));
       setText('combinedTemp'+site.node,temperature?tempF(temperature).toFixed(1)+' °F':'Temperature —');
-      setText('combinedBattery'+site.node,voltage?batteryV(voltage).toFixed(3)+' V':'Battery —');
+      const device=rows.find(r=>r.telemetry_type==='device'&&(batteryPct(r)!==null||batteryV(r)!==null));
+      const bp=device?batteryPct(device):null,bv=device?batteryV(device):null;
+      setText('combinedBattery'+site.node,'Battery '+[bp===101?'External power':bp!==null?Math.round(bp)+'%':null,bv!==null?bv.toFixed(3)+' V':null].filter(Boolean).join(' · ') || 'Battery —');
       if(site.short !== 'SMLA'){const moistureValue=moisture && valueFor(moisture,'moisture');setText('combinedMoisture'+site.node,moistureValue?Math.round(moistureValue.value)+' '+moistureValue.unit:'Moisture —');}
       setText('combinedAge'+site.node,latest?'Updated '+ageText(latest.observed_at):'Waiting for new readings');
       const el=document.getElementById('combinedState'+site.node),fresh=latest && ageHours(latest.observed_at)<=STALE_AFTER_HOURS;
