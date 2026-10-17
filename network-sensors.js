@@ -96,9 +96,8 @@
   const cardBatteryText = r => {
     if (!r) return 'Battery —';
     const pct = batteryPct(r), volts = batteryV(r);
-    if (pct === 101) return 'External power';
-    if (pct !== null) return 'Battery ' + Math.round(pct) + '%';
-    return volts !== null && volts > 0 ? volts.toFixed(3) + ' V' : 'Battery —';
+    const parts = [pct === 101 ? 'External power' : pct !== null ? Math.round(pct) + '%' : null, volts !== null && volts > 0 ? volts.toFixed(3) + ' V' : null].filter(Boolean);
+    return parts.length ? 'Battery ' + parts.join(' · ') : 'Battery —';
   };
   const addStatus = (el, r, requirementsMet = true) => {
     if (!el) return;
