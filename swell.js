@@ -287,7 +287,8 @@
     const device = swDeviceRows()[0] || null;
     if (device) {
       const p = batteryPct(device), v = batteryV(device);
-      setText('swHeroBattery', p !== null ? `Battery ${Math.round(p)}%` : v !== null ? `${v.toFixed(3)} V` : 'Battery —');
+      const parts=[p===101?'External power':p!==null?Math.round(p)+'%':null,v!==null?v.toFixed(3)+' V':null].filter(Boolean);
+      setText('swHeroBattery',parts.length?'Battery '+parts.join(' · '):'Battery —');
     } else setText('swHeroBattery', 'Battery —');
     fillSwellStats();
     renderSwellBattery();
