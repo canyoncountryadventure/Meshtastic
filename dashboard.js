@@ -120,6 +120,11 @@ function renderSummary(){
   const batteryParts=[percent===101?'External power':percent!==null&&percent>=0&&percent<=100?Math.round(percent)+'%':null,voltage!==null?voltage.toFixed(3)+' V':null].filter(Boolean);
   setText('hvHeroBattery',batteryParts.length?'Battery '+batteryParts.join(' · ')+(latestD&&ageHours(batteryTime(latestD))>STALE_AFTER_HOURS?' · stale':''):'Battery —');
 
+  const homeDevice=stationRows('home').filter(r=>r.telemetry_type==='device'&&(batteryPct(r)!==null||batteryV(r)!==null)).sort((a,b)=>new Date(batteryTime(b))-new Date(batteryTime(a)))[0];
+  const homePct=homeDevice?batteryPct(homeDevice):null,homeVolts=homeDevice?batteryV(homeDevice):null;
+  const homeParts=[homePct===101?'External power':homePct!==null?Math.round(homePct)+'%':null,homeVolts!==null?homeVolts.toFixed(3)+' V':null].filter(Boolean);
+  setText('homeHeroBattery',homeParts.length?'Battery '+homeParts.join(' · '):'Battery —');
+
   if(hv&&home){const a=tempF(hv),b=tempF(home),spread=Math.abs(a-b),warmer=a>=b?STATIONS.hv:STATIONS.home;setText('tempSpread',`${spread.toFixed(1)}°F`);setText('tempSpreadDetail',`${warmer.name} is ${(spread).toFixed(1)}° warmer`);setText('warmestStation',warmer.name);setText('warmestDetail',`${Math.max(a,b).toFixed(1)}°F now`);}
   else {setText('tempSpread','—');setText('tempSpreadDetail','need both current readings');const only=hv?STATIONS.hv:home?STATIONS.home:null;setText('warmestStation',only?only.name:'—');setText('warmestDetail',only?'only station currently reporting':'latest readings');}
   const latests=[['hv',hv],['home',home]].filter(x=>x[1]).sort((a,b)=>new Date(b[1].observed_at)-new Date(a[1].observed_at));
