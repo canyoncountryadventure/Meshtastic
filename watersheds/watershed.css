@@ -7,3 +7,22 @@
 @media(max-width:900px){.quality-readings{grid-template-columns:repeat(3,1fr)}.quality-bottom{grid-template-columns:1fr}.quality-record>.section-title{align-items:flex-start;flex-direction:column}.quality-parameters{justify-content:flex-start}.site-directory{grid-template-columns:1fr}.site-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.program-tabs button{padding:15px 8px;font-size:11px}.quality-controls{grid-template-columns:1fr}.quality-status{flex-direction:column;gap:5px}.quality-readings{grid-template-columns:1fr 1fr}.quality-readings strong{font-size:23px}.quality-chart{height:250px;padding:8px 4px}.quality-chart-head{padding:12px;flex-direction:column;gap:4px}.site-groups{grid-template-columns:1fr}.quality-table td:nth-child(2){min-width:180px}}
 .quality-readings time{display:block;margin-top:8px;color:var(--muted);font-size:9px;font-variant-numeric:tabular-nums}.quality-source{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.35}
+
+
+/* Meshtastic radio delivery metadata in Stream Flow */
+.mesh-route{margin:10px 0 28px;padding:22px;background:#fff;border:1px solid var(--line);border-top:3px solid #285e78;border-radius:3px}
+.mesh-route>.section-title{margin:0 0 14px;align-items:end}
+.route-stamp{margin:0;font-size:11px;color:var(--muted)}
+.route-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.route-stat{min-width:0;padding:13px 14px;background:#f5f8f9;border:1px solid #e3ebed}
+.route-stat span{display:block;font-size:10px;color:var(--muted);margin-bottom:8px}
+.route-stat strong{display:block;font-size:14px;line-height:1.4;overflow-wrap:anywhere;font-weight:650}
+.route-explain{font-size:12px;margin:12px 0;color:var(--ink)}
+.route-history{margin-top:12px;border-top:1px solid var(--line)}
+.route-history summary{cursor:pointer;font-size:12px;font-weight:650;padding:13px 0}
+.route-history .table-scroll{max-height:350px;overflow:auto}
+.route-history table th:nth-child(2),.route-history table td:nth-child(2),.route-history table th:nth-child(4),.route-history table td:nth-child(4){text-align:left}
+.route-history table td:nth-child(4){font-family:Arial,Helvetica,sans-serif;white-space:normal;min-width:135px}
+.route-disclaimer{font-size:11px;line-height:1.6;color:var(--muted);margin:12px 0 0}
+@media(max-width:800px){.route-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mesh-route>.section-title{align-items:flex-start;flex-wrap:wrap}}
+@media(max-width:560px){.mesh-route{padding:15px}.route-grid{gap:7px}.route-stat{padding:11px}.route-stat strong{font-size:12px}}

@@ -151,7 +151,7 @@ async function insertReading(sql, body) {
     VALUES
       (${observedAt}, ${nodeNum}, ${name}, ${type}, ${tempC},
        ${metrics}::jsonb, ${radio}::jsonb, ${raw}::jsonb)
-    RETURNING id, received_at, observed_at, node_num, station_name, telemetry_type, temperature_c, metrics
+    RETURNING id, received_at, observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio
   `;
 
   return rows[0];

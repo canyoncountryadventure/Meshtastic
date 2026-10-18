@@ -16,6 +16,73 @@ const shortDate=ms=>new Date(ms).toLocaleString('en-US',{timeZone:'America/Denve
 const value=(v,d=2)=>v===null?'—':v.toFixed(d);
 const metrics={flow:{label:'Estimated discharge',unit:'cfs',convert:flow,color:'#2c7e70',decimals:2},stage:{label:'Creek stage',unit:'ft',convert:stage,color:'#2c7e70',decimals:2},temp:{label:'Water temperature',unit:'°F',convert:temp,color:'#a26743',decimals:1},battery:{label:'Battery charge',unit:'%',convert:battery,color:'#65759b',decimals:0}};
 function latest(type,convert){return state.latest.find(r=>r.telemetry_type===type&&convert(r)!==null);}
+
+const KNOWN_RELAY_NODES={
+ '!b57d051f':'Hidden Valley',
+ '!742ecff5':'Pack Creek',
+ '!65165646':'Cottonwood Creek',
+ '!9093c167':'Cottonwood Relay',
+ '!a35a4bf4':'Heltec / Moab'
+};
+const htmlSafe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const radio=r=>r?.radio&&typeof r.radio==='object'?r.radio:{};
+function routeHops(r){
+ const x=radio(r),reported=n(x.hops_away??x.hops_used);
+ if(reported!==null&&Number.isInteger(reported)&&reported>=0)return reported;
+ const start=n(x.hop_start),remaining=n(x.hop_limit);
+ return start!==null&&remaining!==null&&start>=remaining&&remaining>=0?start-remaining:null;
+}
+function routeHasData(r){
+ const x=radio(r);return routeHops(r)!==null||n(x.rssi)!==null||n(x.snr)!==null||
+  x.relay_node!==null&&x.relay_node!==undefined||Boolean(x.relay_name||x.relay_id||x.gateway);
+}
+function routeRelay(r){
+ const x=radio(r),h=routeHops(r);
+ if(h===0)return 'Direct (no relay)';
+ if(h===null)return 'Unknown';
+ if(typeof x.relay_name==='string'&&x.relay_name.trim())return x.relay_name.trim()+' (reported)';
+ const full=typeof x.relay_id==='string'?x.relay_id.toLowerCase():null;
+ if(full&&KNOWN_RELAY_NODES[full])return KNOWN_RELAY_NODES[full]+' (full ID)';
+ let last=n(x.relay_node);
+ if(last===null&&typeof x.relay_node==='string'&&/^0x[0-9a-f]{1,2}$/i.test(x.relay_node))last=parseInt(x.relay_node,16);
+ if(last===null||!Number.isInteger(last)||last<0||last>255)return 'Unknown';
+ const suffix=last.toString(16).padStart(2,'0');
+ const matches=Object.entries(KNOWN_RELAY_NODES).filter(([id])=>id.endsWith(suffix));
+ return matches.length===1?matches[0][1]+' (ID suffix only)':'0x'+suffix.toUpperCase()+' (unidentified)';
+}
+function routeGateway(r){
+ const g=radio(r).gateway;
+ if(g===null||g===undefined||!String(g).trim())return 'Not reported';
+ const value=String(g).trim();
+ if(value.toLowerCase()==='!'+Number(r.node_num).toString(16))return 'Not reported';
+ return KNOWN_RELAY_NODES[value.toLowerCase()]||value;
+}
+function routeSignal(r){
+ const x=radio(r),rssi=n(x.rssi),snr=n(x.snr),pieces=[];
+ if(rssi!==null)pieces.push(rssi.toFixed(0)+' dBm');
+ if(snr!==null)pieces.push(snr.toFixed(1)+' dB SNR');
+ return pieces.join(' · ')||'Not reported';
+}
+function renderRoutes(){
+ const packets=state.readings.filter(routeHasData);
+ const newest=[...state.latest,...state.readings].filter(routeHasData).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at))[0];
+ $('routeHopCount').textContent=newest?(routeHops(newest)===null?'Unknown':String(routeHops(newest))):'—';
+ $('routeLastRelay').textContent=newest?routeRelay(newest):'—';
+ $('routeGateway').textContent=newest?routeGateway(newest):'—';
+ $('routeSignal').textContent=newest?routeSignal(newest):'—';
+ $('routePacketTime').textContent=newest?'Packet observed '+date(newest.observed_at):'No radio metadata reported';
+ const count=newest?routeHops(newest):null;
+ $('routeSummary').textContent=!newest?'Route unknown. The gateway has not supplied radio metadata for this station.':
+  count===0?'Latest reported packet reached the receiving gateway directly (0 relay hops).':
+  count===null?'Relay count unavailable for this packet.':
+  'Latest reported packet used '+count+' relay hop'+(count===1?'':'s')+'. Only the last relay identifier may be available.';
+ const cutoff=Date.now()-24*3600000;
+ const recent=packets.filter(r=>new Date(r.observed_at).getTime()>=cutoff).slice(0,12);
+ $('routeRows').innerHTML=recent.map(r=>'<tr><td>'+htmlSafe(date(r.observed_at))+'</td><td>'+htmlSafe(sensorLabel(r))+'</td><td>'+
+  htmlSafe(routeHops(r)??'—')+'</td><td>'+htmlSafe(routeRelay(r))+'</td><td>'+htmlSafe(routeSignal(r))+'</td></tr>').join('')||
+  '<tr><td colspan="5">No route metadata in the last 24 hours.</td></tr>';
+}
+
 function renderConditions(){
  const station=site(),relay=station.kind==='relay',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=water||hs,rated=latest('water_distance',flow),therm=latest(relay?'environment':'mx2001',temp);
  $('stationTitle').textContent=station.name;$('temperatureLabel').textContent=relay?'Air temperature':'Water temperature';$('temperatureColumn').textContent=relay?'Air · °F':'Water · °F';
@@ -35,7 +102,7 @@ function renderConditions(){
 function selectStation(){
  state.readings=state.allReadings.filter(r=>Number(r.node_num)===state.node);state.latest=state.allLatest.filter(r=>Number(r.node_num)===state.node);
  if(site().kind==='relay'&&['flow','stage'].includes(state.metric))state.metric='temp';else if(state.metric==='flow'&&!site().flow)state.metric='stage';
- renderConditions();renderChart();renderRows();
+ renderConditions();renderChart();renderRows();renderRoutes();
 }
 function series(){const m=metrics[state.metric];return (state.metric==='stage'?['water_distance','mx2001']:[state.metric==='battery'?'device':state.metric==='temp'?(site().kind==='relay'?'environment':'mx2001'):'water_distance']).map(type=>({type,color:type==='mx2001'&&state.metric==='stage'?'#b47b4e':m.color,points:state.readings.filter(r=>r.telemetry_type===type&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}));}
 function renderChart(){
@@ -70,6 +137,6 @@ $('refresh').addEventListener('click',load);
 $('stationSelect').addEventListener('change',e=>{state.node=Number(e.target.value);selectStation();});
 document.querySelectorAll('[data-hours]').forEach(b=>b.addEventListener('click',()=>{state.hours=Number(b.dataset.hours);document.querySelectorAll('[data-hours]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));load();}));
 document.querySelectorAll('[data-metric]').forEach(b=>b.addEventListener('click',()=>{state.metric=b.dataset.metric;document.querySelectorAll('[data-metric]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderChart();}));
-$('export').addEventListener('click',()=>{const head=['observed_at_UTC','observed_at_Mountain_Time','station','sensor','stage_ft','estimated_discharge_cfs','rating_status',site().kind==='relay'?'air_temperature_F':'water_temperature_F','battery_percent'];const rows=state.readings.map(r=>[r.observed_at,date(r.observed_at),site().name,r.telemetry_type,stage(r),flow(r),r.discharge_rating_status||'',temp(r),battery(r)]);const csv=[head,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=site().name.toLowerCase().replaceAll(' ','-')+'-'+state.hours+'h.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('export').addEventListener('click',()=>{const head=['observed_at_UTC','observed_at_Mountain_Time','station','sensor','stage_ft','estimated_discharge_cfs','rating_status',site().kind==='relay'?'air_temperature_F':'water_temperature_F','battery_percent','mesh_hops','last_relay','receiving_gateway','rssi_dbm','snr_db'];const rows=state.readings.map(r=>[r.observed_at,date(r.observed_at),site().name,r.telemetry_type,stage(r),flow(r),r.discharge_rating_status||'',temp(r),battery(r),routeHops(r),routeHasData(r)?routeRelay(r):'',routeHasData(r)?routeGateway(r):'',n(radio(r).rssi),n(radio(r).snr)]);const csv=[head,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=site().name.toLowerCase().replaceAll(' ','-')+'-'+state.hours+'h.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 load();
 })();
