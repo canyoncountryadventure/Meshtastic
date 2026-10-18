@@ -5,7 +5,8 @@ import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, store
 import { dispatchEmails, emailConfig } from '../lib/alerts.js';
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
-function signature(value) { return createHmac('sha256',process.env.ALERTS_ADMIN_KEY).update('watershed:' + value).digest('hex'); }
+const ownerKey=()=>process.env.WATERSHED_ALERTS_ADMIN_KEY || process.env.ALERTS_ADMIN_KEY;
+function signature(value) { return createHmac('sha256',ownerKey()).update('watershed:' + value).digest('hex'); }
 function authenticated(req) {
   const prefix='watershed_alerts_session=';
   const cookie=(req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith(prefix))?.slice(prefix.length);
@@ -16,7 +17,7 @@ function authenticated(req) {
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
   if (!['GET','POST'].includes(req.method)) return res.status(405).json({error:'GET or POST required'});
-  if (!process.env.ALERTS_ADMIN_KEY) return res.status(503).json({error:'Owner access has not been configured'});
+  if (!ownerKey()) return res.status(503).json({error:'Owner access has not been configured'});
   if (req.method==='POST' && req.headers.origin) {
     try { if (new URL(req.headers.origin).host!==req.headers.host) return res.status(403).json({error:'Origin rejected'}); }
     catch { return res.status(403).json({error:'Origin rejected'}); }
@@ -24,7 +25,7 @@ export default async function handler(req,res) {
   let body=req.body || {};
   try { if (typeof body==='string') body=JSON.parse(body); } catch { return res.status(400).json({error:'Invalid JSON'}); }
   if (body.action==='login' && req.method==='POST') {
-    if (!equal(body.password || '',process.env.ALERTS_ADMIN_KEY)) return res.status(401).json({error:'Incorrect owner password'});
+    if (!equal(body.password || '',ownerKey())) return res.status(401).json({error:'Incorrect owner password'});
     const expiry=String(Date.now()+8*60*60*1000);
     res.setHeader('Set-Cookie',`watershed_alerts_session=${expiry}.${signature(expiry)}; HttpOnly; Secure; SameSite=Strict; Path=/api/watershed-alerts; Max-Age=28800`);
     return res.status(200).json({ok:true});
