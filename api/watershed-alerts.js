@@ -5,7 +5,7 @@ import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, store
 import { dispatchEmails, emailConfig } from '../lib/alerts.js';
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
-const ownerKey=()=>process.env.WATERSHED_ALERTS_ADMIN_KEY || process.env.ALERTS_ADMIN_KEY;
+const ownerKey=()=>process.env.WATERSHED_OWNER_PASSWORD || process.env.WATERSHED_ALERTS_ADMIN_KEY || process.env.ALERTS_ADMIN_KEY;
 function signature(value) { return createHmac('sha256',ownerKey()).update('watershed:' + value).digest('hex'); }
 function authenticated(req) {
   const prefix='watershed_alerts_session=';
