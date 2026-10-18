@@ -122,7 +122,7 @@ function renderChart(){
  $('chart').querySelectorAll('.chart-dot').forEach(dot=>{const show=()=>{$('chartReadout').textContent=dot.getAttribute('aria-label');};dot.addEventListener('pointerenter',show);dot.addEventListener('focus',show);dot.addEventListener('click',show);});
 }
 function renderRows(){
- $('rows').innerHTML=state.readings.filter(r=>r.telemetry_type==='device'?battery(r)!==null:true).slice(0,12).map(r=>'<tr><td>'+date(r.observed_at)+'</td><td>'+sensorLabel(r)+'</td><td>'+value(stage(r))+'</td><td>'+value(flow(r))+(r.discharge_rating_status?.startsWith('extrapolated')?'*':'')+'</td><td>'+value(temp(r),1)+'</td><td>'+value(battery(r),0)+'</td></tr>').join('')||'<tr><td colspan="6">No observations in the selected period.</td></tr>';
+ $('rows').innerHTML=state.readings.filter(r=>r.telemetry_type!=='device').slice(0,12).map(r=>'<tr><td>'+date(r.observed_at)+'</td><td>'+(r.telemetry_type==='mx2001'?'HOBO MX2001':r.telemetry_type==='environment'?'Air temperature':site().sensor)+'</td><td>'+value(stage(r))+'</td><td>'+value(flow(r))+(r.discharge_rating_status?.startsWith('extrapolated')?'*':'')+'</td><td>'+value(temp(r),1)+'</td></tr>').join('')||'<tr><td colspan="5">No observations in the selected period.</td></tr>';
  $('export').disabled=!state.readings.length;
 }
 async function load(){
@@ -131,7 +131,7 @@ async function load(){
  try{
  const response=await fetch('/api/watershed-readings?hours='+state.hours);if(!response.ok)throw new Error('Request failed');const data=await response.json();if(!data.ok||!Array.isArray(data.readings)||!Array.isArray(data.latest))throw new Error('Invalid response');
  state.allLatest=data.latest.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));state.allReadings=data.readings.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));selectStation();
- }catch{ $('error').textContent='Could not refresh station readings. '+(state.latest.length?'Previously loaded observations remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="6">Observations unavailable.</td></tr>';}}
+ }catch{ $('error').textContent='Could not refresh station readings. '+(state.latest.length?'Previously loaded observations remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="5">Observations unavailable.</td></tr>';}}
  finally{state.busy=false;$('refresh').disabled=false;$('refresh').textContent='↻ Refresh readings';document.querySelectorAll('[data-hours]').forEach(b=>b.disabled=false);}
 }
 $('refresh').addEventListener('click',load);
