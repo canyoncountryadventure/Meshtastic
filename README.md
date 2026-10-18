@@ -32,7 +32,12 @@ Pack Creek telemetry is retired. Its node `!c9f9f6e7` is acknowledged without st
 
 ## Packet path
 
-Field-node measurements → Meshtastic LoRa mesh → Heltec Gateway v4 → HTTPS POST to \`/api/ingest\` → Neon \`telemetry_readings\` → \`/api/readings\` → dashboard. Swell Day MX2001 and SEN0313 readings are kept as separate sensor series. Pack Creek rating records remain available for future use.
+Field-node measurements → Meshtastic LoRa mesh → Heltec Gateway v4 → HTTPS POST to \`/api/ingest\` → Neon, based on the source node number:
+
+- **Pack Creek** (1949224949), **Cottonwood Creek / CC01** (1695962694), and **Cottonwood Relay / CC02** (2425602407) write **only to \`moab_watersheds.creek_observations\`**. This table preserves original raw packets, sensor and radio metadata; the site reads it directly. The main Meshtastic history and station-health APIs use a read-only compatibility view in \`moab_watersheds\` for explicitly requested creek stations.
+- **All other authorized radios** write to **\`neondb.telemetry_readings\`**.
+
+The two databases belong to the same Neon project. There is no telemetry mirroring or background reconciliation. A database CHECK constraint prevents accidentally writing the three watershed nodes into \`neondb.telemetry_readings\`. Watershed-specific alerts, station settings and water-quality results remain in \`moab_watersheds\`. Main alert/rating **configuration** is preserved; it is not a second copy of sensor measurements. Swell Day MX2001 and SEN0313 readings are kept as separate sensor series. Pack Creek rating records remain available for future use.
 
 The Heltec accepts these source packets **only from approved nodes**:
 
