@@ -22,6 +22,13 @@ CREATE TABLE IF NOT EXISTS water_quality_samples (
   dissolved_oxygen_mg_l NUMERIC CHECK (dissolved_oxygen_mg_l IS NULL OR dissolved_oxygen_mg_l >= 0),
   collected_by TEXT,
   notes TEXT,
+  source_provider TEXT,
+  source_station_id TEXT,
+  source_site_name TEXT,
+  source_activity_ids JSONB NOT NULL DEFAULT '[]'::JSONB,
+  source_latitude NUMERIC,
+  source_longitude NUMERIC,
+  sample_depth_m NUMERIC,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(site_id, sampled_at)
