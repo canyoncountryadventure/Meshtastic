@@ -19,6 +19,7 @@ function latest(type,convert){return state.latest.find(r=>r.telemetry_type===typ
 
 const KNOWN_RELAY_NODES={
  '!b57d051f':'Hidden Valley',
+ '!4d594874':'Nuka-Cola',
  '!742ecff5':'Pack Creek',
  '!65165646':'Cottonwood Creek',
  '!9093c167':'Cottonwood Relay',

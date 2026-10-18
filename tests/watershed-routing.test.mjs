@@ -32,7 +32,7 @@ for (const folder of ['','watersheds/']) {
     });
     await new Promise(resolve=>setTimeout(resolve,0));
     assert.equal(element('routeHopCount').textContent,'1');
-    assert.match(element('routeLastRelay').textContent,/0x74.*unidentified/);
+    assert.match(element('routeLastRelay').textContent,/Nuka-Cola.*ID suffix only/);
     assert.doesNotMatch(element('routeLastRelay').textContent,/Hidden Valley/);
     assert.equal(element('routeGateway').textContent,'Heltec Hub');
     assert.match(element('routeRows').innerHTML,/5.5 dB SNR/);
