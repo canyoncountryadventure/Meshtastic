@@ -1,4 +1,6 @@
 import { getSql } from './db.js';
+import { watershedSql } from '../lib/watershed-store.js';
+import { isWatershedNode } from '../lib/watershed-nodes.js';
 import { ensureDatabaseReady, getActiveRatingCurves, getRatingCurvePoints, rateReadings } from './rating-curves.js';
 
 function clampInt(value, fallback, min, max) {
@@ -21,8 +23,10 @@ export default async function handler(req, res) {
   const bucketMinutes = clampInt(params.get('bucket_minutes'), 1, 0, 24 * 60);
 
   try {
-    const sql = getSql();
-    await ensureDatabaseReady(sql);
+    // The dedicated watershed database exposes a compatible read-only view.
+    const watershed = node !== null && isWatershedNode(node);
+    const sql = watershed ? watershedSql() : getSql();
+    if (!watershed) await ensureDatabaseReady(sql);
     let rows;
 
     if (bucketMinutes > 0 && node !== null) {
@@ -86,8 +90,8 @@ export default async function handler(req, res) {
     }
 
     const [curves, curvePoints] = await Promise.all([
-      getActiveRatingCurves(sql, node),
-      getRatingCurvePoints(sql, node),
+      getActiveRatingCurves(watershed ? getSql() : sql, node),
+      getRatingCurvePoints(watershed ? getSql() : sql, node),
     ]);
     rows = rateReadings(rows, curves);
 

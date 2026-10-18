@@ -1,4 +1,6 @@
 import { getSql } from './db.js';
+import { watershedSql } from '../lib/watershed-store.js';
+import { isWatershedNode } from '../lib/watershed-nodes.js';
 import {
   calculateDischarge,
   ensureDatabaseReady,
@@ -130,8 +132,10 @@ export default async function handler(req, res) {
     if (!configs.length) return res.status(404).json({ ok: false, error: 'Unknown station' });
 
     const results = [];
+    const creekSql = configs.some(s=>isWatershedNode(s.node)) ? watershedSql() : null;
     for (const station of configs) {
-      const environmentRows = await sql`
+      const stationSql = isWatershedNode(station.node) ? creekSql : sql;
+      const environmentRows = await stationSql`
         SELECT id, observed_at, received_at, temperature_c, metrics, radio
         FROM telemetry_readings
         WHERE node_num=${station.node}
@@ -147,7 +151,7 @@ export default async function handler(req, res) {
 
       let device = null;
       if (station.battery) {
-        const deviceRows = await sql`
+        const deviceRows = await stationSql`
           SELECT id, observed_at, received_at, metrics, radio
           FROM telemetry_readings
           WHERE node_num=${station.node}
@@ -161,7 +165,7 @@ export default async function handler(req, res) {
 
       let stage = null;
       if (station.stage) {
-        const stageRows = await sql`
+        const stageRows = await stationSql`
           SELECT observed_at, telemetry_type, metrics
           FROM telemetry_readings
           WHERE node_num=${station.node}

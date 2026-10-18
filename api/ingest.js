@@ -1,5 +1,6 @@
 import { getSql } from './db.js';
-import { mirrorCreekReadings } from '../lib/watershed-store.js';
+import { watershedSql, insertDirectCreekReading, processWatershedAlerts } from '../lib/watershed-store.js';
+import { isWatershedNode } from '../lib/watershed-nodes.js';
 import { ensureDatabaseReady } from './rating-curves.js';
 import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
 
@@ -191,26 +192,47 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, stored: 0, paused: paused.length, paused_nodes: paused });
     }
 
-    const sql = getSql();
-    await ensureDatabaseReady(sql);
+    // Route creek/relay readings directly into moab_watersheds. Never store them
+    // in neondb, including during mixed-node gateway batches.
+    const hasMain = activeBodies.some(body => !isWatershedNode(nodeNumber(body)));
+    const hasWatershed = activeBodies.some(body => isWatershedNode(nodeNumber(body)));
+    const sql = hasMain ? getSql() : null;
+    const creekSql = hasWatershed ? watershedSql() : null;
+    if (sql) await ensureDatabaseReady(sql);
     const readings = [];
+    const creekReadings = [];
     for (const body of activeBodies) {
-      readings.push(await insertReading(sql, body));
+      if (isWatershedNode(nodeNumber(body))) {
+        const node_num=nodeNumber(body);
+        const reading=await insertDirectCreekReading(creekSql,{
+          node_num,station_name:KNOWN_STATIONS.get(node_num),
+          observed_at:observedIso(body),telemetry_type:telemetryType(body),
+          temperature_c:temperatureC(body),metrics:body.payload,
+          radio:radioObject(body),raw:body,
+        });
+        readings.push(reading);
+        creekReadings.push(reading);
+      } else {
+        readings.push(await insertReading(sql, body));
+      }
     }
 
-    // Only registered creek stations are mirrored into the separate database.
-    // A failed mirror is repaired by the watershed reconciliation cursor.
-    try { await mirrorCreekReadings(readings,sql); }
-    catch (error) { console.error('Watershed mirror failed', error.name); }
-
-    // Alert failures must never reject successfully stored station telemetry.
+    // Alert failures must not reject a successfully stored measurement.
+    // The primary alert engine still processes previously configured Pack Creek
+    // thresholds, but never inserts Pack Creek telemetry into neondb.
     let alerts;
+    let alertSql = sql;
     try {
-      await evaluateReadings(sql, readings);
-      alerts = await dispatchEmails(sql);
+      alertSql = alertSql || getSql();
+      await evaluateReadings(alertSql, readings);
+      alerts = await dispatchEmails(alertSql);
     } catch (error) {
       console.error('Alert processing failed', error.name);
       alerts = { processing: 'failed' };
+    }
+    if (creekReadings.length) {
+      try { await processWatershedAlerts(creekSql,creekReadings,alertSql); }
+      catch(error) { console.error('Watershed alert processing failed',error.name); }
     }
 
     return res.status(201).json({
