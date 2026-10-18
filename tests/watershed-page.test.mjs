@@ -1,8 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
 test('water quality is a separate top-level program with the requested parameters and sites',()=>{
- const html=fs.readFileSync(new URL('../watershed.html',import.meta.url),'utf8');const migration=fs.readFileSync(new URL('../migrations/20261017_water_quality.sql',import.meta.url),'utf8');
- assert.match(html,/role="tab"[^>]*>Stream flow</);assert.match(html,/role="tab"[^>]*>Water quality</);assert.match(html,/data-quality-metric="e_coli_mpn_100ml"/);assert.match(html,/data-quality-metric="dissolved_oxygen_mg_l"/);
- assert.match(migration,/CREATE TABLE IF NOT EXISTS water_quality_samples/);assert.match(migration,/Pack Creek above confluence with Mill Creek/);assert.match(migration,/San Juan River at Mexican Hat/);assert.equal((migration.match(/^  \('[A-Z0-9-]+'/gm)||[]).length,18);
+ const html=fs.readFileSync(new URL('../watershed.html',import.meta.url),'utf8');const js=fs.readFileSync(new URL('../water-quality.js',import.meta.url),'utf8');const base=fs.readFileSync(new URL('../migrations/20261017_water_quality.sql',import.meta.url),'utf8');const workbook=fs.readFileSync(new URL('../migrations/20261018_water_quality_workbook.sql',import.meta.url),'utf8');
+ assert.match(html,/role="tab"[^>]*>Stream flow</);assert.match(html,/role="tab"[^>]*>Water quality</);assert.match(html,/id="qualityMetricSelect"/);assert.match(html,/id="qualityMap"/);assert.match(js,/openstreetmap\.org/);
+ assert.match(base,/CREATE TABLE IF NOT EXISTS water_quality_samples/);assert.match(workbook,/CREATE TABLE IF NOT EXISTS water_quality_records/);assert.match(workbook,/\('uranium_238','Uranium-238'/);assert.match(workbook,/\('total_phosphorus','Total phosphorus'/);assert.match(workbook,/Mill Creek above Sheley Tunnel/);assert.match(workbook,/San Juan River at Mexican Hat/);assert.equal((workbook.match(/^  \('[A-Z0-9-]+','\d{7}'/gm)||[]).length,45);
 });
 test('station selection keeps relay air temperature separate from creek water measurements',async()=>{
  const nodes=new Map(),buttons=['flow','stage','temp','battery'].map(metric=>({dataset:{metric},setAttribute(){},addEventListener(event,fn){this[event]=fn;},hidden:false}));

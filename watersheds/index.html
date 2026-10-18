@@ -4,9 +4,11 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#173f3a"><meta name="description" content="Pack Creek and Cottonwood Creek stage and water temperature, with Cottonwood Relay air temperature.">
 <title>Moab Watersheds · Monitoring</title>
-<link rel="stylesheet" href="/watershed.css?v=20261017-mesh-routes">
-<script src="/watershed.js?v=20261017-mesh-routes" defer></script>
-<script src="/water-quality.js?v=20261017-quality" defer></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynhMZqKjuH+8CAonJodvOH9NQZ8=" crossorigin="">
+<link rel="stylesheet" href="/watershed.css?v=20261018-workbook">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+<script src="/watershed.js?v=20261018-workbook" defer></script>
+<script src="/water-quality.js?v=20261018-workbook" defer></script>
 </head>
 <body>
 <header class="masthead"><a class="brand" href="/watershed"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="m5 23 11-15 9 12 6-8 8 11M4 30c8-6 14 6 22 0s10-1 14-1M4 37c8-6 14 6 22 0s10-1 14-1"/></svg><span>MOAB<span>WATERSHEDS</span></span></a><nav aria-label="Main navigation"><a href="/notifications">Email notifications</a></nav><span class="network-label">STREAM MONITORING</span></header>
@@ -46,12 +48,12 @@
 <section id="about" class="about"><h2>Methods</h2><div><p>Stage is measured by ultrasonic or HOBO pressure sensors. Pack Creek discharge is calculated from its station rating curve. Cottonwood Creek has no discharge rating curve yet. Estimates outside the measured rating range are identified as extrapolated.</p><p>The HOBO MX2001 measures water temperature and pressure-based stage. Cottonwood Relay reports air temperature when temperature telemetry is available. Sensor records are independent. Times are shown in Mountain Time; CSV files also include UTC.</p><p>Chart lines are interrupted when observations are more than three hours apart.</p></div></section>
 </main>
 <main id="qualityPanel" role="tabpanel" aria-labelledby="qualityTab" hidden>
-<section class="hero quality-hero"><p class="eyebrow">Monthly grab samples · Southeastern Utah</p><h1>Water quality</h1><p class="intro">Field and laboratory results from 18 established sampling locations across six drainages.</p></section>
+<section class="hero quality-hero"><p class="eyebrow">Field and laboratory record · Southeastern Utah</p><h1>Water quality</h1><p class="intro">Historical and current results from 45 established monitoring locations.</p></section>
 <section class="quality-overview">
 <div class="section-title"><div><p class="eyebrow">Sample record</p><h2 id="qualitySiteTitle">Select a monitoring location</h2></div><button id="qualityRefresh" type="button">↻ Refresh samples</button></div>
 <div class="quality-controls"><label>Drainage<select id="drainageSelect"><option value="all">All drainages</option></select></label><label>Location<select id="qualitySiteSelect"><option value="all">All locations</option></select></label></div>
 <div id="qualityError" class="error" role="alert" hidden></div>
-<div class="quality-status"><span id="qualityStatus" role="status">Loading water-quality record…</span><span>Typical frequency · monthly</span></div>
+<div class="quality-status"><span id="qualityStatus" role="status">Loading water-quality record…</span><span>Records · 1975–present</span></div>
 <div class="quality-readings" aria-label="Latest water-quality results">
 <article><p>E. coli</p><strong id="qualityEcoli">—</strong><span>MPN / 100 mL</span><time id="qualityEcoliTime">No result</time></article>
 <article><p>Water temperature</p><strong id="qualityTemp">—</strong><span>°C</span><time id="qualityTempTime">No result</time></article>
@@ -60,13 +62,14 @@
 <article><p>Dissolved oxygen</p><strong id="qualityDo">—</strong><span>mg / L</span><time id="qualityDoTime">No result</time></article>
 </div>
 </section>
+<section class="quality-map-section"><div class="section-title"><div><p class="eyebrow">Monitoring network</p><h2>Station map</h2></div><span id="qualityMapCount">Loading locations</span></div><div id="qualityMap" class="quality-map" aria-label="Map of water-quality monitoring locations"></div><p class="map-note">Street map · select a point to open that station. © OpenStreetMap contributors.</p></section>
 <section class="quality-record">
-<div class="section-title"><div><p class="eyebrow">Time series</p><h2>Monthly results</h2></div><div class="quality-parameters" role="group" aria-label="Water-quality parameter"><button data-quality-metric="e_coli_mpn_100ml" type="button" aria-pressed="true">E. coli</button><button data-quality-metric="water_temperature_c" type="button" aria-pressed="false">Temperature</button><button data-quality-metric="specific_conductivity_us_cm" type="button" aria-pressed="false">Conductivity</button><button data-quality-metric="ph" type="button" aria-pressed="false">pH</button><button data-quality-metric="dissolved_oxygen_mg_l" type="button" aria-pressed="false">Dissolved oxygen</button></div></div>
+<div class="section-title"><div><p class="eyebrow">Time series</p><h2>Parameter history</h2></div><label class="quality-metric-select">Parameter<select id="qualityMetricSelect"><option value="e_coli_mpn_100ml">E. coli</option></select></label></div>
 <div class="quality-chart-panel"><div class="quality-chart-head"><span id="qualityChartLabel">E. coli · MPN / 100 mL</span><span id="qualitySampleCount">No samples loaded</span></div><div id="qualityChart" class="quality-chart"><div class="empty">No water-quality samples recorded yet.</div></div></div>
-<div class="quality-bottom"><div class="panel"><div class="panel-heading"><h3>Sampling history</h3><button id="qualityExport" type="button" disabled>Download CSV ↓</button></div><p class="muted">Results are shown in scientific reporting units. A dash means the parameter was not reported for that sampling event.</p><div class="table-scroll"><table class="quality-table"><thead><tr><th>Sampled · MT</th><th>Location</th><th>E. coli<br>MPN/100 mL</th><th>Temp<br>°C</th><th>Conductivity<br>µS/cm</th><th>pH</th><th>DO<br>mg/L</th></tr></thead><tbody id="qualityRows"><tr><td colspan="7">No samples recorded.</td></tr></tbody></table></div></div><aside class="station-note"><h3>Parameters</h3><dl><dt>E. coli</dt><dd>Most probable number per 100 milliliters.</dd><dt>Specific conductivity</dt><dd>Microsiemens per centimeter.</dd><dt>Dissolved oxygen</dt><dd>Milligrams per liter.</dd><dt>Temperature and pH</dt><dd>Field measurements reported in °C and standard units.</dd></dl></aside></div>
+<div class="quality-bottom"><div class="panel"><div class="panel-heading"><h3>Reported results</h3><button id="qualityExport" type="button" disabled>Download CSV ↓</button></div><p class="muted">The table follows the selected parameter. Laboratory columns without units in the source workbook are labeled “unit not supplied.”</p><div class="table-scroll"><table class="quality-table"><thead><tr><th>Sampled · MST</th><th>Location</th><th>Value</th><th>Unit</th><th>Trip ID</th></tr></thead><tbody id="qualityRows"><tr><td colspan="5">No results recorded.</td></tr></tbody></table></div></div><aside class="station-note"><h3>Parameter groups</h3><dl id="qualityParameterGroups"><dt>Loading</dt><dd>Parameter catalog…</dd></dl></aside></div>
 </section>
 <section class="site-directory"><div><p class="eyebrow">Monitoring network</p><h2>Sampling locations</h2></div><div id="qualitySiteDirectory" class="site-groups"></div></section>
-<section class="about"><h2>Methods</h2><div><p>Water-quality samples are stored separately from continuous stream-stage telemetry. Each row represents one sampling event at one established location.</p><p>Historical results are from Utah DWQ through WQX and the Water Quality Portal. Concurrent E. coli laboratory replicates are reported as a geometric mean. Censored results retain their reported qualifier. Ken’s Lake field values use the shallowest explicitly reported profile depth; its E. coli results are from the separate South Beach station.</p></div></section>
+<section class="about"><h2>Methods</h2><div><p>Stations are matched by MLID first, then by a cleaned station name when the workbook has no valid MLID. The original source name, trip ID, notes and workbook row are retained with each record.</p><p>Values and reported precision are preserved from the Southeast Utah workbook. Field units are stated where defined by the workbook columns. The workbook does not provide units for laboratory chemistry and radiological columns, so the site does not invent them.</p></div></section>
 </main>
 <footer><a class="footer-name" href="/watershed">MOAB WATERSHEDS</a><span>Stream flow · Water quality</span><span>Surface-water monitoring</span></footer>
 </body></html>
