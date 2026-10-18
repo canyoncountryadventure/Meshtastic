@@ -45,8 +45,42 @@ export async function reconcileCreekReadings(sourceSql,targetSql){
 }
 export async function readCreekData(sql,hours){
  const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled ORDER BY station_name`;
- const readings=await sql`SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,o.telemetry_type,o.temperature_c,o.metrics,o.radio FROM creek_observations o JOIN creek_stations s USING(node_num) WHERE s.enabled AND o.observed_at>=NOW()-(${hours}*INTERVAL '1 hour') ORDER BY o.observed_at DESC LIMIT 10000`;
- const latest=await sql`SELECT DISTINCT ON(o.node_num,o.telemetry_type) o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,o.telemetry_type,o.temperature_c,o.metrics,o.radio FROM creek_observations o JOIN creek_stations s USING(node_num) WHERE s.enabled ORDER BY o.node_num,o.telemetry_type,o.observed_at DESC`;
+ const bucketSeconds=hours>=8760?86400:hours>=2160?21600:0;
+ // Long views select real samples from time buckets, never synthetic values.
+ const readings=bucketSeconds
+  ? await sql`WITH bucketed AS (
+    SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,o.telemetry_type,o.temperature_c,o.metrics,o.radio,
+      ROW_NUMBER() OVER (PARTITION BY o.node_num,o.telemetry_type,FLOOR(EXTRACT(EPOCH FROM o.observed_at)/${bucketSeconds}::numeric)
+        ORDER BY o.observed_at DESC,o.source_id DESC) AS bucket_rank
+    FROM creek_observations o JOIN creek_stations s USING(node_num)
+    WHERE s.enabled AND o.observed_at >= NOW()-(${hours}*INTERVAL '1 hour'))
+    SELECT id,node_num,station_name,observed_at,received_at,telemetry_type,temperature_c,metrics,radio
+    FROM bucketed WHERE bucket_rank=1 ORDER BY observed_at DESC LIMIT 12000`
+  : await sql`SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
+       o.telemetry_type,o.temperature_c,o.metrics,o.radio
+     FROM creek_observations o JOIN creek_stations s USING(node_num)
+     WHERE s.enabled AND o.observed_at>=NOW()-(${hours}*INTERVAL '1 hour')
+     ORDER BY o.observed_at DESC LIMIT 25000`;
+ const latest=await sql`SELECT DISTINCT ON(o.node_num,o.telemetry_type)
+       o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
+       o.telemetry_type,o.temperature_c,o.metrics,o.radio
+     FROM creek_observations o JOIN creek_stations s USING(node_num)
+     WHERE s.enabled ORDER BY o.node_num,o.telemetry_type,o.observed_at DESC`;
+ // Raw 24-hour observations keep trend calculations and relay history precise
+ // even when the long-range graph is sampled daily.
+ const recent=await sql`SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
+       o.telemetry_type,o.temperature_c,o.metrics,o.radio
+     FROM creek_observations o JOIN creek_stations s USING(node_num)
+     WHERE s.enabled AND o.observed_at>=NOW()-INTERVAL '24 hours'
+     ORDER BY o.observed_at DESC LIMIT 1500`;
  const curves=stations.map(s=>s.rating_curve).filter(Boolean);
- return {stations:stations.map(({rating_curve,...s})=>s),readings:rateReadings(readings,curves),latest:rateReadings(latest,curves)};
+ const publicStations=stations.map(({rating_curve,...station})=>({
+   ...station,rating_curve:rating_curve?.active===true?{
+     coefficient_a:rating_curve.coefficient_a,stage_offset_ft:rating_curve.stage_offset_ft,
+     exponent_b:rating_curve.exponent_b,curve_version:rating_curve.curve_version,
+     valid_stage_min_ft:rating_curve.valid_stage_min_ft,valid_stage_max_ft:rating_curve.valid_stage_max_ft
+   }:null
+ }));
+ return {stations:publicStations,readings:rateReadings(readings,curves),latest:rateReadings(latest,curves),
+   recent:rateReadings(recent,curves),sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
 }

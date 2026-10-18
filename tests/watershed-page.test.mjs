@@ -28,6 +28,6 @@ test('station selection keeps relay air temperature separate from creek water me
   const chart=element('chart').innerHTML;
   assert.match(chart,/Battery charge in %/);assert.match(chart,new RegExp((60+i)+' % · Device battery'));
   assert(!chart.includes('101 %'));assert(!chart.includes('NaN'));
-  assert.match(element('sampleCount').textContent,/^1 observations/);
+  assert.match(element('sampleCount').textContent,/^1 observation/);
  }
 });
