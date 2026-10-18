@@ -27,7 +27,7 @@ test('watershed authentication uses a separate cookie and signature',async()=>{
 });
 test('standalone alerts proxy blocks foreign origins and forwards only its session cookie',async()=>{
  const realFetch=globalThis.fetch;let called=false;
- globalThis.fetch=async(url,options)=>{called=true;assert.equal(url,'https://meshtastic-ecru.vercel.app/api/watershed-alerts');assert.equal(options.headers.Cookie,'watershed_alerts_session=own');return {status:200,headers:{get:()=>null},json:async()=>({ok:true})};};
+ globalThis.fetch=async(url,options)=>{called=true;assert.equal(url,'https://meshtastic-ecru.vercel.app/api/watershed-alerts?v=2');assert.equal(options.cache,'no-store');assert.equal(options.headers.Cookie,'watershed_alerts_session=own');return {status:200,headers:{get:()=>null},json:async()=>({ok:true})};};
  try{
   const blocked=response();await proxy({method:'POST',headers:{host:'seutahwatersheds.vercel.app',origin:'https://other.example'},body:{}},blocked);assert.equal(blocked.statusCode,403);assert.equal(called,false);
   const good=response();await proxy({method:'GET',headers:{cookie:'alerts_session=other; watershed_alerts_session=own'}},good);assert.equal(good.statusCode,200);assert.equal(called,true);
