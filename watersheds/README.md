@@ -19,3 +19,5 @@ The /notifications page manages only Moab Watersheds rules, recipients and email
 Apply migrations/20261015_watershed_stations_alerts.sql to moab_watersheds before deploying this revision. Refresh standalone source with node tools/prepare-watersheds.mjs.
 
 Battery percentage alerts use device telemetry (0–100%). Apply `migrations/20261015_watershed_battery.sql` to the dedicated database. The recovery value is the reading that must be passed before the next threshold crossing can send another alert.
+
+The Water quality tab stores monthly grab samples in the same dedicated `moab_watersheds` database, but in separate `water_quality_sites` and `water_quality_samples` tables. Apply `migrations/20261017_water_quality.sql` before deployment. Five reported parameters are supported: E. coli, water temperature, specific conductivity, pH, and dissolved oxygen.
