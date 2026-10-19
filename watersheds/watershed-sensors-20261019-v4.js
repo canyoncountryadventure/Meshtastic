@@ -4,7 +4,7 @@ const DASHBOARD_BUILD = '20261019-sensors-v4';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'Cottonwood Creek',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',kind:'relay',sensor:'Air temperature sensor',flow:false}};
 const site=()=>SITES[state.node];
-const state={node:1949224949,hours:24,metric:'flow',readings:[],latest:[],recent:[],allRecent:[],allReadings:[],allLatest:[],stationInfo:[],sampleIntervalHours:null,busy:false};
+const state={node:1949224949,hours:12,metric:'flow',readings:[],latest:[],recent:[],allRecent:[],allReadings:[],allLatest:[],stationInfo:[],sampleIntervalHours:null,busy:false};
 const n=value=>value===null||value===undefined||value===''?null:Number.isFinite(Number(value))?Number(value):null;
 const valid=r=>Object.hasOwn(SITES,Number(r.node_num))&&(r.telemetry_type==='device'||(Number(r.node_num)===2425602407?r.telemetry_type==='environment':['water_distance','mx2001'].includes(r.telemetry_type)));
 const stage=r=>r?.metrics?.stage_calibrated===false||r?.metrics?.distance_valid===false?null:n(r?.metrics?.water_level_ft);
