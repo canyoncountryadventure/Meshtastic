@@ -140,6 +140,30 @@ function renderTrends(){
  setTrend('tempTrend',shortTrend(site().kind==='relay'?'environment':'mx2001',temp,6,2,3,0.5,0),'°F');
 }
 
+// Reconcile older HTML still open/cached in a browser with the current JS.
+// Never fail an entire station refresh because a newer presentational ID
+// was absent from the already-open page.
+function ensureMeasurementMarkup(){
+ const stageCard=$('stageCard');
+ if(!$('stageLabel')&&stageCard){
+  const heading=stageCard.querySelector('.eyebrow');
+  if(heading)heading.id='stageLabel';
+ }
+ if(!$('hoboStageCard')&&stageCard){
+  const card=document.createElement('article');
+  card.className='reading';
+  card.id='hoboStageCard';
+  card.hidden=true;
+  card.innerHTML='<p class="eyebrow">HOBO MX2001 stage</p><div class="number"><strong id="hoboStageCurrent">—</strong><span>ft</span></div><p id="hoboStageTime" class="timestamp">Waiting for HOBO stage</p><div class="reading-foot">Independent pressure-based stage · HOBO MX2001</div>';
+  stageCard.insertAdjacentElement('afterend',card);
+ }
+ const table=$('rows')?.closest('table');
+ if(table){
+  table.classList.add('measurement-table');
+  const header=table.querySelector('thead tr');
+  if(header&&!header.id)header.id='measurementHead';
+ }
+}
 function renderConditions(){
  const station=site(),relay=station.kind==='relay',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=state.node===1695962694?water:(water||hs),rated=latest('water_distance',flow),therm=latest(relay?'environment':'mx2001',temp);
  $('stationTitle').textContent=station.name;$('temperatureLabel').textContent=relay?'Air temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
@@ -158,6 +182,7 @@ function renderConditions(){
  metrics.temp.label=relay?'Air temperature':'Water temperature';
 }
 function selectStation(){
+ ensureMeasurementMarkup();
  state.readings=state.allReadings.filter(r=>Number(r.node_num)===state.node);state.latest=state.allLatest.filter(r=>Number(r.node_num)===state.node);state.recent=state.allRecent.filter(r=>Number(r.node_num)===state.node);
  if(site().kind==='relay'&&['flow','stage'].includes(state.metric))state.metric='temp';else if(state.metric==='flow'&&!site().flow)state.metric='stage';
  renderConditions();renderChart();showRatingEquation();renderRows();renderRoutes();
@@ -244,7 +269,7 @@ async function load(){
  state.allLatest=data.latest.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));state.allReadings=data.readings.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));
  state.allRecent=Array.isArray(data.recent)?data.recent.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)):[];
  state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.sampleIntervalHours=n(data.sample_interval_hours);selectStation();
- }catch{ $('error').textContent='Could not refresh station readings. '+(state.latest.length?'Previously loaded observations remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="'+recentColumns().length+'">Observations unavailable.</td></tr>';}}
+ }catch(error){ console.error('Watershed data or rendering error:',error);$('error').textContent='Could not refresh station readings. '+(state.latest.length?'Some earlier data may remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="'+recentColumns().length+'">Observations unavailable.</td></tr>';}}
  finally{state.busy=false;$('refresh').disabled=false;$('refresh').textContent='↻ Refresh readings';document.querySelectorAll('[data-hours]').forEach(b=>b.disabled=false);}
 }
 $('refresh').addEventListener('click',load);
