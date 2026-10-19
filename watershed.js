@@ -141,7 +141,7 @@ function renderTrends(){
 }
 
 function renderConditions(){
- const station=site(),relay=station.kind==='relay',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=water||hs,rated=latest('water_distance',flow),therm=latest(relay?'environment':'mx2001',temp);
+ const station=site(),relay=station.kind==='relay',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=state.node===1695962694?water:(water||hs),rated=latest('water_distance',flow),therm=latest(relay?'environment':'mx2001',temp);
  $('stationTitle').textContent=station.name;$('temperatureLabel').textContent=relay?'Air temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
  $('readingCards').className='readings '+(relay?'relay':station.flow?'':'creek')+(state.node===1695962694?' cottonwood':'');$('flowCard').hidden=!station.flow;$('stageCard').hidden=relay;$('hoboStageCard').hidden=state.node!==1695962694;
  $('stage').textContent=value(level?stage(level):null,level?.telemetry_type==='water_distance'?3:2);$('hoboStageCurrent').textContent=value(hs?stage(hs):null,2);$('flow').textContent=value(rated?flow(rated):null);$('temp').textContent=value(therm?temp(therm):null,1);
@@ -244,7 +244,7 @@ async function load(){
  state.allLatest=data.latest.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));state.allReadings=data.readings.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));
  state.allRecent=Array.isArray(data.recent)?data.recent.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)):[];
  state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.sampleIntervalHours=n(data.sample_interval_hours);selectStation();
- }catch{ $('error').textContent='Could not refresh station readings. '+(state.latest.length?'Previously loaded observations remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="6">Observations unavailable.</td></tr>';}}
+ }catch{ $('error').textContent='Could not refresh station readings. '+(state.latest.length?'Previously loaded observations remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="'+recentColumns().length+'">Observations unavailable.</td></tr>';}}
  finally{state.busy=false;$('refresh').disabled=false;$('refresh').textContent='↻ Refresh readings';document.querySelectorAll('[data-hours]').forEach(b=>b.disabled=false);}
 }
 $('refresh').addEventListener('click',load);
@@ -254,7 +254,7 @@ document.querySelectorAll('[data-metric]').forEach(b=>b.addEventListener('click'
 $('export').addEventListener('click',()=>{
  const headers=['observed_at_UTC','observed_at_Mountain_Time','station','sensor','stage_ft','ultrasonic_stage_ft','hobo_stage_ft','estimated_discharge_cfs','rating_status',site().kind==='relay'?'air_temperature_F':'water_temperature_F','battery_percent','mesh_hops','last_relay','receiving_gateway','rssi_dbm','snr_db','transmission_source'];
  const rows=state.readings.map(r=>[r.observed_at,date(r.observed_at),site().name,r.telemetry_type,stage(r),r.telemetry_type==='water_distance'?stage(r):null,r.telemetry_type==='mx2001'?stage(r):null,flow(r),r.discharge_rating_status||'',temp(r),battery(r),routeHops(r),routeHasData(r)?routeRelay(r):'',routeHasData(r)?routeGateway(r):'',n(radio(r).rssi),n(radio(r).snr),transmissionLabel(r)||'']);
- const csv=[headers,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\\r\\n');
+ const csv=[headers,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');
  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=site().name.toLowerCase().replaceAll(' ','-')+'-'+state.hours+'h.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 load();
