@@ -54,3 +54,24 @@
 .rating-range{font-size:11px;color:#496d65}
 @media(max-width:760px){.record .range{justify-content:flex-start}.rating-formula{font-size:19px}}
 @media(max-width:560px){.rating-equation{margin:0 12px 12px;padding:12px}.gap-legend{font-size:10px}.trend-indicator{margin:-5px 0 12px}}
+
+
+/* Sensor-specific recent readings: keep table wider than its old two-column
+   sidebar slot, and make stage/temperature source labels unambiguous. */
+.record-bottom{grid-template-columns:minmax(0,1fr)}
+.record-bottom>.panel,.record-bottom>.station-note{min-width:0}
+.measurement-table{width:100%;min-width:660px;border-collapse:collapse;table-layout:auto}
+.measurement-table th{white-space:normal;line-height:1.35;vertical-align:bottom;font-size:11px}
+.measurement-table td{vertical-align:middle;font-size:12px;white-space:nowrap}
+.measurement-table th,.measurement-table td{padding:12px 11px}
+.measurement-table th:first-child,.measurement-table td:first-child,
+.measurement-table th:nth-child(2),.measurement-table td:nth-child(2),
+.measurement-table .measurement-source{text-align:left}
+.measurement-table .measurement-time{color:#475b69}
+.measurement-table .measurement-sensor{font-family:Arial,Helvetica,sans-serif;font-weight:600}
+.measurement-table .measurement-source{font-family:Arial,Helvetica,sans-serif;color:#365e6c}
+.measurement-table .measurement-value{font-weight:600;font-variant-numeric:tabular-nums}
+.measurement-table tbody tr:hover{background:#f7fafb}
+.readings.creek.cottonwood{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.readings.creek.cottonwood{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.readings.creek.cottonwood{grid-template-columns:1fr}.measurement-table{min-width:650px}}
