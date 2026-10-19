@@ -75,3 +75,13 @@
 .readings.creek.cottonwood{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:900px){.readings.creek.cottonwood{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.readings.creek.cottonwood{grid-template-columns:1fr}.measurement-table{min-width:650px}}
+
+/* Diagnostic 9: radio battery telemetry visible beside independent sensor readings. */
+.reading.battery{border-top-color:#65759b}
+.battery-voltage{margin:1px 0 4px;color:#445b73;font-size:14px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums}
+.battery-voltage strong{font-weight:600}
+.readings.relay{grid-template-columns:repeat(2,minmax(0,1fr))}
+.readings.creek.cottonwood{grid-template-columns:repeat(4,minmax(0,1fr))}
+.measurement-table{min-width:850px}
+@media(max-width:900px){.readings.creek.cottonwood{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.readings.relay,.readings.creek.cottonwood{grid-template-columns:1fr}.measurement-table{min-width:800px}}
