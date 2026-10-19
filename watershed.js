@@ -10,6 +10,16 @@ const stage=r=>r?.metrics?.stage_calibrated===false||r?.metrics?.distance_valid=
 const temp=r=>['mx2001','environment'].includes(r?.telemetry_type)&&n(r.temperature_c)!==null?n(r.temperature_c)*9/5+32:null;
 const battery=r=>{const v=n(r?.metrics?.battery_level??r?.metrics?.battery_percent??r?.metrics?.battery_pct);return r?.telemetry_type==='device'&&v!==null&&v>=0&&v<=100?v:null;};
 const sensorLabel=r=>r.telemetry_type==='device'?'Device battery':r.telemetry_type==='mx2001'?'HOBO MX2001':r.telemetry_type==='environment'?'Air temperature':site().sensor;
+// CC01 Heltec V6 explicitly marks parsed DM replies. Existing unmarked MX/DS
+// sensor packets are the automatic route; do not infer provenance by arrival time.
+function transmissionLabel(r){
+ if(Number(r?.node_num)!==1695962694||!['water_distance','mx2001'].includes(r?.telemetry_type))return null;
+ const source=r?.metrics?.source;
+ if(source==='heltec_dm')return 'Heltec DM';
+ if(source===undefined||source===null||source==='')return 'Auto TX';
+ return 'Unknown';
+}
+const transmissionDetail=r=>transmissionLabel(r)?' · '+transmissionLabel(r):'';
 const flow=r=>stage(r)!==null?n(r?.discharge_cfs):null;
 const date=iso=>new Date(iso).toLocaleString('en-US',{timeZone:'America/Denver',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
 const shortDate=ms=>new Date(ms).toLocaleString('en-US',{timeZone:'America/Denver',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
@@ -79,7 +89,7 @@ function renderRoutes(){
   'Latest reported packet used '+count+' relay hop'+(count===1?'':'s')+'. Only the last relay identifier may be available.';
  const cutoff=Date.now()-24*3600000;
  const recent=packets.filter(r=>new Date(r.observed_at).getTime()>=cutoff).slice(0,12);
- $('routeRows').innerHTML=recent.map(r=>'<tr><td>'+htmlSafe(date(r.observed_at))+'</td><td>'+htmlSafe(sensorLabel(r))+'</td><td>'+
+ $('routeRows').innerHTML=recent.map(r=>'<tr><td>'+htmlSafe(date(r.observed_at))+'</td><td>'+htmlSafe(sensorLabel(r)+transmissionDetail(r))+'</td><td>'+
   htmlSafe(routeHops(r)??'—')+'</td><td>'+htmlSafe(routeRelay(r))+'</td><td>'+htmlSafe(routeSignal(r))+'</td></tr>').join('')||
   '<tr><td colspan="5">No route metadata in the last 24 hours.</td></tr>';
 }
@@ -137,9 +147,9 @@ function renderConditions(){
  $('stage').textContent=value(level?stage(level):null);$('flow').textContent=value(rated?flow(rated):null);$('temp').textContent=value(therm?temp(therm):null,1);
  $('stageSource').textContent=level?.telemetry_type==='mx2001'?'HOBO MX2001 pressure-based stage':station.sensor+' ultrasonic water-level sensor';
  $('temperatureSource').textContent=relay?'Air-temperature telemetry · latest available observation':'HOBO MX2001 · latest available observation';
- $('stageTime').textContent=level?'Observed '+date(level.observed_at):'No calibrated stage observation available';
- $('flowTime').textContent=rated?'Observed '+date(rated.observed_at):'No rated ultrasonic stage available';
- $('tempTime').textContent=therm?'Observed '+date(therm.observed_at):relay?'Awaiting air-temperature readings':'No HOBO water-temperature observation available';
+ $('stageTime').textContent=level?'Observed '+date(level.observed_at)+transmissionDetail(level):'No calibrated stage observation available';
+ $('flowTime').textContent=rated?'Observed '+date(rated.observed_at)+transmissionDetail(rated):'No rated ultrasonic stage available';
+ $('tempTime').textContent=therm?'Observed '+date(therm.observed_at)+transmissionDetail(therm):relay?'Awaiting air-temperature readings':'No HOBO water-temperature observation available';
  $('instrumentation').innerHTML=relay?'<h3>Instrumentation</h3><p class="muted">Cottonwood Relay reports air temperature when sensor telemetry is available. No stage or discharge is measured at this relay.</p>':'<h3>Instrumentation</h3><dl><dt>Ultrasonic stage</dt><dd>'+station.sensor+'; feet relative to the station datum.</dd><dt>Water temperature</dt><dd>HOBO MX2001; degrees Fahrenheit.</dd><dt>HOBO reference stage</dt><dd>'+ (hs?value(stage(hs))+' ft':'No observation available')+'</dd><dt>Reference observation time</dt><dd>'+(hs?date(hs.observed_at):'No observation available')+'</dd>'+(station.flow?'<dt>Discharge</dt><dd>Estimated from the Pack Creek rating curve.</dd>':'<dt>Discharge</dt><dd>No rating curve established.</dd>')+'</dl>';
  $('ratingNote').textContent=rated?.discharge_rating_status?.startsWith('extrapolated')?'Rating estimate · extrapolated '+(rated.discharge_rating_status.endsWith('high')?'above':'below')+' the measured rating range.':'Calculated from the station’s stage–discharge rating.';
  const newest=state.latest[0];$('observationStatus').textContent=newest?'Latest observation · '+date(newest.observed_at):'No '+station.name+' measurements available';
@@ -187,7 +197,7 @@ function renderChart(){
      svg+='<path class="chart-gap" d="M'+point(a)+' L'+point(b)+'" aria-label="Interpolated gap; no measurements between these times"><title>Missing observations · dashed interpolation, not measured values</title></path>';
    }
    s.points.forEach((p,i)=>{
-     const label=date(p.r.observed_at)+' · '+p.y.toFixed(m.decimals)+' '+m.unit+' · '+sensorLabel(p.r)+(state.metric==='flow'&&p.r.discharge_rating_status?.startsWith('extrapolated')?' · extrapolated':'');
+     const label=date(p.r.observed_at)+' · '+p.y.toFixed(m.decimals)+' '+m.unit+' · '+sensorLabel(p.r)+transmissionDetail(p.r)+(state.metric==='flow'&&p.r.discharge_rating_status?.startsWith('extrapolated')?' · extrapolated':'');
      svg+='<circle class="chart-dot" cx="'+x(p.x).toFixed(2)+'" cy="'+y(p.y).toFixed(2)+'" r="3.5" fill="'+s.color+'" tabindex="0" data-series="'+si+'" data-point="'+i+'" aria-label="'+htmlSafe(label)+'"><title>'+htmlSafe(label)+'</title></circle>';
    });
  });
@@ -195,7 +205,7 @@ function renderChart(){
  $('chart').querySelectorAll('.chart-dot').forEach(dot=>{const show=()=>{$('chartReadout').textContent=dot.getAttribute('aria-label');};dot.addEventListener('pointerenter',show);dot.addEventListener('focus',show);dot.addEventListener('click',show);});
 }
 function renderRows(){
- $('rows').innerHTML=state.readings.filter(r=>r.telemetry_type!=='device').slice(0,12).map(r=>'<tr><td>'+date(r.observed_at)+'</td><td>'+(r.telemetry_type==='mx2001'?'HOBO MX2001':r.telemetry_type==='environment'?'Air temperature':site().sensor)+'</td><td>'+value(stage(r))+'</td><td>'+value(flow(r))+(r.discharge_rating_status?.startsWith('extrapolated')?'*':'')+'</td><td>'+value(temp(r),1)+'</td></tr>').join('')||'<tr><td colspan="5">No observations in the selected period.</td></tr>';
+ $('rows').innerHTML=state.readings.filter(r=>r.telemetry_type!=='device').slice(0,12).map(r=>'<tr><td>'+date(r.observed_at)+'</td><td>'+(r.telemetry_type==='mx2001'?'HOBO MX2001':r.telemetry_type==='environment'?'Air temperature':site().sensor)+'</td><td>'+htmlSafe(transmissionLabel(r)||'—')+'</td><td>'+value(stage(r))+'</td><td>'+value(flow(r))+(r.discharge_rating_status?.startsWith('extrapolated')?'*':'')+'</td><td>'+value(temp(r),1)+'</td></tr>').join('')||'<tr><td colspan="6">No observations in the selected period.</td></tr>';
  $('export').disabled=!state.readings.length;$('export').textContent=state.sampleIntervalHours?'Download sampled CSV ↓':'Download CSV ↓';
  $('samplingNotice').textContent=state.sampleIntervalHours?' · Long-range CSV includes sampled chart observations only.':'';
 }
@@ -207,13 +217,13 @@ async function load(){
  state.allLatest=data.latest.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));state.allReadings=data.readings.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));
  state.allRecent=Array.isArray(data.recent)?data.recent.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)):[];
  state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.sampleIntervalHours=n(data.sample_interval_hours);selectStation();
- }catch{ $('error').textContent='Could not refresh station readings. '+(state.latest.length?'Previously loaded observations remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="5">Observations unavailable.</td></tr>';}}
+ }catch{ $('error').textContent='Could not refresh station readings. '+(state.latest.length?'Previously loaded observations remain displayed. ':'')+'Use Refresh readings to try again.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="6">Observations unavailable.</td></tr>';}}
  finally{state.busy=false;$('refresh').disabled=false;$('refresh').textContent='↻ Refresh readings';document.querySelectorAll('[data-hours]').forEach(b=>b.disabled=false);}
 }
 $('refresh').addEventListener('click',load);
 $('stationSelect').addEventListener('change',e=>{state.node=Number(e.target.value);selectStation();});
 document.querySelectorAll('[data-hours]').forEach(b=>b.addEventListener('click',()=>{state.hours=Number(b.dataset.hours);document.querySelectorAll('[data-hours]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));load();}));
 document.querySelectorAll('[data-metric]').forEach(b=>b.addEventListener('click',()=>{state.metric=b.dataset.metric;document.querySelectorAll('[data-metric]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderChart();}));
-$('export').addEventListener('click',()=>{const head=['observed_at_UTC','observed_at_Mountain_Time','station','sensor','stage_ft','estimated_discharge_cfs','rating_status',site().kind==='relay'?'air_temperature_F':'water_temperature_F','battery_percent','mesh_hops','last_relay','receiving_gateway','rssi_dbm','snr_db'];const rows=state.readings.map(r=>[r.observed_at,date(r.observed_at),site().name,r.telemetry_type,stage(r),flow(r),r.discharge_rating_status||'',temp(r),battery(r),routeHops(r),routeHasData(r)?routeRelay(r):'',routeHasData(r)?routeGateway(r):'',n(radio(r).rssi),n(radio(r).snr)]);const csv=[head,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=site().name.toLowerCase().replaceAll(' ','-')+'-'+state.hours+'h.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('export').addEventListener('click',()=>{const head=['observed_at_UTC','observed_at_Mountain_Time','station','sensor','stage_ft','estimated_discharge_cfs','rating_status',site().kind==='relay'?'air_temperature_F':'water_temperature_F','battery_percent','mesh_hops','last_relay','receiving_gateway','rssi_dbm','snr_db','transmission_source'];const rows=state.readings.map(r=>[r.observed_at,date(r.observed_at),site().name,r.telemetry_type,stage(r),flow(r),r.discharge_rating_status||'',temp(r),battery(r),routeHops(r),routeHasData(r)?routeRelay(r):'',routeHasData(r)?routeGateway(r):'',n(radio(r).rssi),n(radio(r).snr),transmissionLabel(r)||'']);const csv=[head,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=site().name.toLowerCase().replaceAll(' ','-')+'-'+state.hours+'h.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 load();
 })();
