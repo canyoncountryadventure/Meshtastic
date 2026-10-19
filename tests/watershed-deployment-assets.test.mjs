@@ -9,7 +9,7 @@ test('each deployed watershed page references assets inside its own Vercel root'
   for (const root of [repo, path.join(repo, 'watersheds')]) {
     const htmlFile = path.join(root, root === repo ? 'watershed.html' : 'index.html');
     const html = fs.readFileSync(htmlFile, 'utf8');
-    for (const match of html.matchAll(/<(?:script|link)\\b[^>]*(?:src|href)="(\\/[^"]+\\.(?:js|css)(?:\\?[^"]*)?)"/g)) {
+    for (const match of html.matchAll(/<(?:script|link)[^>]*(?:src|href)="(\/[^"]+\.(?:js|css)(?:\?[^"]*)?)"/g)) {
       const asset = decodeURI(match[1].split('?')[0]);
       assert.ok(fs.existsSync(path.join(root, asset.slice(1))), htmlFile + ' references missing asset ' + asset);
     }
