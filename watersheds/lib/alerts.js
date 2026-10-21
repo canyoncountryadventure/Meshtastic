@@ -70,7 +70,7 @@ export async function dispatchEmails(sql, limit=4, options = {}) {
   let sent = 0;
   await sql`UPDATE alert_deliveries d SET status='cancelled',error='Rule disabled, deleted, or recipient removed'
     WHERE status IN ('pending','sending') AND NOT EXISTS (
-      SELECT 1 FROM alert_rules r WHERE r.id=d.rule_id AND (r.enabled OR d.reading_id IS NULL)
+      SELECT 1 FROM alert_rules r WHERE r.id=d.rule_id AND (r.enabled OR (d.reading_id IS NULL AND (d.subject LIKE 'Test:%' OR d.subject LIKE 'Moab Watersheds test:%')))
         AND r.recipients ? d.recipient
     )`;
   // Each recipient is a separate delivery, preserving privacy and independent retries.
