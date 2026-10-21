@@ -168,7 +168,7 @@ function renderConditions(){
  const station=site(),relay=station.kind==='relay',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=state.node===1695962694?water:(water||hs),rated=latest('water_distance',flow),therm=latest(relay?'environment':'mx2001',temp);
  $('stationTitle').textContent=station.name;$('temperatureLabel').textContent=relay?'Air temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
  $('readingCards').className='readings '+(relay?'relay':station.flow?'':'creek')+(state.node===1695962694?' cottonwood':'');$('flowCard').hidden=!station.flow;$('stageCard').hidden=relay;$('hoboStageCard').hidden=state.node!==1695962694;
- $('stage').textContent=value(level?stage(level):null,level?.telemetry_type==='water_distance'?3:2);$('hoboStageCurrent').textContent=value(hs?stage(hs):null,2);$('flow').textContent=value(rated?flow(rated):null);$('temp').textContent=value(therm?temp(therm):null,1);
+ $('stage').textContent=value(level?stage(level):null,2);$('hoboStageCurrent').textContent=value(hs?stage(hs):null,2);$('flow').textContent=value(rated?flow(rated):null);$('temp').textContent=value(therm?temp(therm):null,1);
  $('stageSource').textContent=level?.telemetry_type==='mx2001'?'HOBO MX2001 pressure-based stage':station.sensor+' ultrasonic water-level sensor';
  $('temperatureSource').textContent=relay?'Air-temperature telemetry · latest available observation':'HOBO MX2001 · latest available observation';
  $('stageTime').textContent=level?'Observed '+date(level.observed_at)+transmissionDetail(level):'No calibrated stage observation available';$('hoboStageTime').textContent=hs?'Observed '+date(hs.observed_at)+transmissionDetail(hs):'No HOBO stage observation available';
@@ -237,7 +237,7 @@ function recentColumns(){
  if(state.node===1695962694)return [
   ...common,
   {label:'Transmission',cell:r=>transmissionLabel(r)||'—',cls:'measurement-source'},
-  {label:'MB7388 stage · ft',cell:r=>r.telemetry_type==='water_distance'?value(stage(r),3):'—',cls:'measurement-value'},
+  {label:'MB7388 stage · ft',cell:r=>r.telemetry_type==='water_distance'?value(stage(r),2):'—',cls:'measurement-value'},
   {label:'HOBO stage · ft',cell:r=>r.telemetry_type==='mx2001'?value(stage(r),2):'—',cls:'measurement-value'},
   {label:'HOBO water · °F',cell:r=>r.telemetry_type==='mx2001'?value(temp(r),1):'—',cls:'measurement-value'}
  ];
@@ -247,7 +247,7 @@ function recentColumns(){
  ];
  return [
   ...common,
-  {label:site().sensor+' stage · ft',cell:r=>r.telemetry_type==='water_distance'?value(stage(r),3):'—',cls:'measurement-value'},
+  {label:site().sensor+' stage · ft',cell:r=>r.telemetry_type==='water_distance'?value(stage(r),2):'—',cls:'measurement-value'},
   {label:'HOBO stage · ft',cell:r=>r.telemetry_type==='mx2001'?value(stage(r),2):'—',cls:'measurement-value'},
   {label:'Flow · cfs',cell:r=>r.telemetry_type==='water_distance'?value(flow(r))+(r.discharge_rating_status?.startsWith('extrapolated')?'*':''):'—',cls:'measurement-value'},
   {label:'HOBO water · °F',cell:r=>r.telemetry_type==='mx2001'?value(temp(r),1):'—',cls:'measurement-value'}
