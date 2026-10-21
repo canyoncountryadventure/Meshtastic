@@ -36,5 +36,11 @@
         }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/watershed-heartbeat",
+      "schedule": "0 * * * *"
+    }
   ]
 }
