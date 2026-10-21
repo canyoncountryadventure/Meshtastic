@@ -40,7 +40,7 @@
   "crons": [
     {
       "path": "/api/watershed-heartbeat",
-      "schedule": "0 * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
