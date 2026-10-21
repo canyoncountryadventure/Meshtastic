@@ -48,6 +48,9 @@ export default async function handler(req,res){
   let email;try{email=normalizeEmails([body.email])[0];}catch{return res.status(400).json({error:'Enter a valid email address'});}
   try{
    const sql=watershedSql(),token=randomBytes(32).toString('base64url');
+   // Limit total verification traffic as well as each address. Do not expose address existence.
+   const volume=await sql`SELECT COUNT(*)::int AS requests FROM watershed_public_email_access WHERE last_requested_at>NOW()-INTERVAL '1 hour'`;
+   if(Number(volume[0]?.requests)>=60)return res.status(200).json({ok:true,message:'If eligible, check your email for a sign-in link.'});
    const saved=await sql`INSERT INTO watershed_public_email_access(email,token_hash,token_expires_at,last_requested_at)
      VALUES(${email},${hash(token)},NOW()+INTERVAL '20 minutes',NOW())
      ON CONFLICT(email) DO UPDATE SET token_hash=EXCLUDED.token_hash,token_expires_at=EXCLUDED.token_expires_at,

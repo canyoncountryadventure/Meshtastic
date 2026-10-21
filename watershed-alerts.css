@@ -2,3 +2,5 @@
 
 /* Public subscriptions are separate from the owner's admin view. */
 #publicPanel{margin-bottom:22px}#publicRequestForm{align-items:end}#publicRequestForm label{flex:1;min-width:210px}#publicPanel #publicMessage{min-height:20px;font-size:13px}#publicPanel button{cursor:pointer}#publicPanel .panel-heading h3{margin:0}#publicRuleForm{border-top:1px solid #d6dde2;margin-top:18px;padding-top:12px}#publicRules .rule-card{padding:12px 0}#publicWho{overflow-wrap:anywhere}#publicPanel [hidden]{display:none!important}
+
+.notification-shell .owner-area{margin:22px 0}.notification-shell .owner-area>summary{cursor:pointer;padding:14px 16px;border:1px solid #d6dde2;background:#f3f6f7;font-weight:600;font-size:14px}.notification-shell .owner-area>.panel{margin-top:16px}
