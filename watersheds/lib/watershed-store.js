@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { rateReadings } from './watershed-rating.js';
 import { evaluateReadings,dispatchEmails,emailConfig } from './alerts.js';
+import { evaluateOfflineRules } from './watershed-offline.js';
 export function watershedSql(){
  if(!process.env.WATERSHED_DATABASE_URL)throw new Error('Watershed database is not configured');
  return neon(process.env.WATERSHED_DATABASE_URL, { fetchOptions: { signal: AbortSignal.timeout(8000) } });
@@ -22,6 +23,8 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
  const curves=await sql`SELECT rating_curve FROM creek_stations WHERE enabled AND rating_curve IS NOT NULL`;
  await evaluateReadings(sql,readings,{curves:curves.map(c=>c.rating_curve),
    dashboardUrl:'https://seutahwatersheds.vercel.app/',subjectPrefix:'Moab Watersheds: '});
+ // Every arriving packet can detect another silent station. The scheduled check also catches whole-network outages.
+ await evaluateOfflineRules(sql);
  // Email service configuration remains managed centrally; only watershed alerts
  // and readings are stored in moab_watersheds.
  if(mainSql){
