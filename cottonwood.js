@@ -26,7 +26,7 @@
     const series=[];
     if(enabled['mb-stage'])series.push({name:'MB stage',color:creek.color,points:mb,maxGapMs:3*3600000});
     if(enabled['mx-stage'])series.push({name:'MX2001 stage',color:'#57b7ff',points:mx,maxGapMs:3*3600000});
-    renderLineChart(target,series,{axisLabel:'Stage ft',tooltipValue:v=>`${v.toFixed(3)} ft`,
+    renderLineChart(target,series,{axisLabel:'Stage ft',tooltipValue:v=>`${v.toFixed(2)} ft`,
       empty:series.length?'Waiting for selected Cottonwood stage measurements.':'Select a stage sensor above.',pointRadius:3.4});
     const tempTarget=document.getElementById('ccWaterTempChart');
     tempTarget.style.display=enabled['mx-temp']?'':'none';
@@ -44,8 +44,8 @@
         const mb=readings.find(r=>r.telemetry_type==='water_distance' && stageValue(r)!==null);
         const mx=readings.find(r=>r.telemetry_type==='mx2001' && stageValue(r)!==null);
         const temp=readings.find(r=>r.telemetry_type==='mx2001' && tempF(r)!==null);
-        setText('ccReading'+site.node,mb?`${stageValue(mb).toFixed(3)} ft · MB`:mx?`${stageValue(mx).toFixed(3)} ft · MX2001`:'Stage —');
-        fields.push(mx?`MX2001 ${stageValue(mx).toFixed(3)} ft`:'MX2001 stage —',temp?`${tempF(temp).toFixed(1)} °F`:'Temperature —',battery);
+        setText('ccReading'+site.node,mb?`${stageValue(mb).toFixed(2)} ft · MB`:mx?`${stageValue(mx).toFixed(2)} ft · MX2001`:'Stage —');
+        fields.push(mx?`MX2001 ${stageValue(mx).toFixed(2)} ft`:'MX2001 stage —',temp?`${tempF(temp).toFixed(1)} °F`:'Temperature —',battery);
       } else {
         setText('ccReading'+site.node,battery);
         const link=readings.find(r=>rssi(r)!==null || snr(r)!==null);
