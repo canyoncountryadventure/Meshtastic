@@ -185,7 +185,7 @@ async function cc01ControlHandler(req,res){
      !Number.isSafeInteger(Number(body.packet_id))||Number(body.packet_id)<0||Number(body.packet_id)>4294967295)
      return res.status(400).json({error:'Invalid station event'});
    await sql`INSERT INTO cc01_sensor_events(node_num,sensor,status,packet_id)
-     VALUES(1695962694,${body.sensor},${body.status},${Number(body.packet_id)})`;
+     VALUES(1695962694,${body.sensor},${body.status},${Number(body.packet_id)}) ON CONFLICT DO NOTHING`;
    return res.status(201).json({ok:true});
   }
   return res.status(400).json({error:'Unknown request'});

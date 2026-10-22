@@ -18,7 +18,7 @@ function renderGatewayControl(){
  const applied=c.applied_at?'Applied: WATER '+(c.applied_water_enabled?'on':'paused')+', HOBO '+(c.applied_hobo_enabled?'on':'paused')+' · '+new Date(c.applied_at).toLocaleString('en-US',{timeZone:'America/Denver'}):'Heltec has not yet reported applying any control settings.';
  const mismatch=c.applied_version===null||Number(c.applied_version)!==Number(c.version)||
    c.applied_water_enabled!==c.water_enabled||c.applied_hobo_enabled!==c.hobo_enabled;
- $('gatewayApplied').textContent=desired+' · '+applied+(mismatch?' · Waiting for gateway confirmation':' · Confirmed');
+ $('gatewayApplied').textContent=desired+' · '+applied+(mismatch?' · Not matching requested controls yet':' · Confirmed');
 }
 $('gatewayForm').onsubmit=e=>{e.preventDefault();run(async()=>{
  await api({action:'save_gateway_control',water_enabled:$('gatewayWater').checked,

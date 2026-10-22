@@ -16,3 +16,5 @@ CREATE INDEX IF NOT EXISTS cc01_sensor_events_latest ON public.cc01_sensor_event
 GRANT SELECT,INSERT,UPDATE ON public.cc01_gateway_control TO watersheds_app;
 GRANT SELECT,INSERT ON public.cc01_sensor_events TO watersheds_app;
 GRANT USAGE,SELECT ON SEQUENCE public.cc01_sensor_events_id_seq TO watersheds_app;
+
+CREATE UNIQUE INDEX IF NOT EXISTS cc01_sensor_event_dedupe ON public.cc01_sensor_events(node_num,sensor,status,packet_id) WHERE packet_id IS NOT NULL;
