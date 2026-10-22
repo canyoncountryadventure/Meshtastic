@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261022-cc01-health-v9';
+const DASHBOARD_BUILD = '20261022-cottonwood-replacement-v10';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'Cottonwood Creek',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',kind:'relay',sensor:'Air temperature sensor',flow:false}};
 const site=()=>SITES[state.node];
@@ -240,6 +240,7 @@ function renderSensorDiagnostics(){
 }
 function renderConditions(){
  const station=site(),relay=station.kind==='relay',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=state.node===1695962694?water:(water||hs),rated=latest('water_distance',flow),therm=latest(relay?'environment':'mx2001',temp),device=state.latest.find(r=>r.telemetry_type==='device'&&(battery(r)!==null||batteryVoltage(r)!==null));
+ const outage=$('cottonwoodOutage');if(outage)outage.hidden=state.node!==1695962694;
  $('stationTitle').textContent=station.name;$('temperatureLabel').textContent=relay?'Air temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
  $('readingCards').className='readings '+(relay?'relay':station.flow?'':'creek')+(state.node===1695962694?' cottonwood':'');$('flowCard').hidden=!station.flow;$('stageCard').hidden=relay;$('hoboStageCard').hidden=relay;
  $('batteryPct').textContent=value(device?battery(device):null,0);$('batteryVoltage').textContent=value(device?batteryVoltage(device):null,3);$('batteryTime').textContent=device?'Observed '+date(device.observed_at):'No battery telemetry available';
