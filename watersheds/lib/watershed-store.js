@@ -62,6 +62,9 @@ export async function readCreekData(sql,hours){
      FROM creek_observations o JOIN creek_stations s USING(node_num)
      WHERE s.enabled AND o.observed_at>=NOW()-INTERVAL '24 hours'
      ORDER BY o.observed_at DESC LIMIT 1500`;
+ const sensorEvents=await sql`SELECT id,node_num,sensor,status,received_at
+    FROM cc01_sensor_events WHERE node_num=1695962694 ORDER BY received_at DESC LIMIT 24`;
+ const controls=await sql`SELECT water_enabled,hobo_enabled,applied_water_enabled,applied_hobo_enabled,applied_at FROM cc01_gateway_control WHERE id=1`;
  const curves=stations.map(s=>s.rating_curve).filter(Boolean);
  const publicStations=stations.map(({rating_curve,...station})=>({
    ...station,rating_curve:rating_curve?.active===true?{
@@ -71,5 +74,6 @@ export async function readCreekData(sql,hours){
    }:null
  }));
  return {stations:publicStations,readings:rateReadings(readings,curves),latest:rateReadings(latest,curves),
-   recent:rateReadings(recent,curves),sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
+   recent:rateReadings(recent,curves),sensor_events:sensorEvents,
+   cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
 }

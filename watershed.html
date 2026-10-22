@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="/watershed.css?v=20261021-hobo-watch">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
-<script src="/watershed-sensors-20261021-v8.js" defer></script>
+<script src="/watershed-sensors-20261022-v9.js" defer></script>
 <script src="/water-quality.js?v=20261018-quality-controls" defer></script>
 </head>
 <body>
@@ -21,9 +21,9 @@
 <div id="error" class="error" role="alert" hidden></div>
 <div class="readings" id="readingCards">
 <article class="reading flow" id="flowCard"><p class="eyebrow">Estimated discharge</p><div class="number"><strong id="flow">—</strong><span>cfs</span></div><p id="flowTime" class="timestamp">Waiting for rated stage</p><div id="flowTrend" class="trend-indicator trend-unavailable" aria-live="polite">Trend unavailable</div><div class="reading-foot" id="ratingNote">Calculated from the station’s stage–discharge rating.</div></article>
-<article class="reading" id="stageCard"><p class="eyebrow" id="stageLabel">Stage</p><div class="number"><strong id="stage">—</strong><span>ft</span></div><p id="stageTime" class="timestamp">Waiting for stage observations</p><div class="reading-foot" id="stageSource">SEN0313 ultrasonic water-level sensor</div></article>
-<article class="reading" id="hoboStageCard" hidden><p class="eyebrow">HOBO MX2001 stage</p><div class="number"><strong id="hoboStageCurrent">—</strong><span>ft</span></div><p id="hoboStageTime" class="timestamp">Waiting for HOBO stage</p><p id="hoboFloodWarning" class="hobo-flood-warning" role="status" aria-live="polite" hidden></p><div class="reading-foot">Independent pressure-based stage · HOBO MX2001</div></article>
-<article class="reading"><p class="eyebrow" id="temperatureLabel">Water temperature</p><div class="number"><strong id="temp">—</strong><span>°F</span></div><p id="tempTime" class="timestamp">Waiting for water temperature</p><div id="tempTrend" class="trend-indicator trend-unavailable" aria-live="polite">Trend unavailable</div><div class="reading-foot" id="temperatureSource">HOBO MX2001 · latest available observation</div></article>
+<article class="reading" id="stageCard"><p class="eyebrow" id="stageLabel">Stage</p><div class="number"><strong id="stage">—</strong><span>ft</span></div><p id="stageTime" class="timestamp">Waiting for stage observations</p><p id="cc01WaterWarning" class="cc01-sensor-warning" role="status" hidden></p><div class="reading-foot" id="stageSource">SEN0313 ultrasonic water-level sensor</div></article>
+<article class="reading" id="hoboStageCard" hidden><p class="eyebrow">HOBO MX2001 stage</p><div class="number"><strong id="hoboStageCurrent">—</strong><span>ft</span></div><p id="hoboStageTime" class="timestamp">Waiting for HOBO stage</p><p id="cc01HoboWarning" class="cc01-sensor-warning" role="status" hidden></p><p id="hoboFloodWarning" class="hobo-flood-warning" role="status" aria-live="polite" hidden></p><div class="reading-foot">Independent pressure-based stage · HOBO MX2001</div></article>
+<article class="reading"><p class="eyebrow" id="temperatureLabel">Water temperature</p><div class="number"><strong id="temp">—</strong><span>°F</span></div><p id="tempTime" class="timestamp">Waiting for water temperature</p><p id="cc01TempWarning" class="cc01-sensor-warning" role="status" hidden></p><div id="tempTrend" class="trend-indicator trend-unavailable" aria-live="polite">Trend unavailable</div><div class="reading-foot" id="temperatureSource">HOBO MX2001 · latest available observation</div></article>
 <article class="reading battery" id="batteryCard"><p class="eyebrow">Radio battery</p><div class="number"><strong id="batteryPct">—</strong><span>%</span></div><p class="battery-voltage"><strong id="batteryVoltage">—</strong> V</p><p id="batteryTime" class="timestamp">Waiting for battery telemetry</p><div class="reading-foot">Meshtastic device telemetry · last reported value</div></article>
 </div>
 </section>
