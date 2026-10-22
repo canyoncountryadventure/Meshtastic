@@ -38,12 +38,25 @@ export default async function handler(req,res) {
   try {
     const sql=getSql();
     if (req.method==='GET') {
-      const [rules,history,config]=await Promise.all([
+      const [rules,history,config,control]=await Promise.all([
         sql`SELECT * FROM alert_rules ORDER BY id`,
         sql`SELECT id,rule_id,recipient,subject,status,attempts,error,created_at,sent_at FROM alert_deliveries ORDER BY id DESC LIMIT 50`,
         sourceSql()`SELECT sender,updated_at FROM alert_email_config WHERE id=1`,
+        sql`SELECT water_enabled,hobo_enabled,authorized_admin_node,version,updated_at,applied_water_enabled,applied_hobo_enabled,applied_version,applied_at FROM cc01_gateway_control WHERE id=1`,
       ]);
-      return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS});
+      return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS,gateway_control:control[0]||null});
+    }
+    if (body.action==='save_gateway_control') {
+      const radio=Number(body.authorized_admin_node);
+      if(typeof body.water_enabled!=='boolean'||typeof body.hobo_enabled!=='boolean'||
+         !Number.isSafeInteger(radio)||radio<0||radio>4294967295)
+         return res.status(400).json({error:'Invalid gateway control settings'});
+      const changed=await sql`UPDATE cc01_gateway_control SET
+        water_enabled=${body.water_enabled},hobo_enabled=${body.hobo_enabled},
+        authorized_admin_node=${radio},version=version+1,updated_at=NOW()
+        WHERE id=1 RETURNING version`;
+      if(!changed.length)return res.status(503).json({error:'Gateway control not initialized'});
+      return res.status(200).json({ok:true,version:Number(changed[0].version)});
     }
     if (body.action==='save_rule') {
       const rule=validateRule(storedRule(body)),emails=normalizeEmails(body.recipients || []);
