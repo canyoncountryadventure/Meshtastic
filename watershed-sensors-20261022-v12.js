@@ -2,16 +2,16 @@
 'use strict';
 const DASHBOARD_BUILD = '20261022-pack-creek-detail-v12';
 const $=id=>document.getElementById(id);
-const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',detail:'7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false}};
+const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',detail:'7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'Matheson Groundwater Well',kind:'groundwater',sensor:'Water-level sensor',flow:false}};
 const site=()=>SITES[state.node];
 const state={node:1949224949,hours:12,metric:'flow',readings:[],latest:[],recent:[],allRecent:[],allReadings:[],allLatest:[],stationInfo:[],sampleIntervalHours:null,sensorEvents:[],cc01Polling:null,measurementPage:0,measurementPageSize:12,busy:false};
 const n=value=>value===null||value===undefined||value===''?null:Number.isFinite(Number(value))?Number(value):null;
-const valid=r=>Object.hasOwn(SITES,Number(r.node_num))&&(r.telemetry_type==='device'||(Number(r.node_num)===2425602407?r.telemetry_type==='environment':['water_distance','mx2001'].includes(r.telemetry_type)));
+const valid=r=>Object.hasOwn(SITES,Number(r.node_num))&&(r.telemetry_type==='device'||(Number(r.node_num)===2425602407?r.telemetry_type==='environment':Number(r.node_num)===2004386937?['water_distance','mx2001','environment'].includes(r.telemetry_type):['water_distance','mx2001'].includes(r.telemetry_type)));
 const stage=r=>r?.metrics?.stage_calibrated===false||r?.metrics?.distance_valid===false?null:n(r?.metrics?.water_level_ft);
 const temp=r=>{if(!['mx2001','environment'].includes(r?.telemetry_type))return null;const fahrenheit=n(r?.metrics?.temperature_f),celsius=n(r?.temperature_c??r?.metrics?.temperature_c);return fahrenheit!==null?fahrenheit:celsius!==null?celsius*9/5+32:null;};
 const battery=r=>{const v=n(r?.metrics?.battery_level??r?.metrics?.battery_percent??r?.metrics?.battery_pct);return r?.telemetry_type==='device'&&v!==null&&v>=0&&v<=100?v:null;};
 const batteryVoltage=r=>{const v=n(r?.metrics?.voltage??r?.metrics?.battery_voltage);return r?.telemetry_type==='device'&&v!==null&&v>0&&v<7?v:null;};
-const sensorLabel=r=>r.telemetry_type==='device'?'Device battery':r.telemetry_type==='mx2001'?'HOBO MX2001':r.telemetry_type==='environment'?'Air temperature':site().sensor;
+const sensorLabel=r=>r.telemetry_type==='device'?'Device battery':r.telemetry_type==='mx2001'?(site().kind==='groundwater'?'Groundwater sensor':'HOBO MX2001'):r.telemetry_type==='environment'?(site().kind==='relay'?'Air temperature':'Water temperature'):site().sensor;
 // CC01 Heltec V6 explicitly marks parsed DM replies. Existing unmarked MX/DS
 // sensor packets are the automatic route; do not infer provenance by arrival time.
 function transmissionLabel(r){
@@ -253,23 +253,23 @@ function renderSensorDiagnostics(){
  }
 }
 function renderConditions(){
- const station=site(),relay=station.kind==='relay',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=state.node===1695962694?water:(water||hs),rated=latest('water_distance',flow),therm=latest(relay?'environment':'mx2001',temp),device=state.latest.find(r=>r.telemetry_type==='device'&&(battery(r)!==null||batteryVoltage(r)!==null));
+ const station=site(),relay=station.kind==='relay',groundwater=station.kind==='groundwater',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=groundwater?water:(state.node===1695962694?water:(water||hs)),rated=latest('water_distance',flow),therm=groundwater?state.latest.find(r=>['environment','mx2001'].includes(r.telemetry_type)&&temp(r)!==null):latest(relay?'environment':'mx2001',temp),device=state.latest.find(r=>r.telemetry_type==='device'&&(battery(r)!==null||batteryVoltage(r)!==null));
  const outage=$('cottonwoodOutage');if(outage)outage.hidden=state.node!==1695962694;
- $('stationTitle').textContent=station.name;if($('stationSubtitle'))$('stationSubtitle').textContent=station.detail;$('temperatureLabel').textContent=relay?'Air temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
+ $('stationTitle').textContent=station.name;if($('stationSubtitle'))$('stationSubtitle').textContent=station.detail;$('temperatureLabel').textContent=relay?'Air temperature':groundwater?'Groundwater temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=groundwater?'Depth to water':state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
  $('readingCards').className='readings '+(relay?'relay':station.flow?'':'creek')+(state.node===1695962694?' cottonwood':'');$('flowCard').hidden=!station.flow;$('stageCard').hidden=relay;$('hoboStageCard').hidden=relay;
  $('batteryPct').textContent=value(device?battery(device):null,0);$('batteryVoltage').textContent=value(device?batteryVoltage(device):null,3);$('batteryTime').textContent=device?'Observed '+date(device.observed_at):'No battery telemetry available';
  $('stage').textContent=displayStage(level?stage(level):null);$('hoboStageCurrent').textContent=displayStage(hs?stage(hs):null);$('flow').textContent=value(rated?flow(rated):null);$('temp').textContent=value(therm?temp(therm):null,1);
- $('stageSource').textContent=(level?.telemetry_type==='mx2001'?'HOBO MX2001 pressure-based stage':station.sensor+' ultrasonic water-level sensor')+' · Display rounded to 0.01 ft';
- $('temperatureSource').textContent=relay?'Air-temperature telemetry · latest available observation':'HOBO MX2001 · latest available observation';
- $('stageTime').textContent=level?'Observed '+date(level.observed_at)+transmissionDetail(level):'No calibrated stage observation available';$('hoboStageTime').textContent=hs?'Observed '+date(hs.observed_at)+transmissionDetail(hs):'No HOBO stage observation available';
+ $('stageSource').textContent=groundwater?station.sensor+' · feet below the well reference':(level?.telemetry_type==='mx2001'?'HOBO MX2001 pressure-based stage':station.sensor+' ultrasonic water-level sensor')+' · Display rounded to 0.01 ft';
+ $('temperatureSource').textContent=relay?'Air-temperature telemetry · latest available observation':groundwater?'Groundwater sensor · latest available observation':'HOBO MX2001 · latest available observation';
+ $('stageTime').textContent=level?'Observed '+date(level.observed_at)+transmissionDetail(level):groundwater?'No depth-to-water observation available':'No calibrated stage observation available';$('hoboStageTime').textContent=hs?'Observed '+date(hs.observed_at)+transmissionDetail(hs):'No HOBO stage observation available';
  $('flowTime').textContent=rated?'Observed '+date(rated.observed_at)+transmissionDetail(rated):'No rated ultrasonic stage available';
- $('tempTime').textContent=therm?'Observed '+date(therm.observed_at)+transmissionDetail(therm):relay?'Awaiting air-temperature readings':'No HOBO water-temperature observation available';
- $('instrumentation').innerHTML=relay?'<h3>Instrumentation</h3><p class="muted">Cottonwood Relay reports air temperature when sensor telemetry is available. No stage or discharge is measured at this relay.</p>':'<h3>Instrumentation</h3><dl><dt>Ultrasonic stage</dt><dd>'+station.sensor+'; feet relative to the station datum.</dd><dt>Water temperature</dt><dd>HOBO MX2001; degrees Fahrenheit.</dd><dt>HOBO reference stage</dt><dd>'+ (hs?value(stage(hs))+' ft':'No observation available')+'</dd><dt>Reference observation time</dt><dd>'+(hs?date(hs.observed_at):'No observation available')+'</dd>'+(station.flow?'<dt>Discharge</dt><dd>Estimated from the Pack Creek rating curve.</dd>':'<dt>Discharge</dt><dd>No rating curve established.</dd>')+'</dl>';
+ $('tempTime').textContent=therm?'Observed '+date(therm.observed_at)+transmissionDetail(therm):relay?'Awaiting air-temperature readings':groundwater?'No groundwater-temperature observation available':'No HOBO water-temperature observation available';
+ $('instrumentation').innerHTML=relay?'<h3>Instrumentation</h3><p class="muted">Cottonwood Relay reports air temperature when sensor telemetry is available. No stage or discharge is measured at this relay.</p>':groundwater?'<h3>Instrumentation</h3><dl><dt>Depth to water</dt><dd>Water-level sensor; feet below the well reference.</dd><dt>Groundwater temperature</dt><dd>Sensor telemetry; degrees Fahrenheit.</dd><dt>Radio battery</dt><dd>Meshtastic device telemetry.</dd></dl>':'<h3>Instrumentation</h3><dl><dt>Ultrasonic stage</dt><dd>'+station.sensor+'; feet relative to the station datum.</dd><dt>Water temperature</dt><dd>HOBO MX2001; degrees Fahrenheit.</dd><dt>HOBO reference stage</dt><dd>'+ (hs?value(stage(hs))+' ft':'No observation available')+'</dd><dt>Reference observation time</dt><dd>'+(hs?date(hs.observed_at):'No observation available')+'</dd>'+(station.flow?'<dt>Discharge</dt><dd>Estimated from the Pack Creek rating curve.</dd>':'<dt>Discharge</dt><dd>No rating curve established.</dd>')+'</dl>';
  $('ratingNote').textContent=rated?.discharge_rating_status?.startsWith('extrapolated')?'Rating estimate · extrapolated '+(rated.discharge_rating_status.endsWith('high')?'above':'below')+' the measured rating range.':'Calculated from the station’s stage–discharge rating.';
  const newest=state.latest[0];$('observationStatus').textContent=newest?'Latest observation · '+date(newest.observed_at):'No '+station.name+' measurements available';
  renderTrends();renderHoboFloodWarning();renderSensorDiagnostics();
- document.querySelectorAll('[data-metric]').forEach(b=>{b.hidden=(b.dataset.metric==='flow'&&!station.flow)||(b.dataset.metric==='stage'&&relay);b.setAttribute('aria-pressed',String(b.dataset.metric===state.metric));if(b.dataset.metric==='temp')b.textContent=relay?'Air temperature':'Water temperature';});
- metrics.temp.label=relay?'Air temperature':'Water temperature';
+ document.querySelectorAll('[data-metric]').forEach(b=>{b.hidden=(b.dataset.metric==='flow'&&!station.flow)||(b.dataset.metric==='stage'&&relay);b.setAttribute('aria-pressed',String(b.dataset.metric===state.metric));if(b.dataset.metric==='temp')b.textContent=relay?'Air temperature':groundwater?'Groundwater temperature':'Water temperature';});
+ metrics.temp.label=relay?'Air temperature':groundwater?'Groundwater temperature':'Water temperature';
 }
 function selectStation(){
  ensureMeasurementMarkup();
@@ -277,10 +277,10 @@ function selectStation(){
  if(site().kind==='relay'&&['flow','stage'].includes(state.metric))state.metric='temp';else if(state.metric==='flow'&&!site().flow)state.metric='stage';
  renderConditions();renderChart();showRatingEquation();renderRows();renderRoutes();
 }
-function series(){const m=metrics[state.metric];return (state.metric==='stage'?['water_distance','mx2001']:[state.metric==='battery'?'device':state.metric==='temp'?(site().kind==='relay'?'environment':'mx2001'):'water_distance']).map(type=>({type,color:type==='mx2001'&&state.metric==='stage'?'#b47b4e':m.color,points:state.readings.filter(r=>r.telemetry_type===type&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}));}
+function series(){const m=metrics[state.metric];return (state.metric==='stage'?['water_distance','mx2001']:[state.metric==='battery'?'device':state.metric==='temp'?(site().kind==='relay'?['environment']:(site().kind==='groundwater'?['environment','mx2001']:['mx2001'])):['water_distance']]).flat().map(type=>({type,color:type==='mx2001'&&state.metric==='stage'?'#b47b4e':m.color,points:state.readings.filter(r=>r.telemetry_type===type&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}));}
 function renderChart(){
  const m=metrics[state.metric],data=series(),pts=data.flatMap(s=>s.points);$('sampleCount').textContent=pts.length+' observation'+(pts.length===1?'':'s')+' · '+(state.hours===8760?'1 year':state.hours===2160?'90 days':state.hours<=24?state.hours+' hours':state.hours/24+' days')+(state.sampleIntervalHours?' · sampled every '+state.sampleIntervalHours+'h':'');
- $('chartLegend').textContent=state.metric==='battery'?'Battery percentage · device telemetry':state.metric==='stage'?site().sensor+' stage (teal) · HOBO MX2001 stage (clay)':state.metric==='flow'?'Estimated discharge · SEN0313 stage':(site().kind==='relay'?'Air temperature · Cottonwood Relay':'Water temperature · HOBO MX2001');
+ $('chartLegend').textContent=state.metric==='battery'?'Battery percentage · device telemetry':state.metric==='stage'?site().sensor+' stage (teal) · HOBO MX2001 stage (clay)':state.metric==='flow'?'Estimated discharge · SEN0313 stage':(site().kind==='relay'?'Air temperature · Cottonwood Relay':site().kind==='groundwater'?'Groundwater temperature':'Water temperature · HOBO MX2001');
  const gapHours=state.sampleIntervalHours?Math.max(3,2*state.sampleIntervalHours):3;
  $('gapLegend').innerHTML='<i aria-hidden="true"></i> Dashed amber connects gaps over '+gapHours+'h (not measured)';
  $('chartReadout').textContent='Select an observation to view its time and value.';
@@ -334,6 +334,12 @@ function recentColumns(){
   {label:'MB7388 stage · ft',cell:r=>r.telemetry_type==='water_distance'?displayStage(stage(r)):'—',cls:'measurement-value'},
   {label:'HOBO stage · ft',cell:r=>r.telemetry_type==='mx2001'?displayStage(stage(r)):'—',cls:'measurement-value'},
   {label:'HOBO water · °F',cell:r=>r.telemetry_type==='mx2001'?value(temp(r),1):'—',cls:'measurement-value'},
+  ...batteryColumns
+ ];
+ if(site().kind==='groundwater')return [
+  ...common,
+  {label:'Depth to water · ft',cell:r=>r.telemetry_type==='water_distance'?displayStage(stage(r)):'—',cls:'measurement-value'},
+  {label:'Groundwater · °F',cell:r=>['environment','mx2001'].includes(r.telemetry_type)?value(temp(r),1):'—',cls:'measurement-value'},
   ...batteryColumns
  ];
  if(site().kind==='relay')return [

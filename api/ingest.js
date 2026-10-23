@@ -12,7 +12,7 @@ const KNOWN_STATIONS = new Map([
   [1949224949, "Pack Creek"],
   [2650172798, 'Thousand Lake Mountain'],
   [4241345683, 'SMLA'], // !fccdcc93, repurposed station
-  [2004386937, 'Rock Moisture'], // !77788479, temporary sandstone test; firmware type remains soil
+  [2004386937, 'Matheson Groundwater'], // !77788479, GW01 groundwater well
   [1695962694, 'Cottonwood Creek'], // !65165646, CC01: MB stage and MX2001 stage/temperature
   [2425602407, 'Cottonwood Relay'], // !9093c167, CC02
   [3044869407, 'Hidden Valley'], // !b57d051f, formerly Revived; deployed October 16
@@ -130,7 +130,7 @@ function validate(body) {
        Number(body.payload.soil_moisture_percent) < 0 || Number(body.payload.soil_moisture_percent) > 100)) {
     throw new Error('Invalid soil moisture reading or source node');
   }
-  if (body.type === 'water_distance' && ![1949224949, 1695962694].includes(nodeNum)) {
+  if (body.type === 'water_distance' && ![1949224949, 1695962694, 2004386937].includes(nodeNum)) {
     throw new Error('Water-distance packets are only approved for Pack Creek and Cottonwood Creek');
   }
 
