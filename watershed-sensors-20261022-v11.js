@@ -36,7 +36,7 @@ const KNOWN_RELAY_NODES={
  '!b57d051f':'Hidden Valley',
  '!4d594874':'Nuka-Cola',
  '!742ecff5':'Pack Creek',
- '!65165646':'Cottonwood Creek',
+ '!65165646':'South Cottonwood',
  '!9093c167':'Cottonwood Relay',
  '!a35a4bf4':'Heltec / Moab'
 };
