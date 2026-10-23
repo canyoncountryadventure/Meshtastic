@@ -19,3 +19,14 @@ test('field validation values use the surveyed MX2001 reference',()=>{
  assert.equal(Number(Math.abs(6.16-6.15).toFixed(2)),0.01);
  assert.match(script,/Manual depth 6\.15 ft; MX2001 implied 6\.16 ft/);
 });
+
+test('Matheson public display leads with elevation and includes land surface and inception history',()=>{
+ assert.doesNotMatch(page,/data-metric="depth"/);
+ assert.doesNotMatch(page,/id="depthBelowCasingCard"/);
+ assert.match(page,/data-metric="elevation"[^>]*>Water-surface elevation/);
+ assert.match(page,/data-hours="1000000"[^>]*>Since inception/);
+ assert.match(script,/MATHESON_LAND_SURFACE_ELEVATION_FT=3966\.78/);
+ assert.match(script,/Land surface · 3,966\.78 ft/);
+ assert.match(script,/highest in late winter and early spring/);
+ assert.match(script,/warmest in winter and coolest in late spring to early summer/);
+});
