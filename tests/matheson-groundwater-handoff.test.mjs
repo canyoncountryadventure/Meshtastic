@@ -30,3 +30,16 @@ test('Matheson public display leads with elevation and includes land surface and
  assert.match(script,/highest in late winter and early spring/);
  assert.match(script,/warmest in winter and coolest in late spring to early summer/);
 });
+
+test('Matheson omits pre-installation MX telemetry without inventing a datum',()=>{
+ assert.doesNotMatch(script,/MATHESON_MX_INITIAL_SENSOR_DEPTH_TOC_FT|26\.50/);
+ assert.match(script,/r\.telemetry_type==='mx2001'&&new Date\(r\.observed_at\)\.getTime\(\)<MATHESON_MX_FINAL_INSTALLED_AT/);
+ assert.match(script,/s\.type==='groundwater_handoff'&&prev\.r\.telemetry_type!==p\.r\.telemetry_type/);
+ assert.match(script,/installation field reading/);
+ assert.match(script,/data in this database begin Nov\. 25, 2025/);
+});
+
+test('Cottonwood Relay displays Elk Ridge on station detail',()=>{
+ assert.match(script,/name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft'/);
+ assert.match(page,/<option value="2425602407">Cottonwood Relay<\/option>/);
+});
