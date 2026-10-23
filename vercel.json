@@ -3,14 +3,6 @@
     {
       "source": "/alerts",
       "destination": "/alerts.html"
-    },
-    {
-      "source": "/watershed",
-      "destination": "/watershed.html"
-    },
-    {
-      "source": "/notifications",
-      "destination": "/watershed-alerts.html"
     }
   ],
   "functions": {
@@ -41,6 +33,28 @@
     {
       "path": "/api/watershed-heartbeat",
       "schedule": "0 12 * * *"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/watershed",
+      "destination": "https://seutahwatersheds.vercel.app/",
+      "permanent": true
+    },
+    {
+      "source": "/watershed.html",
+      "destination": "https://seutahwatersheds.vercel.app/",
+      "permanent": true
+    },
+    {
+      "source": "/notifications",
+      "destination": "https://seutahwatersheds.vercel.app/notifications",
+      "permanent": true
+    },
+    {
+      "source": "/watershed-alerts.html",
+      "destination": "https://seutahwatersheds.vercel.app/notifications",
+      "permanent": true
     }
   ]
 }
