@@ -154,13 +154,8 @@
   `;
   document.head.appendChild(css);
 
-  const hero = document.querySelector('.station-hero-grid');
-  if (hero) hero.insertAdjacentHTML('afterbegin',
-    '<article class="station-hero extra-station" style="--accent:#d9b873">' +
-      '<div class="station-heading"><span class="station-dot" style="background:#d9b873"></span><div>' +
-      '<strong>Rock Moisture (experimental phase)</strong><small>RAK4631 · Firmware V4 · !77788479 · raw ADC10</small></div></div>' +
-      '<div class="extra-reading" id="soilMoisture">—</div><div class="extra-secondary" id="soilAdc">ADC —</div>' +
-      '<div class="station-meta"><span id="soilUpdated">Waiting for readings</span><span id="soilHeroBattery">Battery —</span></div><div class="station-state offline" id="soilState">No readings yet</div></article>');
+  // Former Rock Moisture radio is now Matheson Groundwater on Moab Watersheds.
+  // No station card is created here; historical data is preserved.
 
   function renderSoilChart(target=document.getElementById('soilMoistureChart')){
     if(!target)return;
@@ -253,7 +248,6 @@
     }
 
     const active = tempStations
-      .concat(sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? [{name:EXTRA.soil.name,reading:sm}] : [])
     if (active.length) {
       const freshest = active.sort((a,b)=>new Date(b.reading.observed_at)-new Date(a.reading.observed_at))[0];
       setText('freshestStation',freshest.name);
@@ -263,13 +257,12 @@
       setText('freshestDetail','No current station readings');
     }
 
-    const healthy = tempStations.length +
-      (sm && ageHours(sm.observed_at) <= STALE_AFTER_HOURS ? 1 : 0);
-    setText('stationsReporting',healthy+' / 6');
+    const healthy = tempStations.length;
+    setText('stationsReporting',healthy+' / 4');
     const n=document.getElementById('networkStatus');
     if(n){
-      n.className='live-pill '+(healthy===6?'online':healthy?'partial':'offline');
-      setText('networkStatusText',healthy===6?'All 6 stations reporting':healthy?healthy+' of 6 stations reporting':'No current station telemetry');
+      n.className='live-pill '+(healthy===4?'online':healthy?'partial':'offline');
+      setText('networkStatusText',healthy===4?'All 4 stations reporting':healthy?healthy+' of 4 stations reporting':'No current station telemetry');
     }
   };
 
@@ -350,7 +343,7 @@
   document.querySelectorAll('.station-hero .station-heading').forEach(heading => {
     const name = heading.querySelector('strong')?.textContent?.trim();
     const small = heading.querySelector('small');
-    if (!small || !name || name === 'Rock Moisture') return;
+    if (!small || !name) return;
     if (name === 'Pack Creek') {
       small.textContent = small.textContent.replace(/air temperature/gi, 'water temperature');
       if (!/water temperature/i.test(small.textContent)) small.textContent += ' · water temperature';
@@ -360,7 +353,7 @@
   });
   const footer = document.querySelector('footer > span:first-child');
   if (footer) footer.textContent =
-    'Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake';
+    'Meshtastic environmental network · Hidden Valley · Moab · Fishlake';
   document.querySelectorAll('.path-note span').forEach(el => {
     if (el.textContent.includes('synchronized cloud batch'))
       el.textContent = el.textContent.replace('synchronized cloud batch','HTTPS ingest');
@@ -371,7 +364,7 @@
   });
   const mapDescription = document.querySelector('.map-panel .panel-head p');
   if (mapDescription) mapDescription.textContent =
-    'Mapped locations are shown where coordinates are confirmed. Rock Moisture is not positioned until its site coordinates are supplied.';
+    'Mapped locations are shown where coordinates are confirmed.';
 
   // The original five-station scripts load on startup before this extension.
   // Refresh once so the added stations render immediately with the same API data.

@@ -5,14 +5,12 @@
   const sites = [
     {node:3044869407,name:'Hidden Valley',color:'#55d9b7',since:REPURPOSED_AT},
     {node:2740603892,name:'Moab',color:'#ff9a67'},
-    {node:2004386937,name:'Soil Moisture',color:'#d9b873'},
     {node:4241345683,name:'SMLA',short:'SMLA',id:'!fccdcc93',color:'#f5d05f',since:REPURPOSED_AT},
     {node:1577197109,name:'Fishlake Hightop',color:'#60e5f5'},
   ];
   const metricDefs = [
     {key:'voltage',name:'Battery voltage',unit:'V',dash:'',precision:3},
     {key:'temperature',name:'Temperature',unit:'°F',dash:'7 4',precision:1},
-    {key:'moisture',name:'Moisture',unit:'ADC10',dash:'2 4',precision:0},
   ];
   const seriesPalette = [
     ['#55d9b7','#a8ed72','#1bb9a8'],
@@ -94,8 +92,6 @@
   document.head.appendChild(css);
   // Detailed station statistics now belong in the comparison graph.
   document.querySelector('.station-detail-grid')?.setAttribute('hidden','');
-  const soilCard=document.getElementById('soilMoisture')?.closest('article');
-  if(soilCard){const title=soilCard.querySelector('strong');if(title)title.textContent='Soil Moisture';}
   const controls=document.getElementById('combinedControls');
   document.getElementById('combinedMetricControls').innerHTML=metricDefs.map(m=>
     `<label class="combined-choice"><input type="checkbox" data-combined-metric="${m.key}">${esc(m.name)}</label>`).join('');
@@ -148,7 +144,7 @@
       if(unit==='ADC10'){min=Math.max(0,min);max=Math.min(1023,max);}if(unit==='% index'){min=Math.max(0,min);max=Math.min(100,max);}
       return [unit,{min,max,y:v=>top+(max-v)/(max-min)*ph}];
     }));
-    const svg=svgEl('svg',{viewBox:`0 0 ${w} ${h}`,preserveAspectRatio:'none',role:'img','aria-label':'Site battery voltage, temperature, moisture and stage comparison with independent unit scales'});target.appendChild(svg);
+    const svg=svgEl('svg',{viewBox:`0 0 ${w} ${h}`,preserveAspectRatio:'none',role:'img','aria-label':'Site battery voltage, temperature and stage comparison with independent unit scales'});target.appendChild(svg);
     for(let i=0;i<=4;i++){
       const yy=top+ph*i/4;svg.appendChild(svgEl('line',{x1:left,x2:left+pw,y1:yy,y2:yy,stroke:'#17343d','stroke-width':1}));
       units.forEach((unit,j)=>{const scale=scales.get(unit),value=scale.max-(scale.max-scale.min)*i/4;addText(svg,j===0?left-8:left+pw+8+(j-1)*58,yy+4,value.toFixed(unit==='V'?2:unit==='ADC10'?0:1),j===0?'end':'start','#a8c2c9',11);});
@@ -203,10 +199,10 @@
   }
   document.getElementById('combinedExpand')?.addEventListener('click',()=>{
     const dialog=document.getElementById('expandDialog'),target=document.getElementById('expandedChart');
-    setText('expandTitle','Battery, Temperature & Moisture');document.getElementById('expandedMap').hidden=true;target.hidden=false;target.dataset.rangeSource='combinedChart';dialog.showModal();setTimeout(()=>renderCombined(target),40);
+    setText('expandTitle','Battery & Temperature');document.getElementById('expandedMap').hidden=true;target.hidden=false;target.dataset.rangeSource='combinedChart';dialog.showModal();setTimeout(()=>renderCombined(target),40);
   });
   const earlierRenderAll=renderAll;
   renderAll=function(){earlierRenderAll();renderCombined();renderFishlakeTemperature();renderNewCards();if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='combinedChart')renderCombined(document.getElementById('expandedChart'));if(document.getElementById('expandDialog')?.open && document.getElementById('expandedChart')?.dataset.rangeSource==='fishlakeTemperatureChart')renderFishlakeTemperature(document.getElementById('expandedChart'));};
-  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Rock Moisture · Moab · Fishlake · SMLA · Revived';
+  const footer=document.querySelector('footer > span:first-child');if(footer)footer.textContent='Meshtastic environmental network · Hidden Valley · Moab · Fishlake · SMLA · Revived';
   renderAll();
 })();

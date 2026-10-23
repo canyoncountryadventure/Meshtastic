@@ -19,7 +19,6 @@ Apply `migrations/20261014-email-alerts.sql` before deploying this feature. Run 
 | Display name | Node ID | Decimal node number | Data |
 |---|---|---:|---|
 | SMLA | !fccdcc93 | 4241345683 | Temperature and device telemetry |
-| Soil Moisture | !77788479 | 2004386937 | Soil ADC10 and its own HOBO temperature |
 | Hidden Valley | !b57d051f | 3044869407 | Formerly Revived; temperature (°F) and battery (%) card |
 | Moab (Heltec) | !a35a4bf4 | 2740603892 | Local HOBO BLE temperature and gateway |
 | Fishlake Hightop | !5e021e35 | 1577197109 | HOBO temperature |
@@ -27,6 +26,8 @@ Apply `migrations/20261014-email-alerts.sql` before deploying this feature. Run 
 | Cottonwood Creek (CC01) | !65165646 | 1695962694 | MB water stage and MX2001 stage/temperature |
 | Cottonwood Relay (CC02) | !9093c167 | 2425602407 | Device battery and radio-link telemetry |
 | Thousand Lake Mountain | !9df66d7e | 2650172798 | HOBO temperature |
+
+The former Soil Moisture / Rock Moisture radio `!77788479` has been repurposed as **Matheson Groundwater** on Moab Watersheds. The main Meshtastic dashboard no longer shows its old soil-moisture card or comparison option. This UI change does not modify historical observations, ingestion routing, or Matheson Groundwater data.
 
 Pack Creek telemetry is retired. Its node `!c9f9f6e7` is acknowledged without storing new readings. Historical Pack Creek telemetry is deleted, while the stage–discharge curve and five rating points remain in `rating_curves` and `rating_curve_points`. SMLA's repurposed-node readings are retained. The former Revived radio is now Hidden Valley; the old Hidden Valley `!4aab9211` is hidden from the dashboard while stored history is retained. Readings before its October 5 repurposing are excluded from current health checks.
 
@@ -55,7 +56,7 @@ The production gateway build injects \`HOBO_HTTP_GATEWAY_INGEST_KEY\` from the G
 
 ## Dashboard behavior
 
-Cottonwood Creek and Swell Day each have independent ultrasonic stage, MX2001 stage, and MX2001 temperature controls. The comparison graph keeps sensor stage series separate. Cottonwood Relay displays battery and radio-link status without requiring a temperature logger. Pack Creek has no live telemetry card; its rating records are retained. Soil Moisture uses its own logger.
+Cottonwood Creek and Swell Day each have independent ultrasonic stage, MX2001 stage, and MX2001 temperature controls. The comparison graph keeps sensor stage series separate. Cottonwood Relay displays battery and radio-link status without requiring a temperature logger. Pack Creek has no live telemetry card; its rating records are retained. The former Soil Moisture card was removed after its radio was repurposed as Matheson Groundwater on Moab Watersheds.
 
 Pack Creek rating curve version 1 is \`Q = 6.07187614 × (H − 0.22259098)^1.04237977\`, where \`H\` is calibrated stage in feet and \`Q\` is discharge in cubic feet per second. Its measured stage range is 0.2444–0.6904 ft; API responses identify values outside that range as extrapolated.
 
