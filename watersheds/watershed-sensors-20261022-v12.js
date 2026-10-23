@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261023-matheson-submergence-v14';
+const DASHBOARD_BUILD = '20261023-matheson-mx2001-depth-v15';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',detail:'7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'Matheson Groundwater Well',kind:'groundwater',sensor:'Submerged water-level logger',flow:false}};
 const site=()=>SITES[state.node];
@@ -253,7 +253,7 @@ function renderSensorDiagnostics(){
  }
 }
 function renderConditions(){
- const station=site(),relay=station.kind==='relay',groundwater=station.kind==='groundwater',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=groundwater?water:(state.node===1695962694?water:(water||hs)),rated=latest('water_distance',flow),therm=groundwater?state.latest.find(r=>['environment','mx2001'].includes(r.telemetry_type)&&temp(r)!==null):latest(relay?'environment':'mx2001',temp),device=state.latest.find(r=>r.telemetry_type==='device'&&(battery(r)!==null||batteryVoltage(r)!==null));
+ const station=site(),relay=station.kind==='relay',groundwater=station.kind==='groundwater',water=latest('water_distance',stage),hs=latest('mx2001',stage),level=groundwater?(hs||water):(state.node===1695962694?water:(water||hs)),rated=latest('water_distance',flow),therm=groundwater?state.latest.find(r=>['environment','mx2001'].includes(r.telemetry_type)&&temp(r)!==null):latest(relay?'environment':'mx2001',temp),device=state.latest.find(r=>r.telemetry_type==='device'&&(battery(r)!==null||batteryVoltage(r)!==null));
  const outage=$('cottonwoodOutage');if(outage)outage.hidden=state.node!==1695962694;
  $('stationTitle').textContent=station.name;if($('stationSubtitle'))$('stationSubtitle').textContent=station.detail;$('temperatureLabel').textContent=relay?'Air temperature':groundwater?'Groundwater temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=groundwater?'Water depth above logger':state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
  $('readingCards').className='readings '+(relay?'relay':station.flow?'':'creek')+(state.node===1695962694?' cottonwood':'');$('flowCard').hidden=!station.flow;$('stageCard').hidden=relay;$('hoboStageCard').hidden=relay||groundwater;
@@ -277,7 +277,7 @@ function selectStation(){
  if(site().kind==='relay'&&['flow','stage'].includes(state.metric))state.metric='temp';else if(state.metric==='flow'&&!site().flow)state.metric='stage';
  renderConditions();renderChart();showRatingEquation();renderRows();renderRoutes();
 }
-function series(){const m=metrics[state.metric];return (state.metric==='stage'?(site().kind==='groundwater'?['water_distance']:['water_distance','mx2001']):[state.metric==='battery'?'device':state.metric==='temp'?(site().kind==='relay'?['environment']:(site().kind==='groundwater'?['environment','mx2001']:['mx2001'])):['water_distance']]).flat().map(type=>({type,color:type==='mx2001'&&state.metric==='stage'?'#b47b4e':m.color,points:state.readings.filter(r=>r.telemetry_type===type&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}));}
+function series(){const m=metrics[state.metric];return (state.metric==='stage'?(site().kind==='groundwater'?['mx2001','water_distance']:['water_distance','mx2001']):[state.metric==='battery'?'device':state.metric==='temp'?(site().kind==='relay'?['environment']:(site().kind==='groundwater'?['environment','mx2001']:['mx2001'])):['water_distance']]).flat().map(type=>({type,color:type==='mx2001'&&state.metric==='stage'&&site().kind!=='groundwater'?'#b47b4e':m.color,points:state.readings.filter(r=>r.telemetry_type===type&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}));}
 function renderChart(){
  const m=metrics[state.metric],data=series(),pts=data.flatMap(s=>s.points);$('sampleCount').textContent=pts.length+' observation'+(pts.length===1?'':'s')+' · '+(state.hours===8760?'1 year':state.hours===2160?'90 days':state.hours<=24?state.hours+' hours':state.hours/24+' days')+(state.sampleIntervalHours?' · sampled every '+state.sampleIntervalHours+'h':'');
  $('chartLegend').textContent=state.metric==='battery'?'Battery percentage · device telemetry':state.metric==='stage'?(site().kind==='groundwater'?'Water depth above logger · '+site().sensor:site().sensor+' stage (teal) · HOBO MX2001 stage (clay)'):state.metric==='flow'?'Estimated discharge · SEN0313 stage':(site().kind==='relay'?'Air temperature · Cottonwood Relay':site().kind==='groundwater'?'Groundwater temperature':'Water temperature · HOBO MX2001');
@@ -338,7 +338,7 @@ function recentColumns(){
  ];
  if(site().kind==='groundwater')return [
   ...common,
-  {label:'Water above logger · ft',cell:r=>r.telemetry_type==='water_distance'?displayStage(stage(r)):'—',cls:'measurement-value'},
+  {label:'Water above logger · ft',cell:r=>['mx2001','water_distance'].includes(r.telemetry_type)?displayStage(stage(r)):'—',cls:'measurement-value'},
   {label:'Groundwater · °F',cell:r=>['environment','mx2001'].includes(r.telemetry_type)?value(temp(r),1):'—',cls:'measurement-value'},
   ...batteryColumns
  ];
