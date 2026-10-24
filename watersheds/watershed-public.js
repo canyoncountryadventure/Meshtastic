@@ -2,8 +2,9 @@
  'use strict';
  const $=id=>document.getElementById(id);
  const el=(tag,text)=>{const v=document.createElement(tag);if(text!==undefined)v.textContent=text;return v;};
- const stations=[[1949224949,'Pack Creek'],[1695962694,'Cottonwood Creek'],[2425602407,'Cottonwood Relay']];
+ const stations=[[1949224949,'Pack Creek'],[1695962694,'Cottonwood Creek'],[2425602407,'Cottonwood Relay'],[2004386937,'Matheson Groundwater']];
  const parameterLabels={offline_hours:'Station unresponsive (hours)',discharge_cfs:'Estimated discharge (cfs)',water_level_ft:'Stage (ft)',temperature_c:'Temperature (°F)',battery_percent:'Battery (%)'};
+ const parameterLabel=(parameter,node)=>parameter==='water_level_ft'&&Number(node)===2004386937?'Water depth above logger (ft)':parameter==='temperature_c'&&Number(node)===2004386937?'Groundwater temperature (°F)':parameterLabels[parameter]||parameter;
  let state=null;
  const tell=text=>$('publicMessage').textContent=text;
  async function api(body){
@@ -16,8 +17,8 @@
  function options(select,values,selected){select.replaceChildren(...values.map(([value,label])=>{const o=el('option',label);o.value=value;return o;}));select.value=String(selected??values[0][0]);}
  function fillParameters(selected){
   const node=Number($('publicStation').value);
-  const choices=node===2425602407?['offline_hours','temperature_c','battery_percent']:node===1695962694?['offline_hours','water_level_ft','temperature_c','battery_percent']:['offline_hours','discharge_cfs','water_level_ft','temperature_c','battery_percent'];
-  options($('publicParameter'),choices.map(x=>[x,parameterLabels[x]]),choices.includes(selected)?selected:choices[0]);
+  const choices=node===2425602407?['offline_hours','temperature_c','battery_percent']:node===1695962694||node===2004386937?['offline_hours','water_level_ft','temperature_c','battery_percent']:['offline_hours','discharge_cfs','water_level_ft','temperature_c','battery_percent'];
+  options($('publicParameter'),choices.map(x=>[x,parameterLabel(x,node)]),choices.includes(selected)?selected:choices[0]);
   sync();
  }
  function sync(){
@@ -51,7 +52,7 @@
    const card=el('article');card.className='rule-card';
    const info=el('div');
    const status=rule.parameter==='offline_hours'?'No telemetry for '+rule.threshold+' hours':rule.direction+' '+rule.threshold+' (reset '+rule.reset_value+')';
-   info.append(el('h3',rule.station_name+' · '+(parameterLabels[rule.parameter]||rule.parameter)),el('p',status),el('p',rule.enabled?'Enabled':'Paused'));
+   info.append(el('h3',rule.station_name+' · '+parameterLabel(rule.parameter,rule.node_num)),el('p',status),el('p',rule.enabled?'Enabled':'Paused'));
    const actions=el('div');actions.className='actions';
    const editBtn=el('button','Edit');editBtn.type='button';editBtn.onclick=()=>edit(rule);
    const deleteBtn=el('button','Delete');deleteBtn.type='button';deleteBtn.onclick=()=>handle(async()=>{
