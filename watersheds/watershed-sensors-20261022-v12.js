@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261023-matheson-verified-handoff-v19';
+const DASHBOARD_BUILD = '20261023-matheson-mx2001-3h-gap-v20';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'U18 USGS Matheson Wetlands Well · Matheson Wetlands Preserve',kind:'groundwater',sensor:'HOBO MX2001',flow:false}};
 const site=()=>SITES[state.node];
@@ -297,11 +297,16 @@ function series(){
  if(site().kind==='groundwater'&&state.metric==='elevation')return [{type:'groundwater_handoff',color:m.color,points:state.readings.filter(r=>['rugged_troll','mx2001'].includes(r.telemetry_type)&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}];
  return (state.metric==='stage'?(site().kind==='groundwater'?['rugged_troll','mx2001']:['water_distance','mx2001']):[state.metric==='battery'?'device':state.metric==='temp'?(site().kind==='relay'?['environment']:(site().kind==='groundwater'?['rugged_troll','environment','mx2001']:['mx2001'])):['water_distance']]).flat().map(type=>({type,color:type==='mx2001'&&state.metric==='stage'&&site().kind!=='groundwater'?'#b47b4e':m.color,points:state.readings.filter(r=>r.telemetry_type===type&&m.convert(r)!==null).map(r=>({x:new Date(r.observed_at).getTime(),y:m.convert(r),r})).sort((a,b)=>a.x-b.x)}));
 }
+// Only Matheson U18's HOBO MX2001 logs every three hours. Allow 30 minutes
+// for ordinary timestamp drift; a missed three-hour cycle still shows as a gap.
+// The TROLL-to-HOBO instrument change is handled separately and remains dashed.
+const MATHESON_MX_GAP_TOLERANCE_HOURS=3.5;
+const chartGapThresholdHours=(nodeNum,previous,current,standardHours)=>nodeNum===2004386937&&previous?.r?.telemetry_type==='mx2001'&&current?.r?.telemetry_type==='mx2001'?Math.max(standardHours,MATHESON_MX_GAP_TOLERANCE_HOURS):standardHours;
 function renderChart(){
  const m=metrics[state.metric],data=series(),pts=data.flatMap(s=>s.points);$('sampleCount').textContent=pts.length+' observation'+(pts.length===1?'':'s')+' · '+(state.hours===SINCE_INCEPTION_HOURS?'since inception':state.hours===2160?'90 days':state.hours<=24?state.hours+' hours':state.hours/24+' days')+(state.sampleIntervalHours?' · sampled every '+state.sampleIntervalHours+'h':'');
  $('chartLegend').textContent=state.metric==='elevation'?'Water-surface elevation · joined TROLL + MX2001 record · brown line is land surface at 3,966.78 ft':state.metric==='battery'?'Battery percentage · device telemetry':state.metric==='stage'?(site().kind==='groundwater'?'Water above each logger · shown separately because instrument depths differ':site().sensor+' stage (teal) · HOBO MX2001 stage (clay)'):state.metric==='flow'?'Estimated discharge · SEN0313 stage':(site().kind==='relay'?'Air temperature · Cottonwood Relay':site().kind==='groundwater'?'Groundwater temperature':'Water temperature · HOBO MX2001');
  const gapHours=state.sampleIntervalHours?Math.max(3,2*state.sampleIntervalHours):3;
- $('gapLegend').innerHTML='<i aria-hidden="true"></i> Dashed amber connects gaps over '+gapHours+'h (not measured)';
+ $('gapLegend').innerHTML='<i aria-hidden="true"></i> Dashed amber: gaps over '+gapHours+'h'+(site().kind==='groundwater'&&gapHours<MATHESON_MX_GAP_TOLERANCE_HOURS?' (Matheson MX2001: over 3.5h)':'')+(site().kind==='groundwater'?'; TROLL-to-HOBO transition':'')+' · unmeasured intervals';
  $('chartReadout').textContent='Select an observation to view its time and value.';
  if(!pts.length){$('chart').innerHTML='<div class="empty">No '+m.label.toLowerCase()+' observations in this period. Try a longer time range.</div>';return;}
  const end=Date.now(),start=state.hours===SINCE_INCEPTION_HOURS?Math.min(...pts.map(p=>p.x)):end-state.hours*3600000,W=1100,H=300,L=65,R=22,T=20,B=42;
@@ -320,7 +325,7 @@ function renderChart(){
    const point=p=>x(p.x).toFixed(2)+','+y(p.y).toFixed(2);
    for(let i=0;i<s.points.length;i++){
      const p=s.points[i],prev=s.points[i-1];
-     if(i>0&&(p.x-prev.x>gapHours*3600000||(s.type==='groundwater_handoff'&&prev.r.telemetry_type!==p.r.telemetry_type))){
+     if(i>0&&(p.x-prev.x>chartGapThresholdHours(state.node,prev,p,gapHours)*3600000||(s.type==='groundwater_handoff'&&prev.r.telemetry_type!==p.r.telemetry_type))){
        if(current.length)segs.push(current);
        current=[p];gaps.push([prev,p]);
      }else current.push(p);

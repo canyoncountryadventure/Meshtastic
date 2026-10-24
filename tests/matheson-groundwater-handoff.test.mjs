@@ -43,3 +43,22 @@ test('Cottonwood Relay displays Elk Ridge on station detail',()=>{
  assert.match(script,/name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft'/);
  assert.match(page,/<option value="2425602407">Cottonwood Relay<\/option>/);
 });
+
+test('Matheson MX2001 alone tolerates normal three-hour intervals with timestamp drift',()=>{
+ assert.match(script,/MATHESON_MX_GAP_TOLERANCE_HOURS=3\.5/);
+ assert.match(script,/chartGapThresholdHours\(state\.node,prev,p,gapHours\)/);
+ assert.match(script,/s\.type==='groundwater_handoff'&&prev\.r\.telemetry_type!==p\.r\.telemetry_type/);
+ const expression=script.match(/const chartGapThresholdHours=(.+);/);
+ assert.ok(expression,'chart gap function must exist');
+ const chartGapThresholdHours=Function('MATHESON_MX_GAP_TOLERANCE_HOURS','return '+expression[1])(3.5);
+ const point=type=>({r:{telemetry_type:type}});
+ const mx=point('mx2001'),troll=point('rugged_troll');
+ assert.equal(chartGapThresholdHours(2004386937,mx,mx,3),3.5);
+ assert.equal(chartGapThresholdHours(2004386937,mx,mx,48),48);
+ assert.equal(chartGapThresholdHours(2004386937,troll,troll,3),3);
+ assert.equal(chartGapThresholdHours(2004386937,troll,mx,3),3);
+ assert.equal(chartGapThresholdHours(1695962694,mx,mx,3),3);
+ assert.equal(3.25>chartGapThresholdHours(2004386937,mx,mx,3),false);
+ assert.equal(6>chartGapThresholdHours(2004386937,mx,mx,3),true);
+ assert.match(page,/Matheson Groundwater's HOBO MX2001 allows up to 3 hours 30 minutes/);
+});
