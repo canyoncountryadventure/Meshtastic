@@ -1,0 +1,38 @@
+name: Meshtastic station heartbeat
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  station-heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check Meshtastic stations for delayed packets
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          base = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+          authorization = os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']
+          separator = '&' if '?' in base else '?'
+          url = base + separator + 'audience=meshtastic-station-heartbeat'
+          request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + authorization})
+          with urllib.request.urlopen(request, timeout=20) as response:
+              token = json.load(response)['value']
+          check = urllib.request.Request(
+              'https://meshtastic-ecru.vercel.app/api/mesh-heartbeat',
+              headers={'Authorization': 'Bearer ' + token})
+          with urllib.request.urlopen(check, timeout=45) as response:
+              data = json.load(response)
+          if not data.get('ok'):
+              raise RuntimeError('Meshtastic delayed-station check did not succeed')
+          print('Meshtastic heartbeat: ' + str(data.get('checked',0)) + ' rules checked.')
+          PY

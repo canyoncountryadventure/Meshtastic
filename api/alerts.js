@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSql } from './db.js';
-import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, storedRule } from '../lib/alert-values.js';
+import { normalizeEmails, displayRule, storedRule } from '../lib/alert-values.js';
+import { MESH_STATIONS, MESH_PARAMETERS, MESH_PARAMETER_CHOICES, validateMeshRule, isMeshRule } from '../lib/mesh-alert-values.js';
 import { encryptKey, dispatchEmails } from '../lib/alerts.js';
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
@@ -10,6 +11,10 @@ function authenticated(req) {
   if (!cookie) return false;
   const [expiry,sig]=cookie.split('.');
   return /^\d+$/.test(expiry) && Number(expiry)>Date.now() && equal(sig,signature(expiry));
+}
+async function editableRule(sql,id) {
+  const found=await sql`SELECT node_num,parameter FROM alert_rules WHERE id=${id}`;
+  return found.length===1 && isMeshRule(found[0]);
 }
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
@@ -37,15 +42,19 @@ export default async function handler(req,res) {
     if (req.method==='GET') {
       const [rules,history,config]=await Promise.all([
         sql`SELECT * FROM alert_rules ORDER BY id`,
-        sql`SELECT id,rule_id,recipient,subject,status,attempts,error,created_at,sent_at FROM alert_deliveries ORDER BY id DESC LIMIT 50`,
+        sql`SELECT d.id,d.rule_id,d.recipient,d.subject,d.status,d.attempts,d.error,d.created_at,d.sent_at,
+          r.node_num,r.parameter FROM alert_deliveries d JOIN alert_rules r ON r.id=d.rule_id
+          WHERE r.node_num IN (3044869407,2740603892,1577197109,4241345683)
+          ORDER BY d.id DESC LIMIT 200`,
         sql`SELECT sender,updated_at FROM alert_email_config WHERE id=1`,
       ]);
-      return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS});
+      return res.status(200).json({ok:true,rules:rules.filter(isMeshRule).map(displayRule),temperature_unit:'F',history:history.filter(isMeshRule).slice(0,50).map(({node_num,parameter,...delivery})=>delivery),email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:MESH_STATIONS,parameters:MESH_PARAMETERS,parameter_choices:MESH_PARAMETER_CHOICES});
     }
     if (body.action==='save_rule') {
-      const rule=validateRule(storedRule(body)),emails=normalizeEmails(body.recipients || []);
+      const rule=validateMeshRule(storedRule(body)),emails=normalizeEmails(body.recipients || []);
       const args=JSON.stringify(emails);
       if (body.id) {
+        if(!(await editableRule(sql,body.id)))return res.status(404).json({error:'Rule not found on this dashboard'});
         const rows=await sql`UPDATE alert_rules SET node_num=${rule.node_num},station_name=${rule.station_name},parameter=${rule.parameter},
           direction=${rule.direction},threshold=${rule.threshold},reset_value=${rule.reset_value},enabled=${rule.enabled},recipients=${args}::jsonb,
           active=FALSE,last_observed_at=NOW(),updated_at=NOW(),revision=revision+1 WHERE id=${body.id} RETURNING id`;
@@ -55,6 +64,7 @@ export default async function handler(req,res) {
           VALUES(${rule.node_num},${rule.station_name},${rule.parameter},${rule.direction},${rule.threshold},${rule.reset_value},${rule.enabled},${args}::jsonb,NOW())`;
       }
     } else if (body.action==='delete_rule') {
+      if(!(await editableRule(sql,body.id)))return res.status(404).json({error:'Rule not found on this dashboard'});
       await sql`DELETE FROM alert_rules WHERE id=${body.id}`;
     } else if (body.action==='save_email') {
       const sender=String(body.sender || '').trim(); normalizeEmails([sender]);
@@ -62,8 +72,8 @@ export default async function handler(req,res) {
       await sql`INSERT INTO alert_email_config(id,sender,encrypted_key) VALUES(1,${sender},${encryptKey(body.key)})
         ON CONFLICT(id) DO UPDATE SET sender=EXCLUDED.sender,encrypted_key=EXCLUDED.encrypted_key,updated_at=NOW()`;
     } else if (body.action==='test') {
-      const rows=await sql`SELECT id,station_name,recipients FROM alert_rules WHERE id=${body.id}`;
-      const rule=rows[0]; if (!rule || !rule.recipients.length) throw new Error('Save at least one recipient first');
+      const rows=await sql`SELECT id,node_num,parameter,station_name,recipients FROM alert_rules WHERE id=${body.id}`;
+      const rule=rows[0]; if (!isMeshRule(rule) || !rule.recipients.length) throw new Error('Save at least one recipient first');
       const config=await sql`SELECT id FROM alert_email_config WHERE id=1`;
       if (!config.length) throw new Error('Connect the email service first');
       const recent=await sql`SELECT id FROM alert_deliveries WHERE rule_id=${rule.id} AND reading_id IS NULL AND created_at>NOW()-INTERVAL '1 minute' LIMIT 1`;
@@ -77,7 +87,7 @@ export default async function handler(req,res) {
     return res.status(200).json({ok:true});
   } catch(error) {
     console.error('Alerts request failed',error.name);
-    const safe=/Choose|Reset|Threshold|Enter|Use up|Stage|Only Pack|Save at|Connect|Wait one|Unknown action/.test(error.message);
+    const safe=/Choose|choose|Threshold|threshold|Battery|battery|delayed|duration|parameter|station|Enter|Use up|Save at|Connect|Wait one|Unknown action/.test(error.message);
     return res.status(safe?400:500).json({error:safe?error.message:'Could not save or load alerts'});
   }
 }
