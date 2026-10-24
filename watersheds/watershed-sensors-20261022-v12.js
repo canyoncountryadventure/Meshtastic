@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261024-matheson-groundwater-30d-trends-v22';
+const DASHBOARD_BUILD = '20261024-matheson-twice-daily-v23';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'U18 USGS Matheson Wetlands Well · Matheson Wetlands Preserve',kind:'groundwater',sensor:'HOBO MX2001',flow:false}};
 const site=()=>SITES[state.node];
@@ -460,7 +460,7 @@ async function load(){
  if(state.node===2004386937)state.trendReadings=(trendData?.readings||data.readings).filter(valid).filter(r=>Number(r.node_num)===2004386937);
  else state.trendReadings=[];
  state.allRecent=Array.isArray(data.recent)?data.recent.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)):[];
- state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.sampleIntervalHours=n(data.sample_interval_hours);state.sensorEvents=Array.isArray(data.sensor_events)?data.sensor_events:[];state.cc01Polling=data.cc01_polling||null;selectStation();
+ state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.sampleIntervalHours=n(data.sample_interval_hours_by_node?.[String(state.node)]??data.sample_interval_hours);state.sensorEvents=Array.isArray(data.sensor_events)?data.sensor_events:[];state.cc01Polling=data.cc01_polling||null;selectStation();
  }catch(error){ console.error('Watershed data or rendering error, build '+DASHBOARD_BUILD+':',error);const reason=error instanceof Error?error.message:'Unknown issue';$('error').textContent='Could not load measurements ('+reason+'). '+(state.latest.length?'Previously loaded readings may remain. ':'')+'Build: '+DASHBOARD_BUILD+'.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="'+recentColumns().length+'">Observations unavailable.</td></tr>';}}
  finally{state.busy=false;$('refresh').disabled=false;$('refresh').textContent='↻ Refresh readings';document.querySelectorAll('[data-hours]').forEach(b=>b.disabled=false);}
 }

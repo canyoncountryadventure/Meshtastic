@@ -35,11 +35,16 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
 export async function readCreekData(sql,hours){
  const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled ORDER BY station_name`;
  const bucketSeconds=hours>=8760?86400:hours>=2160?21600:hours>=1440?7200:0;
+ // Preserve two real groundwater-sensor observations per day for Matheson in
+ // annual and since-inception views; other stations retain daily sampling.
+ const mathesonBucketSeconds=hours>=8760?43200:bucketSeconds;
  // Long views select real samples from time buckets, never synthetic values.
  const readings=bucketSeconds
   ? await sql`WITH bucketed AS (
     SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,o.telemetry_type,o.temperature_c,o.metrics,o.radio,
-      ROW_NUMBER() OVER (PARTITION BY o.node_num,o.telemetry_type,FLOOR(EXTRACT(EPOCH FROM o.observed_at)/${bucketSeconds}::numeric)
+      ROW_NUMBER() OVER (PARTITION BY o.node_num,o.telemetry_type,FLOOR(EXTRACT(EPOCH FROM o.observed_at)/
+        CASE WHEN o.node_num=2004386937 AND o.telemetry_type IN ('rugged_troll','mx2001')
+          THEN ${mathesonBucketSeconds}::numeric ELSE ${bucketSeconds}::numeric END)
         ORDER BY o.observed_at DESC,o.source_id DESC) AS bucket_rank
     FROM creek_observations o JOIN creek_stations s USING(node_num)
     WHERE s.enabled AND o.observed_at >= NOW()-(${hours}*INTERVAL '1 hour'))
@@ -73,7 +78,11 @@ export async function readCreekData(sql,hours){
      valid_stage_min_ft:rating_curve.valid_stage_min_ft,valid_stage_max_ft:rating_curve.valid_stage_max_ft
    }:null
  }));
+ const sampleIntervals=bucketSeconds?Object.fromEntries(stations.map(s=>[
+   String(s.node_num),Number(s.node_num)===2004386937?mathesonBucketSeconds/3600:bucketSeconds/3600
+ ])):{};
  return {stations:publicStations,readings:rateReadings(readings,curves),latest:rateReadings(latest,curves),
    recent:rateReadings(recent,curves),sensor_events:sensorEvents,
-   cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
+   cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null,
+   sample_interval_hours_by_node:sampleIntervals};
 }
