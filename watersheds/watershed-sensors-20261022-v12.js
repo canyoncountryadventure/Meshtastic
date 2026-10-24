@@ -1,10 +1,10 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261023-matheson-mx2001-3h-gap-v20';
+const DASHBOARD_BUILD = '20261024-matheson-groundwater-30d-trends-v21';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'U18 USGS Matheson Wetlands Well · Matheson Wetlands Preserve',kind:'groundwater',sensor:'HOBO MX2001',flow:false}};
 const site=()=>SITES[state.node];
-const state={node:1949224949,hours:12,metric:'flow',readings:[],latest:[],recent:[],allRecent:[],allReadings:[],allLatest:[],stationInfo:[],sampleIntervalHours:null,sensorEvents:[],cc01Polling:null,measurementPage:0,measurementPageSize:12,busy:false};
+const state={node:1949224949,hours:12,metric:'flow',readings:[],latest:[],recent:[],allRecent:[],allReadings:[],allLatest:[],trendReadings:[],stationInfo:[],sampleIntervalHours:null,sensorEvents:[],cc01Polling:null,measurementPage:0,measurementPageSize:12,busy:false};
 const n=value=>value===null||value===undefined||value===''?null:Number.isFinite(Number(value))?Number(value):null;
 const valid=r=>!(Number(r.node_num)===2004386937&&r.telemetry_type==='mx2001'&&new Date(r.observed_at).getTime()<MATHESON_MX_FINAL_INSTALLED_AT)&&Object.hasOwn(SITES,Number(r.node_num))&&(r.telemetry_type==='device'||(Number(r.node_num)===2425602407?r.telemetry_type==='environment':Number(r.node_num)===2004386937?['rugged_troll','mx2001','environment'].includes(r.telemetry_type):['water_distance','mx2001'].includes(r.telemetry_type)));
 const stage=r=>r?.metrics?.stage_calibrated===false||r?.metrics?.distance_valid===false?null:n(r?.metrics?.water_level_ft);
@@ -141,6 +141,44 @@ function shortTrend(type,convert,windowHours,minSpanHours,staleHours,baseThresho
  return {direction:delta>tolerance?'up':delta< -tolerance?'down':'flat',delta,span,windowHours};
 }
 
+// Groundwater responds on longer time scales than stream stage. Use a 30-day
+// least-squares trend through daily medians so hourly barometric and thermal
+// noise cannot control the direction indicator.
+function median(values){
+ const sorted=values.slice().sort((a,b)=>a-b),middle=Math.floor(sorted.length/2);
+ return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
+}
+function groundwaterTrend(convert,baseThreshold){
+ const merged=[...state.trendReadings,...state.readings],seen=new Set();
+ const candidates=merged.filter(r=>{
+  if(!['rugged_troll','mx2001'].includes(r.telemetry_type)||convert(r)===null)return false;
+  const key=String(r.source_id??r.id??(r.telemetry_type+'|'+r.observed_at));
+  if(seen.has(key))return false;seen.add(key);return true;
+ }).sort((a,b)=>new Date(a.observed_at)-new Date(b.observed_at));
+ const newest=candidates.at(-1);if(!newest)return null;
+ const end=Date.parse(newest.observed_at),dayMs=86400000,windowDays=30;
+ if(!Number.isFinite(end)||end>Date.now()+60000||Date.now()-end>7*3600000)return null;
+ const buckets=new Map();
+ for(const r of candidates){
+  const t=Date.parse(r.observed_at),v=convert(r);
+  if(!Number.isFinite(t)||t<end-windowDays*dayMs||t>end||v===null)continue;
+  const day=Math.floor(t/dayMs);
+  if(!buckets.has(day))buckets.set(day,[]);
+  buckets.get(day).push(v);
+ }
+ const daily=[...buckets].map(([day,values])=>({x:day,y:median(values)})).sort((a,b)=>a.x-b.x);
+ if(daily.length<21)return null;
+ const span=daily.at(-1).x-daily[0].x;
+ if(span<21)return null;
+ const meanX=daily.reduce((sum,p)=>sum+p.x,0)/daily.length;
+ const meanY=daily.reduce((sum,p)=>sum+p.y,0)/daily.length;
+ const denominator=daily.reduce((sum,p)=>sum+(p.x-meanX)**2,0);
+ if(!denominator)return null;
+ const slope=daily.reduce((sum,p)=>sum+(p.x-meanX)*(p.y-meanY),0)/denominator;
+ const delta=slope*span;
+ return {direction:delta>baseThreshold?'up':delta< -baseThreshold?'down':'flat',delta,span,windowDays,points:daily.length,method:'least-squares slope through daily medians'};
+}
+
 /* Flood evidence, not proof the HOBO was destroyed. Include rises that
    peaked and receded within the last three hours. */
 function recentFloodRise(ultrasonic,hoboTime,measuredFlow,now){
@@ -195,17 +233,21 @@ function renderHoboFloodWarning(){
 }
 
 function setTrend(id,trend,unit){
- const el=$(id);if(!trend){el.className='trend-indicator trend-unavailable';el.textContent='Trend unavailable · insufficient recent data';return;}
+ const el=$(id);if(!el)return;
+ if(!trend){el.className='trend-indicator trend-unavailable';el.textContent='Trend unavailable · insufficient data for the selected trend period';el.title='';return;}
  const arrow={up:'↑',down:'↓',flat:'→'}[trend.direction];
  const word={up:'Rising',down:'Falling',flat:'Steady'}[trend.direction];
- const delta=unit==='cfs'?trend.delta.toFixed(2):trend.delta.toFixed(1);
+ const decimals=unit==='cfs'||unit==='ft'?2:1;
+ const period=trend.windowDays?'over '+trend.windowDays+' days':'/ '+trend.span.toFixed(1)+'h';
  el.className='trend-indicator trend-'+trend.direction;
- el.innerHTML='<span class="trend-arrow" aria-hidden="true">'+arrow+'</span> '+word+' · '+(trend.delta>0?'+':'')+delta+' '+unit+' / '+trend.span.toFixed(1)+'h';
- el.title=trend.windowHours+'h observation window · comparison of measured values';
+ el.innerHTML='<span class="trend-arrow" aria-hidden="true">'+arrow+'</span> '+word+' · '+(trend.delta>0?'+':'')+trend.delta.toFixed(decimals)+' '+unit+' '+period;
+ el.title=trend.windowDays?trend.windowDays+'-day trend · '+trend.method+' · '+trend.points+' daily medians':trend.windowHours+'h observation window · comparison of measured values';
 }
 function renderTrends(){
+ const groundwater=site().kind==='groundwater';
  setTrend('flowTrend',site().flow?shortTrend('water_distance',flow,3,0.75,1.5,0.10,0.025):null,'cfs');
- setTrend('tempTrend',shortTrend(site().kind==='relay'?'environment':'mx2001',temp,6,2,3,0.5,0),'°F');
+ setTrend('waterElevationTrend',groundwater?groundwaterTrend(mathesonElevation,0.05):null,'ft');
+ setTrend('tempTrend',groundwater?groundwaterTrend(temp,0.2):shortTrend(site().kind==='relay'?'environment':'mx2001',temp,6,2,3,0.5,0),'°F');
 }
 
 // Reconcile older HTML still open/cached in a browser with the current JS.
@@ -218,7 +260,12 @@ function ensureMeasurementMarkup(){
   if(heading)heading.id='stageLabel';
  }
  if(!$('waterElevationCard')&&stageCard){
-  const card=document.createElement('article');card.className='reading';card.id='waterElevationCard';card.hidden=true;card.innerHTML='<p class="eyebrow">Water-surface elevation</p><div class="number"><strong id="waterElevation">—</strong><span>ft</span></div><p id="waterElevationTime" class="timestamp">Waiting for groundwater observations</p><div class="reading-foot">Calculated from the 3,968.52 ft top-of-casing reference elevation</div>';stageCard.insertAdjacentElement('afterend',card);
+  const card=document.createElement('article');card.className='reading';card.id='waterElevationCard';card.hidden=true;card.innerHTML='<p class="eyebrow">Water-surface elevation</p><div class="number"><strong id="waterElevation">—</strong><span>ft</span></div><p id="waterElevationTime" class="timestamp">Waiting for groundwater observations</p><div id="waterElevationTrend" class="trend-indicator trend-unavailable" aria-live="polite">Trend unavailable</div><div class="reading-foot">Calculated from the 3,968.52 ft top-of-casing reference elevation</div>';stageCard.insertAdjacentElement('afterend',card);
+ }
+ const groundwaterCard=$('waterElevationCard');
+ if(groundwaterCard&&!$('waterElevationTrend')){
+  const trend=document.createElement('div');trend.id='waterElevationTrend';trend.className='trend-indicator trend-unavailable';trend.setAttribute('aria-live','polite');trend.textContent='Trend unavailable';
+  groundwaterCard.querySelector('.reading-foot')?.insertAdjacentElement('beforebegin',trend);
  }
  const metricTabs=document.querySelector('[data-metric="stage"]')?.parentElement;
  if(metricTabs&&!metricTabs.querySelector('[data-metric="elevation"]'))metricTabs.insertAdjacentHTML('afterbegin','<button data-metric="elevation" type="button" aria-pressed="false" hidden>Water-surface elevation</button>');
@@ -279,7 +326,7 @@ function renderConditions(){
  $('waterElevationTime').textContent=level?'Observed '+date(level.observed_at)+transmissionDetail(level):'No groundwater observation available';
  $('flowTime').textContent=rated?'Observed '+date(rated.observed_at)+transmissionDetail(rated):'No rated ultrasonic stage available';
  $('tempTime').textContent=therm?'Observed '+date(therm.observed_at)+transmissionDetail(therm):relay?'Awaiting air-temperature readings':groundwater?'No groundwater-temperature observation available':'No HOBO water-temperature observation available';
- $('instrumentation').innerHTML=relay?'<h3>Instrumentation</h3><p class="muted">Cottonwood Relay reports air temperature when sensor telemetry is available. No stage or discharge is measured at this relay.</p>':groundwater?'<h3>U18 well reference</h3><dl><dt>Station</dt><dd>USGS Matheson Wetlands Well U18</dd><dt>Rugged TROLL 100 sensing port</dt><dd>35.30 ft below top of casing.</dd><dt>HOBO MX2001 sensing port</dt><dd>18.25 ft below casing, installed Oct. 23, 2026 at 3:35 PM MDT. Earlier MX2001 telemetry is excluded from the U18 hydrograph because it predates the verified installation datum.</dd><dt>Installation field reading</dt><dd>12.09 ft of water above the MX2001 at 3:35 PM MDT, entered as a documented field observation, not an automatic radio transmission.</dd><dt>Field validation</dt><dd>Manual depth 6.15 ft; MX2001 implied 6.16 ft at 3:35 PM MDT (0.01 ft difference).</dd><dt>Top-of-casing reference elevation</dt><dd>3,968.52 ft; vertical datum not verified.</dd><dt>Land-surface elevation</dt><dd>3,966.78 ft; shown as the brown reference line on the elevation graph.</dd><dt>Observed water-level pattern</dt><dd>During the available record, groundwater elevation was highest in late winter and early spring, declined through summer into early fall, and began recovering in October.</dd><dt>Observed temperature pattern</dt><dd>Groundwater temperature stayed near 60–62 °F. It was warmest in winter and coolest in late spring to early summer, reflecting the delayed and muted subsurface response to seasonal air temperature.</dd><dt>Record limitation</dt><dd>Historical TROLL data in this database begin Nov. 25, 2025. Earlier observations were not included in the imported logger record. Seasonal patterns are preliminary, not a long-term baseline.</dd><dt>Coordinates</dt><dd>38.59645009, −109.5736423</dd><dt>Calculation</dt><dd>Water-surface elevation uses each instrument’s measured sensing-port depth and the common top-of-casing elevation. The TROLL and MX2001 records are joined without an artificial offset.</dd></dl>':'<h3>Instrumentation</h3><dl><dt>Ultrasonic stage</dt><dd>'+station.sensor+'; feet relative to the station datum.</dd><dt>Water temperature</dt><dd>HOBO MX2001; degrees Fahrenheit.</dd><dt>HOBO reference stage</dt><dd>'+ (hs?value(stage(hs))+' ft':'No observation available')+'</dd><dt>Reference observation time</dt><dd>'+(hs?date(hs.observed_at):'No observation available')+'</dd>'+(station.flow?'<dt>Discharge</dt><dd>Estimated from the Pack Creek rating curve.</dd>':'<dt>Discharge</dt><dd>No rating curve established.</dd>')+'</dl>';
+ $('instrumentation').innerHTML=relay?'<h3>Instrumentation</h3><p class="muted">Cottonwood Relay reports air temperature when sensor telemetry is available. No stage or discharge is measured at this relay.</p>':groundwater?'<h3>U18 well reference</h3><dl><dt>Station</dt><dd>USGS Matheson Wetlands Well U18</dd><dt>Rugged TROLL 100 sensing port</dt><dd>35.30 ft below top of casing.</dd><dt>HOBO MX2001 sensing port</dt><dd>18.25 ft below casing, installed Oct. 23, 2026 at 3:35 PM MDT. Earlier MX2001 telemetry is excluded from the U18 hydrograph because it predates the verified installation datum.</dd><dt>Installation field reading</dt><dd>12.09 ft of water above the MX2001 at 3:35 PM MDT, entered as a documented field observation, not an automatic radio transmission.</dd><dt>Field validation</dt><dd>Manual depth 6.15 ft; MX2001 implied 6.16 ft at 3:35 PM MDT (0.01 ft difference).</dd><dt>Top-of-casing reference elevation</dt><dd>3,968.52 ft; vertical datum not verified.</dd><dt>Land-surface elevation</dt><dd>3,966.78 ft; shown as the brown reference line on the elevation graph.</dd><dt>Observed water-level pattern</dt><dd>During the available record, groundwater elevation was highest in late winter and early spring, declined through summer into early fall, and began recovering in October.</dd><dt>Observed temperature pattern</dt><dd>Groundwater temperature stayed near 60–62 °F. It was warmest in winter and coolest in late spring to early summer, reflecting the delayed and muted subsurface response to seasonal air temperature.</dd><dt>Trend method</dt><dd>Water-surface elevation and groundwater temperature use a 30-day least-squares trend through daily median values. This reduces hourly noise and reports the seasonal direction rather than a single-point jump.</dd><dt>Record limitation</dt><dd>Historical TROLL data in this database begin Nov. 25, 2025. Earlier observations were not included in the imported logger record. Seasonal patterns are preliminary, not a long-term baseline.</dd><dt>Coordinates</dt><dd>38.59645009, −109.5736423</dd><dt>Calculation</dt><dd>Water-surface elevation uses each instrument’s measured sensing-port depth and the common top-of-casing elevation. The TROLL and MX2001 records are joined without an artificial offset.</dd></dl>':'<h3>Instrumentation</h3><dl><dt>Ultrasonic stage</dt><dd>'+station.sensor+'; feet relative to the station datum.</dd><dt>Water temperature</dt><dd>HOBO MX2001; degrees Fahrenheit.</dd><dt>HOBO reference stage</dt><dd>'+ (hs?value(stage(hs))+' ft':'No observation available')+'</dd><dt>Reference observation time</dt><dd>'+(hs?date(hs.observed_at):'No observation available')+'</dd>'+(station.flow?'<dt>Discharge</dt><dd>Estimated from the Pack Creek rating curve.</dd>':'<dt>Discharge</dt><dd>No rating curve established.</dd>')+'</dl>';
  $('ratingNote').textContent=rated?.discharge_rating_status?.startsWith('extrapolated')?'Rating estimate · extrapolated '+(rated.discharge_rating_status.endsWith('high')?'above':'below')+' the measured rating range.':'Calculated from the station’s stage–discharge rating.';
  const newest=state.latest[0];$('observationStatus').textContent=newest?'Latest observation · '+date(newest.observed_at):'No '+station.name+' measurements available';
  renderTrends();renderHoboFloodWarning();renderSensorDiagnostics();
@@ -408,6 +455,8 @@ async function load(){
  try{
  const response=await fetch('/api/watershed-readings?hours='+state.hours,{cache:'no-store'});if(!response.ok)throw new Error('Watershed API HTTP '+response.status);const data=await response.json();if(!data.ok||!Array.isArray(data.readings)||!Array.isArray(data.latest))throw new Error('Invalid response');
  state.allLatest=data.latest.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));state.allReadings=data.readings.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at));
+ if(state.node===2004386937&&state.hours>=720)state.trendReadings=state.allReadings.filter(r=>Number(r.node_num)===2004386937);
+ else if(state.node!==2004386937)state.trendReadings=[];
  state.allRecent=Array.isArray(data.recent)?data.recent.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)):[];
  state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.sampleIntervalHours=n(data.sample_interval_hours);state.sensorEvents=Array.isArray(data.sensor_events)?data.sensor_events:[];state.cc01Polling=data.cc01_polling||null;selectStation();
  }catch(error){ console.error('Watershed data or rendering error, build '+DASHBOARD_BUILD+':',error);const reason=error instanceof Error?error.message:'Unknown issue';$('error').textContent='Could not load measurements ('+reason+'). '+(state.latest.length?'Previously loaded readings may remain. ':'')+'Build: '+DASHBOARD_BUILD+'.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="'+recentColumns().length+'">Observations unavailable.</td></tr>';}}
