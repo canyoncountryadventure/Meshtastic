@@ -28,7 +28,7 @@ jobs:
           with urllib.request.urlopen(request, timeout=20) as response:
               token = json.load(response)['value']
           check = urllib.request.Request(
-              'https://meshtastic-ecru.vercel.app/api/mesh-heartbeat',
+              'https://meshtastic-ecru.vercel.app/api/alerts?heartbeat=mesh',
               headers={'Authorization': 'Bearer ' + token})
           with urllib.request.urlopen(check, timeout=45) as response:
               data = json.load(response)

@@ -5,7 +5,7 @@ import {generateKeyPairSync,sign} from 'node:crypto';
 import {MESH_STATIONS,MESH_PARAMETER_CHOICES,isMeshRule,validateMeshRule,meshReadingValue} from '../lib/mesh-alert-values.js';
 import {isStationDelayed,evaluateMeshOfflineRules} from '../lib/mesh-offline.js';
 import {verifyGitHubHeartbeat} from '../lib/github-oidc-heartbeat.js';
-import heartbeat from '../api/mesh-heartbeat.js';
+import heartbeat from '../api/alerts.js';
 
 const ids=MESH_STATIONS.map(([id])=>id);
 const battery={enabled:true,direction:'below',threshold:25,reset_value:30,parameter:'battery_percent'};
@@ -74,7 +74,7 @@ test('scheduler authentication cannot be spoofed with watershed token',async()=>
  const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},
    status(n){this.statusCode=n;return this;},json(v){this.body=v;return this;}};
  const old=process.env.CRON_SECRET;delete process.env.CRON_SECRET;
- try{await heartbeat({method:'GET',headers:{}},res);assert.equal(res.statusCode,401);}
+ try{await heartbeat({method:'GET',url:'/api/alerts?heartbeat=mesh',headers:{}},res);assert.equal(res.statusCode,401);}
  finally{if(old===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=old;}
  const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
  const jwk=publicKey.export({format:'jwk'});jwk.kid='test-key';
@@ -97,6 +97,6 @@ test('Meshtastic interface and schedule remain separate from watershed',()=>{
  const cron=fs.readFileSync(new URL('../.github/workflows/mesh-heartbeat.yml',import.meta.url),'utf8');
  assert.match(api,/validateMeshRule/);assert.match(api,/MESH_PARAMETER_CHOICES/);
  assert.match(page,/Moab Watersheds notifications/);
- assert.match(cron,/meshtastic-station-heartbeat/);assert.match(cron,/api\/mesh-heartbeat/);
+ assert.match(cron,/meshtastic-station-heartbeat/);assert.match(cron,/api\/alerts\?heartbeat=mesh/);
  assert.doesNotMatch(cron,/api\/watershed-heartbeat/);
 });

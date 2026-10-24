@@ -2,7 +2,9 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSql } from './db.js';
 import { normalizeEmails, displayRule, storedRule } from '../lib/alert-values.js';
 import { MESH_STATIONS, MESH_PARAMETERS, MESH_PARAMETER_CHOICES, validateMeshRule, isMeshRule } from '../lib/mesh-alert-values.js';
-import { encryptKey, dispatchEmails } from '../lib/alerts.js';
+import { encryptKey, dispatchEmails, emailConfig } from '../lib/alerts.js';
+import { evaluateMeshOfflineRules } from '../lib/mesh-offline.js';
+import { verifyGitHubHeartbeat } from '../lib/github-oidc-heartbeat.js';
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
 function signature(value) { return createHmac('sha256',process.env.ALERTS_ADMIN_KEY).update(value).digest('hex'); }
@@ -16,9 +18,31 @@ async function editableRule(sql,id) {
   const found=await sql`SELECT node_num,parameter FROM alert_rules WHERE id=${id}`;
   return found.length===1 && isMeshRule(found[0]);
 }
+const MESH_HEARTBEAT_SCOPE={
+  audience:'meshtastic-station-heartbeat',
+  workflow:'canyoncountryadventure/Meshtastic/.github/workflows/mesh-heartbeat.yml@refs/heads/main',
+};
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
   if (!['GET','POST'].includes(req.method)) return res.status(405).json({error:'GET or POST required'});
+  // Dedicated signed scheduler action reuses this function to stay below the Vercel Hobby limit.
+  // It reads only the Meshtastic neondb. Ordinary alert settings still require owner login.
+  const url=new URL(req.url||'/api/alerts','https://meshtastic-ecru.vercel.app');
+  if(req.method==='GET' && url.searchParams.get('heartbeat')==='mesh'){
+    const secret=process.env.CRON_SECRET||'',supplied=(req.headers.authorization||'').replace(/^Bearer /,'');
+    const a=Buffer.from(secret),b=Buffer.from(supplied);
+    const cronAllowed=secret.length>=16&&a.length===b.length&&timingSafeEqual(a,b);
+    if(!cronAllowed&&!(await verifyGitHubHeartbeat(supplied,fetch,MESH_HEARTBEAT_SCOPE)))
+      return res.status(401).json({error:'Unauthorized'});
+    try{
+      const sql=getSql();
+      const result=await evaluateMeshOfflineRules(sql);
+      const config=await emailConfig(sql);
+      const deliveries=config?await dispatchEmails(sql,20,{config,idempotencyPrefix:'meshtastic-alert'}):{sent:0,configured:false};
+      return res.status(200).json({ok:true,checked:result.checked,created:result.newDeliveries,
+        dispatched:deliveries.sent,configured:deliveries.configured});
+    }catch(error){console.error('Meshtastic heartbeat failed',error.name);return res.status(503).json({error:'Station delay check unavailable'});}
+  }
   if (!process.env.ALERTS_ADMIN_KEY) return res.status(503).json({error:'Owner access has not been configured'});
   if (req.method==='POST' && req.headers.origin) {
     try { if (new URL(req.headers.origin).host!==req.headers.host) return res.status(403).json({error:'Origin rejected'}); }
