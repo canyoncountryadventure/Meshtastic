@@ -35,9 +35,9 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
 export async function readCreekData(sql,hours){
  const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled ORDER BY station_name`;
  const bucketSeconds=hours>=8760?86400:hours>=2160?21600:hours>=1440?7200:0;
- // Preserve two real groundwater-sensor observations per day for Matheson in
- // annual and since-inception views; other stations retain daily sampling.
- const mathesonBucketSeconds=hours>=8760?43200:bucketSeconds;
+ // Preserve every scheduled three-hour groundwater observation for Matheson
+ // in sampled views; other stations retain their existing long-range sampling.
+ const mathesonBucketSeconds=bucketSeconds?10800:0;
  // Long views select real samples from time buckets, never synthetic values.
  const readings=bucketSeconds
   ? await sql`WITH bucketed AS (

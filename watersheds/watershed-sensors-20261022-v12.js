@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261024-matheson-twice-daily-v23';
+const DASHBOARD_BUILD = '20261024-matheson-three-hour-v24';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},2425602407:{name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'U18 USGS Matheson Wetlands Well · Matheson Wetlands Preserve',kind:'groundwater',sensor:'HOBO MX2001',flow:false}};
 const site=()=>SITES[state.node];
@@ -352,7 +352,7 @@ const chartGapThresholdHours=(nodeNum,previous,current,standardHours)=>nodeNum==
 function renderChart(){
  const m=metrics[state.metric],data=series(),pts=data.flatMap(s=>s.points);$('sampleCount').textContent=pts.length+' observation'+(pts.length===1?'':'s')+' · '+(state.hours===SINCE_INCEPTION_HOURS?'since inception':state.hours===2160?'90 days':state.hours<=24?state.hours+' hours':state.hours/24+' days')+(state.sampleIntervalHours?' · sampled every '+state.sampleIntervalHours+'h':'');
  $('chartLegend').textContent=state.metric==='elevation'?'Water-surface elevation · joined TROLL + MX2001 record · brown line is land surface at 3,966.78 ft':state.metric==='battery'?'Battery percentage · device telemetry':state.metric==='stage'?(site().kind==='groundwater'?'Water above each logger · shown separately because instrument depths differ':site().sensor+' stage (teal) · HOBO MX2001 stage (clay)'):state.metric==='flow'?'Estimated discharge · SEN0313 stage':(site().kind==='relay'?'Air temperature · Cottonwood Relay':site().kind==='groundwater'?'Groundwater temperature':'Water temperature · HOBO MX2001');
- const gapHours=state.sampleIntervalHours?Math.max(3,2*state.sampleIntervalHours):3;
+ const gapHours=site().kind==='groundwater'&&state.sampleIntervalHours===3?3:state.sampleIntervalHours?Math.max(3,2*state.sampleIntervalHours):3;
  $('gapLegend').innerHTML='<i aria-hidden="true"></i> Dashed amber: gaps over '+gapHours+'h'+(site().kind==='groundwater'&&gapHours<MATHESON_MX_GAP_TOLERANCE_HOURS?' (Matheson MX2001: over 3.5h)':'')+(site().kind==='groundwater'?'; TROLL-to-HOBO transition':'')+' · unmeasured intervals';
  $('chartReadout').textContent='Select an observation to view its time and value.';
  if(!pts.length){$('chart').innerHTML='<div class="empty">No '+m.label.toLowerCase()+' observations in this period. Try a longer time range.</div>';return;}
