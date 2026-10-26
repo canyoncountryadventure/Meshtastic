@@ -38,7 +38,8 @@ export default async function handler(request, response) {
       return response.status(503).json({ error: 'Visitor count unavailable' });
     }
 
-    response.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    const cacheSeconds = visitors === 0 ? 30 : 300;
+    response.setHeader('Cache-Control', `public, s-maxage=${cacheSeconds}, stale-while-revalidate=3600`);
     return response.status(200).json({ visitors });
   } catch {
     return response.status(503).json({ error: 'Visitor count unavailable' });
