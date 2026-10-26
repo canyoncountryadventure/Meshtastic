@@ -7,6 +7,7 @@ const mapColors=['#285e78','#8a643f','#496b55','#76566c','#657759','#815634','#4
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=value=>value===null||value===undefined||value===''?null:Number(value);
 const date=value=>new Intl.DateTimeFormat('en-US',{timeZone:'America/Phoenix',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value));
+const dateOnly=value=>new Intl.DateTimeFormat('en-US',{timeZone:'America/Phoenix',year:'numeric',month:'long',day:'numeric'}).format(new Date(value));
 const parameter=code=>state.parameters.find(item=>item.parameter_code===code)||{parameter_code:code,parameter_name:code,unit:null,category:'Field',decimals:2};
 const measurement=(row,code)=>number(row.measurements?.[code]);
 const format=(value,code)=>{const n=number(value),p=parameter(code);if(!Number.isFinite(n))return '—';return n.toLocaleString('en-US',{maximumFractionDigits:p.decimals,minimumFractionDigits:0});};
@@ -65,8 +66,8 @@ function selectSite(siteId,scroll=false){state.site=String(siteId);const site=st
 function render(){const samples=visibleSamples();renderLatest(samples);renderTable(samples);renderChart(samples);}
 async function load(){
  $('qualityRefresh').disabled=true;$('qualityError').hidden=true;
- try{const response=await fetch('/api/water-quality');if(!response.ok)throw new Error('Request failed');const data=await response.json();if(!data.ok||!Array.isArray(data.sites)||!Array.isArray(data.parameters)||!Array.isArray(data.samples))throw new Error('Invalid response');state.sites=data.sites;state.parameters=data.parameters;state.samples=data.samples;fillFilters();renderDirectory();await renderMap();render();}
- catch{$('qualityError').textContent='Could not load water-quality records. Use Refresh samples to try again.';$('qualityError').hidden=false;$('qualityStatus').textContent='Water-quality records unavailable';}
+ try{const response=await fetch('/api/water-quality');if(!response.ok)throw new Error('Request failed');const data=await response.json();if(!data.ok||!Array.isArray(data.sites)||!Array.isArray(data.parameters)||!Array.isArray(data.samples))throw new Error('Invalid response');state.sites=data.sites;state.parameters=data.parameters;state.samples=data.samples;const latest=state.samples.reduce((max,row)=>Math.max(max,new Date(row.sampled_at).getTime()),0);$('qualityLatestMonitoring').textContent=latest?'Latest monitoring date · '+dateOnly(latest):'Latest monitoring date · No records';fillFilters();renderDirectory();await renderMap();render();}
+ catch{$('qualityError').textContent='Could not load water-quality records. Use Refresh samples to try again.';$('qualityError').hidden=false;$('qualityStatus').textContent='Water-quality records unavailable';$('qualityLatestMonitoring').textContent='Latest monitoring date · Unavailable';}
  finally{$('qualityRefresh').disabled=false;}
 }
 $('streamTab').addEventListener('click',()=>setProgram('stream'));$('qualityTab').addEventListener('click',()=>setProgram('quality'));$('qualityRefresh').addEventListener('click',load);
