@@ -22,7 +22,7 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
  if(!readings.length)return;
  const curves=await sql`SELECT rating_curve FROM creek_stations WHERE enabled AND rating_curve IS NOT NULL`;
  await evaluateReadings(sql,readings,{curves:curves.map(c=>c.rating_curve),
-   dashboardUrl:'https://seutahwatersheds.vercel.app/',subjectPrefix:'Moab Watersheds: '});
+   dashboardUrl:'https://seutahwatersheds.vercel.app/',subjectPrefix:'Southeastern Utah Watersheds: '});
  // Every arriving packet can detect another silent station. The scheduled check also catches whole-network outages.
  await evaluateOfflineRules(sql);
  // Email service configuration remains managed centrally; only watershed alerts
