@@ -10,7 +10,7 @@
 <script defer src="/_vercel/insights/script.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="/watershed-sensors-20261022-v12.js?v=20261026-regional-relays" defer></script>
-<script src="/water-quality.js?v=20261018-quality-controls" defer></script>
+<script src="/water-quality.js?v=20261026-latest-monitoring-date" defer></script>
 <script src="/visitor-count.js?v=20261026" defer></script>
 </head>
 <body>
@@ -59,7 +59,7 @@
 <div class="section-title"><div><p class="eyebrow">Sample record</p><h2 id="qualitySiteTitle">Select a monitoring location</h2></div><button id="qualityRefresh" type="button">↻ Refresh samples</button></div>
 <div class="quality-controls"><label>Drainage<select id="drainageSelect"><option value="all">All drainages</option></select></label><label>Location<select id="qualitySiteSelect"><option value="all">All locations</option></select></label></div>
 <div id="qualityError" class="error" role="alert" hidden></div>
-<div class="quality-status"><span id="qualityStatus" role="status">Loading water-quality record…</span><span>Records · 1975–present</span></div>
+<div class="quality-status"><span id="qualityStatus" role="status">Loading water-quality record…</span><span id="qualityLatestMonitoring">Latest monitoring date · Loading…</span><span>Records · 1975–present</span></div>
 <div class="quality-readings" aria-label="Latest water-quality results">
 <article><p>E. coli</p><strong id="qualityEcoli">—</strong><span>MPN / 100 mL</span><time id="qualityEcoliTime">No result</time></article>
 <article><p>Water temperature</p><strong id="qualityTemp">—</strong><span>°C</span><time id="qualityTempTime">No result</time></article>
