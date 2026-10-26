@@ -8,7 +8,7 @@ export async function evaluateOfflineRules(sql) {
    if(!Number.isFinite(last))continue;
    const ageHours=Math.max(0,(Date.now()-last)/3600000);
    const offline=ageHours>=Number(rule.threshold);
-   const subject='Moab Watersheds: '+rule.station_name+' has not delivered telemetry for '+rule.threshold+' hours';
+   const subject='Southeastern Utah Watersheds: '+rule.station_name+' has not delivered telemetry for '+rule.threshold+' hours';
    const body=rule.station_name+' has not delivered telemetry for '+ageHours.toFixed(1)+' hours.\n'+
      'Alert threshold: '+rule.threshold+' hours.\nLast received packet: '+new Date(last).toISOString()+
      '\nThis email is sent once per outage and resets after new telemetry is received.\n'+
