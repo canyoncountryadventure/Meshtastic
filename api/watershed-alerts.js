@@ -3,6 +3,7 @@ import { getSql as sourceSql } from './db.js';
 import { watershedSql as getSql } from '../lib/watershed-store.js';
 import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, storedRule } from '../lib/watershed-alert-values.js';
 import { dispatchEmails, emailConfig } from '../lib/alerts.js';
+import { readOwnerBatteryHistory, BATTERY_HISTORY_DAYS } from '../lib/watershed-battery-history.js';
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
 const ownerKey=()=>process.env.WATERSHED_OWNER_PASSWORD || process.env.WATERSHED_ALERTS_ADMIN_KEY || process.env.ALERTS_ADMIN_KEY;
@@ -37,6 +38,18 @@ export default async function handler(req,res) {
   }
   try {
     const sql=getSql();
+    // One on-demand owner-only query; never called by public subscriptions.
+    if (req.method==='POST' && body.action==='battery_history') {
+      const days=Number(body.days);
+      if(!BATTERY_HISTORY_DAYS.includes(days))return res.status(400).json({error:'Choose 7, 30, or 60 days'});
+      try {
+        const history=await readOwnerBatteryHistory(sourceSql(),sql,days);
+        return res.status(200).json({ok:true,...history});
+      } catch(error) {
+        console.error('Owner battery history read failed',error.name);
+        return res.status(503).json({error:'Battery history unavailable. Neon may be at its compute limit; try after the allowance resets.'});
+      }
+    }
     if (req.method==='GET') {
       const [rules,history,config,control]=await Promise.all([
         sql`SELECT * FROM alert_rules ORDER BY id`,
