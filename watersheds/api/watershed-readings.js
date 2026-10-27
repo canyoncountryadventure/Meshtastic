@@ -5,6 +5,9 @@ const EXTERNAL_SENSOR_STATIONS=new Map([
  [3044869407,{station_name:'Hidden Valley',waterbody:'La Sal Mountains',station_type:'relay'}],
  [1577197109,{station_name:'Fishlake Hightop',waterbody:'Fishlake Plateau',station_type:'relay'}],
  [1683604927,{station_name:'Mill Creek',waterbody:'Power Dam',station_type:'sensor'}],
+ [647393146,{station_name:'Seed Relay 1',waterbody:'Field radio',station_type:'sensor'}],
+ [1252758033,{station_name:'Spare RAK',waterbody:'Field radio',station_type:'relay'}],
+ [4241345683,{station_name:'Mini Me',waterbody:'Field radio',station_type:'sensor'}],
 ]);
 
 async function fetchMainReadings(node,hours,limit,bucketMinutes=0){
