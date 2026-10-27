@@ -1,9 +1,10 @@
 import { watershedSql, readCreekData } from '../lib/watershed-store.js';
 
 const MAIN_TELEMETRY_ORIGIN='https://meshtastic-ecru.vercel.app';
-const EXTERNAL_RELAY_STATIONS=new Map([
+const EXTERNAL_SENSOR_STATIONS=new Map([
  [3044869407,{station_name:'Hidden Valley',waterbody:'La Sal Mountains',station_type:'relay'}],
  [1577197109,{station_name:'Fishlake Hightop',waterbody:'Fishlake Plateau',station_type:'relay'}],
+ [1683604927,{station_name:'Mill Creek',waterbody:'Power Dam',station_type:'sensor'}],
 ]);
 
 async function fetchMainReadings(node,hours,limit,bucketMinutes=0){
@@ -20,7 +21,7 @@ async function fetchMainReadings(node,hours,limit,bucketMinutes=0){
 }
 
 async function readExternalSensorData(node,hours){
- const station=EXTERNAL_RELAY_STATIONS.get(node);
+ const station=EXTERNAL_SENSOR_STATIONS.get(node);
  const bucketMinutes=hours>=8760?1440:hours>=2160?360:hours>=1440?120:0;
  const [readings,latestWindow]=await Promise.all([
   fetchMainReadings(node,hours,10000,bucketMinutes),
@@ -46,7 +47,7 @@ export default async function handler(req,res){
  const hours=[6,12,24,72,168,336,720,1440,2160,8760,1000000].includes(requested)?requested:168;
  const node=Number(params.get('node'));
  try{
-  const data=EXTERNAL_RELAY_STATIONS.has(node)
+  const data=EXTERNAL_SENSOR_STATIONS.has(node)
    ? await readExternalSensorData(node,hours)
    : await readCreekData(watershedSql(),hours);
   res.setHeader('Cache-Control','public, max-age=0, must-revalidate');
