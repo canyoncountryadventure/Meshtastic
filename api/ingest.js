@@ -16,6 +16,7 @@ const KNOWN_STATIONS = new Map([
   [1695962694, 'Cottonwood Creek'], // !65165646, CC01: MB stage and MX2001 stage/temperature
   [2425602407, 'Cottonwood Relay'], // !9093c167, CC02
   [3044869407, 'Hidden Valley'], // !b57d051f, formerly Revived; deployed October 16
+  [1683604927, 'Mill Creek'], // !6459c5bf, Power Dam MX2001
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);
