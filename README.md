@@ -25,6 +25,7 @@ Apply `migrations/20261014-email-alerts.sql` before deploying this feature. Run 
 | It's a Swell Day | !742ecff5 | 1949224949 | MX2001 stage/temperature and SEN0313 stage |
 | Cottonwood Creek (CC01) | !65165646 | 1695962694 | MB water stage and MX2001 stage/temperature |
 | Cottonwood Relay (CC02) | !9093c167 | 2425602407 | Device battery and radio-link telemetry |
+| Mill Creek | !6459c5bf | 1683604927 | Power Dam MX2001 stage/temperature and device telemetry |
 | Thousand Lake Mountain | !9df66d7e | 2650172798 | HOBO temperature |
 
 The former Soil Moisture / Rock Moisture radio `!77788479` has been repurposed as **Matheson Groundwater** on Moab Watersheds. The main Meshtastic dashboard no longer shows its old soil-moisture card or comparison option. This UI change does not modify historical observations, ingestion routing, or Matheson Groundwater data.
