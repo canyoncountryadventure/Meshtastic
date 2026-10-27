@@ -9,7 +9,10 @@ const batteryStations=[
  {id:2004386937,name:'Matheson Groundwater',color:'#76558f'},
  {id:2425602407,name:'Cottonwood Relay',color:'#b08a24'},
  {id:3044869407,name:'Hidden Valley',color:'#bd4f64',external:true},
- {id:1577197109,name:'Fishlake Hightop',color:'#4f6f32',external:true}
+ {id:1577197109,name:'Fishlake Hightop',color:'#4f6f32',external:true},
+ {id:647393146,name:'Seed Relay 1',color:'#2d8b8b',external:true},
+ {id:1252758033,name:'Spare RAK',color:'#9a6a42',external:true},
+ {id:4241345683,name:'Mini Me',color:'#8a8a55',external:true}
 ];
 const batteryState={hours:168,rows:[],enabled:new Set(batteryStations.map(s=>s.id)),loading:false};
 const message=t=>$('message').textContent=t;
