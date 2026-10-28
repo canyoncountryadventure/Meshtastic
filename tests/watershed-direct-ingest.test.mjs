@@ -13,7 +13,7 @@ test('ingest routes creek packets directly; never mirrors them',()=>{
  assert.match(s,/isWatershedNode\(nodeNumber\(body\)\)/);
  assert.match(s,/insertDirectCreekReading\(creekSql/);
  assert.doesNotMatch(s,/mirrorCreekReadings|reconcileCreekReadings/);
- assert.match(s,/readings\.push\(await insertReading\(sql, body\)\)/);
+ assert.match(s,/await insertReading\(sql, body, packetId\)/);
 });
 test('watershed API no longer copies from neondb',()=>{
  for(const p of ['api/watershed-readings.js','watersheds/api/watershed-readings.js']){

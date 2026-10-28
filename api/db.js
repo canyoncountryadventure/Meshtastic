@@ -5,5 +5,5 @@ export function getSql() {
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is not configured');
   }
-  return neon(databaseUrl);
+  return neon(databaseUrl, { fetchOptions: { signal: AbortSignal.timeout(8000) } });
 }

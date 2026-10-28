@@ -6,15 +6,28 @@ export function watershedSql(){
  if(!process.env.WATERSHED_DATABASE_URL)throw new Error('Watershed database is not configured');
  return neon(process.env.WATERSHED_DATABASE_URL, { fetchOptions: { signal: AbortSignal.timeout(8000) } });
 }
+let creekPacketSchema;
+export function ensureCreekPacketSchema(sql) {
+ if (!creekPacketSchema) creekPacketSchema=(async()=>{
+  await sql`ALTER TABLE creek_observations ADD COLUMN IF NOT EXISTS packet_id TEXT`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS creek_observations_packet_id_uq ON creek_observations(packet_id) WHERE packet_id IS NOT NULL`;
+ })().catch(error=>{creekPacketSchema=null;throw error;});
+ return creekPacketSchema;
+}
 // Direct source of truth for watershed telemetry: no MeshtasticDB insert or mirror.
 export async function insertDirectCreekReading(sql, reading) {
- const rows=await sql`INSERT INTO creek_observations
-   (node_num,observed_at,received_at,telemetry_type,temperature_c,metrics,radio,raw)
+ const rows=await sql`WITH inserted AS (INSERT INTO creek_observations
+   (node_num,observed_at,received_at,telemetry_type,temperature_c,metrics,radio,raw,packet_id)
    SELECT ${reading.node_num},${reading.observed_at}::timestamptz,NOW(),${reading.telemetry_type},
      ${reading.temperature_c},${JSON.stringify(reading.metrics)}::jsonb,
-     ${JSON.stringify(reading.radio)}::jsonb,${JSON.stringify(reading.raw)}::jsonb
+     ${JSON.stringify(reading.radio)}::jsonb,${JSON.stringify(reading.raw)}::jsonb,${reading.packet_id}
    FROM creek_stations WHERE node_num=${reading.node_num} AND enabled
-   RETURNING source_id AS id,node_num,observed_at,received_at,telemetry_type,temperature_c,metrics,radio`;
+   ON CONFLICT (packet_id) WHERE packet_id IS NOT NULL DO NOTHING
+   RETURNING source_id AS id,node_num,observed_at,received_at,telemetry_type,temperature_c,metrics,radio,FALSE AS duplicate)
+   SELECT * FROM inserted
+   UNION ALL
+   SELECT source_id AS id,node_num,observed_at,received_at,telemetry_type,temperature_c,metrics,radio,TRUE AS duplicate
+   FROM creek_observations WHERE packet_id=${reading.packet_id} AND NOT EXISTS (SELECT 1 FROM inserted) LIMIT 1`;
  if(rows.length!==1)throw new Error('Watershed station not registered or disabled');
  return {...rows[0],station_name:reading.station_name};
 }
@@ -22,7 +35,7 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
  if(!readings.length)return;
  const curves=await sql`SELECT rating_curve FROM creek_stations WHERE enabled AND rating_curve IS NOT NULL`;
  await evaluateReadings(sql,readings,{curves:curves.map(c=>c.rating_curve),
-   dashboardUrl:'https://seutahwatersheds.vercel.app/',subjectPrefix:'Southeastern Utah Watersheds: '});
+   dashboardUrl:'https://seutahwatersheds.vercel.app/',subjectPrefix:'Moab Watersheds: '});
  // Every arriving packet can detect another silent station. The scheduled check also catches whole-network outages.
  await evaluateOfflineRules(sql);
  // Email service configuration remains managed centrally; only watershed alerts
@@ -35,16 +48,11 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
 export async function readCreekData(sql,hours){
  const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled ORDER BY station_name`;
  const bucketSeconds=hours>=8760?86400:hours>=2160?21600:hours>=1440?7200:0;
- // Preserve every scheduled three-hour groundwater observation for Matheson
- // in sampled views; other stations retain their existing long-range sampling.
- const mathesonBucketSeconds=bucketSeconds?10800:0;
  // Long views select real samples from time buckets, never synthetic values.
  const readings=bucketSeconds
   ? await sql`WITH bucketed AS (
     SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,o.telemetry_type,o.temperature_c,o.metrics,o.radio,
-      ROW_NUMBER() OVER (PARTITION BY o.node_num,o.telemetry_type,FLOOR(EXTRACT(EPOCH FROM o.observed_at)/
-        CASE WHEN o.node_num=2004386937 AND o.telemetry_type IN ('rugged_troll','mx2001')
-          THEN ${mathesonBucketSeconds}::numeric ELSE ${bucketSeconds}::numeric END)
+      ROW_NUMBER() OVER (PARTITION BY o.node_num,o.telemetry_type,FLOOR(EXTRACT(EPOCH FROM o.observed_at)/${bucketSeconds}::numeric)
         ORDER BY o.observed_at DESC,o.source_id DESC) AS bucket_rank
     FROM creek_observations o JOIN creek_stations s USING(node_num)
     WHERE s.enabled AND o.observed_at >= NOW()-(${hours}*INTERVAL '1 hour'))
@@ -78,11 +86,7 @@ export async function readCreekData(sql,hours){
      valid_stage_min_ft:rating_curve.valid_stage_min_ft,valid_stage_max_ft:rating_curve.valid_stage_max_ft
    }:null
  }));
- const sampleIntervals=bucketSeconds?Object.fromEntries(stations.map(s=>[
-   String(s.node_num),Number(s.node_num)===2004386937?mathesonBucketSeconds/3600:bucketSeconds/3600
- ])):{};
  return {stations:publicStations,readings:rateReadings(readings,curves),latest:rateReadings(latest,curves),
    recent:rateReadings(recent,curves),sensor_events:sensorEvents,
-   cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null,
-   sample_interval_hours_by_node:sampleIntervals};
+   cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
 }

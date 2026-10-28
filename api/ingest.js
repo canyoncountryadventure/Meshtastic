@@ -1,9 +1,10 @@
 import { getSql } from './db.js';
 import { timingSafeEqual } from 'node:crypto';
-import { watershedSql, insertDirectCreekReading, processWatershedAlerts } from '../lib/watershed-store.js';
+import { watershedSql, insertDirectCreekReading, processWatershedAlerts, ensureCreekPacketSchema } from '../lib/watershed-store.js';
 import { isWatershedNode } from '../lib/watershed-nodes.js';
 import { ensureDatabaseReady } from './rating-curves.js';
 import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
+import { backupRow, saveEmergencyBackup, stablePacketId } from '../lib/google-sheets-backup.js';
 
 const KNOWN_STATIONS = new Map([
   [1252758033, 'Hidden Valley (retired)'], // !4aab9211, hidden from dashboard; retain incoming history
@@ -139,7 +140,23 @@ function validate(body) {
   return nodeNum;
 }
 
-async function insertReading(sql, body) {
+let mainPacketSchema;
+async function ensureMainPacketSchema(sql) {
+  if (!mainPacketSchema) mainPacketSchema = (async () => {
+    await sql`ALTER TABLE telemetry_readings ADD COLUMN IF NOT EXISTS packet_id TEXT`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS telemetry_readings_packet_id_uq ON telemetry_readings(packet_id) WHERE packet_id IS NOT NULL`;
+  })().catch(error => { mainPacketSchema = null; throw error; });
+  return mainPacketSchema;
+}
+
+function databaseUnavailable(error) {
+  const message = String(error?.message || error || '').toLowerCase();
+  const status = Number(error?.status || error?.statusCode || error?.cause?.status);
+  return status === 402 || status === 408 || status === 429 || status >= 500 ||
+    /quota|compute.*(limit|suspend|unavailable)|database.*unavailable|connection|connect|timeout|timed out|fetch failed|econn|enotfound|socket|network/.test(message);
+}
+
+async function insertReading(sql, body, packetId) {
   const nodeNum = validate(body);
   const observedAt = observedIso(body);
   const name = KNOWN_STATIONS.get(nodeNum);
@@ -151,14 +168,15 @@ async function insertReading(sql, body) {
 
   const rows = await sql`
     INSERT INTO telemetry_readings
-      (observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio, raw)
+      (observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio, raw, packet_id)
     VALUES
       (${observedAt}, ${nodeNum}, ${name}, ${type}, ${tempC},
-       ${metrics}::jsonb, ${radio}::jsonb, ${raw}::jsonb)
-    RETURNING id, received_at, observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio
+       ${metrics}::jsonb, ${radio}::jsonb, ${raw}::jsonb, ${packetId})
+    ON CONFLICT (packet_id) WHERE packet_id IS NOT NULL DO NOTHING
+    RETURNING id, received_at, observed_at, node_num, station_name, telemetry_type, temperature_c, metrics, radio, FALSE AS duplicate
   `;
-
-  return rows[0];
+  if (rows[0]) return rows[0];
+  return { duplicate: true, packet_id: packetId, node_num: nodeNum, station_name: name };
 }
 
 const valid=(a,b)=>{const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&x.length>0&&timingSafeEqual(x,y);};
@@ -232,27 +250,47 @@ export default async function handler(req, res) {
     }
 
     // Route creek/relay readings directly into moab_watersheds. Never store them
-    // in neondb, including during mixed-node gateway batches.
-    const hasMain = activeBodies.some(body => !isWatershedNode(nodeNumber(body)));
-    const hasWatershed = activeBodies.some(body => isWatershedNode(nodeNumber(body)));
-    const sql = hasMain ? getSql() : null;
-    const creekSql = hasWatershed ? watershedSql() : null;
-    if (sql) await ensureDatabaseReady(sql);
+    // in neondb, including during mixed-node gateway batches. Each record is
+    // committed independently, so a partial Neon outage cannot lose the rest.
+    const sql = activeBodies.some(body => !isWatershedNode(nodeNumber(body))) ? getSql() : null;
+    const creekSql = activeBodies.some(body => isWatershedNode(nodeNumber(body))) ? watershedSql() : null;
     const readings = [];
     const creekReadings = [];
+    const backedUp = [];
     for (const body of activeBodies) {
-      if (isWatershedNode(nodeNumber(body))) {
-        const node_num=nodeNumber(body);
-        const reading=await insertDirectCreekReading(creekSql,{
-          node_num,station_name:KNOWN_STATIONS.get(node_num),
-          observed_at:observedIso(body),telemetry_type:telemetryType(body),
-          temperature_c:temperatureC(body),metrics:body.payload,
-          radio:radioObject(body),raw:body,
-        });
-        readings.push(reading);
-        creekReadings.push(reading);
-      } else {
-        readings.push(await insertReading(sql, body));
+      const node_num = nodeNumber(body);
+      const packetId = stablePacketId(body);
+      const watershed = isWatershedNode(node_num);
+      try {
+        let reading;
+        if (watershed) {
+          await ensureCreekPacketSchema(creekSql);
+          reading = await insertDirectCreekReading(creekSql, {
+            node_num, station_name: KNOWN_STATIONS.get(node_num), packet_id: packetId,
+            observed_at: observedIso(body), telemetry_type: telemetryType(body),
+            temperature_c: temperatureC(body), metrics: body.payload, radio: radioObject(body), raw: body,
+          });
+          if (!reading.duplicate) creekReadings.push(reading);
+        } else {
+          await ensureDatabaseReady(sql);
+          await ensureMainPacketSchema(sql);
+          reading = await insertReading(sql, body, packetId);
+        }
+        if (!reading.duplicate) readings.push(reading);
+      } catch (error) {
+        if (!databaseUnavailable(error)) throw error;
+        const destination = watershed ? 'moab_watersheds' : 'neondb';
+        const record = {
+          packetId, row: backupRow({ body, packetId, nodeNum: node_num, stationName: KNOWN_STATIONS.get(node_num), observedAt: observedIso(body), destination }),
+        };
+        // This only acknowledges the gateway after Google confirms the append.
+        try {
+          await saveEmergencyBackup(record);
+        } catch (backupError) {
+          backupError.storageUnavailable = true;
+          throw backupError;
+        }
+        backedUp.push({ packet_id: packetId, node_num, destination });
       }
     }
 
@@ -277,6 +315,8 @@ export default async function handler(req, res) {
     return res.status(201).json({
       ok: true,
       stored: readings.length,
+      backed_up: backedUp.length,
+      backup: backedUp.length ? { active: true, records: backedUp } : undefined,
       alerts,
       paused: paused.length,
       paused_nodes: paused.length ? paused : undefined,
@@ -285,7 +325,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Telemetry ingest failed', error);
-    return res.status(400).json({ ok: false, error: error?.message || 'Telemetry ingest failed' });
+    return res.status(error?.storageUnavailable ? 503 : 400).json({ ok: false, error: error?.message || 'Telemetry ingest failed' });
   }
 }
 
