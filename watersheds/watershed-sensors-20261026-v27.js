@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261026-mill-creek-mxonly-v27';
+const DASHBOARD_BUILD = '20261028-south-cottonwood-restored';
 const $=id=>document.getElementById(id);
 const SITES={1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:false},1683604927:{name:'Mill Creek',detail:'Power Dam',kind:'creek',sensor:'HOBO MX2001',mxOnly:true,flow:false},2425602407:{name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'U18 USGS Matheson Wetlands Well · Matheson Wetlands Preserve',kind:'groundwater',sensor:'HOBO MX2001',flow:false},3044869407:{name:'Hidden Valley',detail:'La Sal Mountains · 5,800 ft',kind:'relay',sensor:'HOBO temperature sensor',flow:false},1577197109:{name:'Fishlake Hightop',detail:'Fishlake Plateau · 11,600 ft',kind:'relay',sensor:'Temperature sensor',flow:false}};
 const site=()=>SITES[state.node];
@@ -315,7 +315,6 @@ function renderSensorDiagnostics(){
 }
 function renderConditions(){
  const station=site(),relay=station.kind==='relay',air=station.kind==='air',temperatureOnly=relay||air,groundwater=station.kind==='groundwater',mxOnly=station.mxOnly===true,water=latest('water_distance',stage),hs=latest('mx2001',stage),troll=latest('rugged_troll',stage),level=groundwater?(hs||troll):mxOnly?hs:(state.node===1695962694?water:(water||hs)),rated=latest('water_distance',flow),therm=groundwater?state.latest.find(r=>['environment','mx2001','rugged_troll'].includes(r.telemetry_type)&&temp(r)!==null):latest(temperatureOnly?'environment':'mx2001',temp),device=state.latest.find(r=>r.telemetry_type==='device'&&(battery(r)!==null||batteryVoltage(r)!==null));
- const outage=$('cottonwoodOutage');if(outage)outage.hidden=state.node!==1695962694;
   $('stationTitle').textContent=station.name;if($('stationSubtitle'))$('stationSubtitle').textContent=station.detail;$('temperatureLabel').textContent=temperatureOnly?'Air temperature':groundwater?'Groundwater temperature':state.node===1695962694?'HOBO MX2001 water temperature':'Water temperature';$('stageLabel').textContent=groundwater?'Water depth above logger':mxOnly?'HOBO MX2001 stage':state.node===1695962694?'MB7388 ultrasonic stage':station.sensor+' stage';
   $('readingCards').className='readings '+(temperatureOnly?'creek':station.flow?'':'creek')+(state.node===1695962694?' cottonwood':'');$('flowCard').hidden=!station.flow;$('stageCard').hidden=temperatureOnly;$('hoboStageCard').hidden=temperatureOnly||groundwater||mxOnly;$('waterElevationCard').hidden=!groundwater;
  $('batteryPct').textContent=value(device?battery(device):null,0);$('batteryVoltage').textContent=value(device?batteryVoltage(device):null,3);$('batteryTime').textContent=device?'Observed '+date(device.observed_at):'No battery telemetry available';
