@@ -1,11 +1,18 @@
 import { timingSafeEqual } from 'node:crypto';
 import { markEmergencyBackup, pendingEmergencyBackups, isGoogleSheetsBackupConfigured } from '../lib/google-sheets-backup.js';
+import { verifyGitHubHeartbeat } from '../lib/github-oidc-heartbeat.js';
 
-function authorized(req) {
+const BACKFILL_SCOPE = {
+  audience: 'meshtastic-telemetry-backfill',
+  workflow: 'canyoncountryadventure/Meshtastic/.github/workflows/telemetry-backfill.yml@refs/heads/main',
+};
+
+async function authorized(req) {
   const expected = process.env.CRON_SECRET || '';
   const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const a = Buffer.from(expected), b = Buffer.from(supplied);
-  return expected.length >= 16 && a.length === b.length && timingSafeEqual(a, b);
+  return (expected.length >= 16 && a.length === b.length && timingSafeEqual(a, b)) ||
+    verifyGitHubHeartbeat(supplied, fetch, BACKFILL_SCOPE);
 }
 
 function sameOrigin(req) {
@@ -17,7 +24,7 @@ function sameOrigin(req) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ ok: false, error: 'GET or POST required' });
-  if (!authorized(req)) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  if (!await authorized(req)) return res.status(401).json({ ok: false, error: 'Unauthorized' });
   if (!isGoogleSheetsBackupConfigured()) return res.status(503).json({ ok: false, error: 'Google Sheets backup is not configured' });
 
   const requested = Number(req.query?.limit || 50);

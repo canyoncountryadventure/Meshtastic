@@ -31,10 +31,6 @@
   ],
   "crons": [
     {
-      "path": "/api/telemetry-backfill",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/watershed-heartbeat",
       "schedule": "0 12 * * *"
     }
