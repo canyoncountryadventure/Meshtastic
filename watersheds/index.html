@@ -9,7 +9,7 @@
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)}</script>
 <script defer src="/_vercel/insights/script.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
-<script src="/watershed-sensors-20261026-v27.js?v=20261028-emergency-backup" defer></script>
+<script src="/watershed-sensors-20261026-v27.js?v=20261028-south-cottonwood-restored" defer></script>
 <script src="/water-quality.js?v=20261026-latest-monitoring-date" defer></script>
 <script src="/visitor-count.js?v=20261026" defer></script>
 </head>
@@ -22,7 +22,6 @@
 <div class="section-title"><div><p class="eyebrow">Latest observations</p><h2 id="stationTitle">Pack Creek</h2><p id="stationSubtitle" class="station-location">Pack Creek above confluence with Mill Creek · 4,020 ft</p></div><button id="refresh" type="button">↻ Refresh readings</button></div>
 <div class="observation-bar"><span id="observationStatus" role="status">Loading creek observations…</span><span>All times Mountain Time</span></div>
 <div id="error" class="error" role="alert" hidden></div>
-<div id="cottonwoodOutage" class="station-outage" role="alert" hidden><strong>Sensor being replaced. Currently down.</strong></div>
 <div class="readings" id="readingCards">
 <article class="reading flow" id="flowCard"><p class="eyebrow">Estimated discharge</p><div class="number"><strong id="flow">—</strong><span>cfs</span></div><p id="flowTime" class="timestamp">Waiting for rated stage</p><div id="flowTrend" class="trend-indicator trend-unavailable" aria-live="polite">Trend unavailable</div><div class="reading-foot" id="ratingNote">Calculated from the station’s stage–discharge rating.</div></article>
 <article class="reading" id="stageCard"><p class="eyebrow" id="stageLabel">Stage</p><div class="number"><strong id="stage">—</strong><span>ft</span></div><p id="stageTime" class="timestamp">Waiting for stage observations</p><p id="cc01WaterWarning" class="cc01-sensor-warning" role="status" hidden></p><div class="reading-foot" id="stageSource">SEN0313 ultrasonic water-level sensor</div></article><article class="reading" id="waterElevationCard" hidden><p class="eyebrow">Water-surface elevation</p><div class="number"><strong id="waterElevation">—</strong><span>ft</span></div><p id="waterElevationTime" class="timestamp">Waiting for groundwater observations</p><div id="waterElevationTrend" class="trend-indicator trend-unavailable" aria-live="polite">Trend unavailable</div><div class="reading-foot">Calculated from the 3,968.52 ft top-of-casing reference elevation</div></article>
