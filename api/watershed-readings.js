@@ -18,7 +18,7 @@ export default async function handler(req,res){
    res.setHeader('Cache-Control','no-store');
    return res.status(200).json({ok:true,hours,backup_active:true,backup_readings:true,...data});
   } catch (backupError) {
-   console.error('Watershed emergency backup query failed',backupError.name);
+   console.error('Watershed emergency backup query failed',backupError.name,String(backupError.message||backupError).slice(0,300));
    return res.status(503).json({ok:false,error:'Creek observations unavailable',backup_active:true});
   }
  }
