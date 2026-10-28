@@ -28,7 +28,7 @@ jobs:
           with urllib.request.urlopen(request, timeout=20) as response:
               token = json.load(response)['value']
           replay = urllib.request.Request(
-              'https://meshtastic-ecru.vercel.app/api/telemetry-backfill',
+              'https://meshtastic-ecru.vercel.app/api/watershed-heartbeat?backfill=1',
               headers={'Authorization': 'Bearer ' + token})
           with urllib.request.urlopen(replay, timeout=55) as response:
               data = json.load(response)
