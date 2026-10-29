@@ -7,12 +7,14 @@ import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
 import { backupRow, saveEmergencyBackup, stablePacketId } from '../lib/google-sheets-backup.js';
 
 const KNOWN_STATIONS = new Map([
-  [1252758033, 'Hidden Valley (retired)'], // !4aab9211, hidden from dashboard; retain incoming history
+  [1252758033, 'Hidden Valley (retired)'],
+  [1436900584, 'Hidden Valley (historic)'],
+  [2224121796, 'Infra_i04 (historic)'], // !4aab9211, hidden from dashboard; retain incoming history
   [2740603892, 'Moab'],
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "Pack Creek"],
   [2650172798, 'Thousand Lake Mountain'],
-  [4241345683, 'SMLA'], // !fccdcc93, repurposed station
+  [4241345683, 'Cottonwood Relay 2'], // !fccdcc93, repurposed station
   [2004386937, 'Matheson Groundwater'], // !77788479, GW01 groundwater well
   [1695962694, 'Cottonwood Creek'], // !65165646, CC01: MB stage and MX2001 stage/temperature
   [2425602407, 'Cottonwood Relay'], // !9093c167, CC02
@@ -249,9 +251,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, stored: 0, paused: paused.length, paused_nodes: paused });
     }
 
-    // Route creek/relay readings directly into moab_watersheds. Never store them
-    // in neondb, including during mixed-node gateway batches. Each record is
-    // committed independently, so a partial Neon outage cannot lose the rest.
+    // All approved telemetry is stored once in moab_watersheds.
+    // The former neondb archive remains read-only during migration.
+    // Each record is committed independently and backed up on a DB outage.
     const sql = activeBodies.some(body => !isWatershedNode(nodeNumber(body))) ? getSql() : null;
     const creekSql = activeBodies.some(body => isWatershedNode(nodeNumber(body))) ? watershedSql() : null;
     const readings = [];
