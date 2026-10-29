@@ -2,7 +2,7 @@
  'use strict';
  const $=id=>document.getElementById(id);
  const el=(tag,text)=>{const v=document.createElement(tag);if(text!==undefined)v.textContent=text;return v;};
- const stations=[[1949224949,'Pack Creek'],[1695962694,'Cottonwood Creek'],[2425602407,'Cottonwood Relay'],[4241345683,'Cottonwood Relay 2'],[2004386937,'Matheson Groundwater'],[1683604927,'Mill Creek'],[3044869407,'Hidden Valley'],[1577197109,'Fishlake Hightop'],[2740603892,'Moab'],[647393146,'Seed Relay 1'],[2650172798,'Thousand Lake Mountain']];
+ const stations=[[1949224949,'Pack Creek'],[1695962694,'Cottonwood Creek'],[2425602407,'Cottonwood Relay'],[4241345683,'Cottonwood Relay 2'],[2004386937,'Matheson Groundwater'],[1683604927,'Mill Creek'],[3044869407,'Hidden Valley'],[1577197109,'Fishlake Hightop']];
  const parameterLabels={offline_hours:'Station unresponsive (hours)',discharge_cfs:'Estimated discharge (cfs)',water_level_ft:'Stage (ft)',temperature_c:'Temperature (°F)',battery_percent:'Battery (%)'};
  const parameterLabel=(parameter,node)=>parameter==='water_level_ft'&&Number(node)===2004386937?'Water depth above logger (ft)':parameter==='temperature_c'&&Number(node)===2004386937?'Groundwater temperature (°F)':parameterLabels[parameter]||parameter;
  let state=null;
