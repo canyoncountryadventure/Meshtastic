@@ -1,4 +1,4 @@
-import { getSql } from './db.js';
+import { watershedSql } from '../lib/watershed-store.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const sql = getSql();
+    const sql = watershedSql();
     const rows = await sql`
       SELECT observed_at, station_name, telemetry_type, temperature_c, metrics
       FROM telemetry_readings
