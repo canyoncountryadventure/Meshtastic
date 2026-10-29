@@ -46,7 +46,7 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
  }
 }
 export async function readCreekData(sql,hours){
- const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled ORDER BY station_name`;
+ const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled OR station_type='archive' ORDER BY station_name`;
  const bucketSeconds=hours>=8760?86400:hours>=2160?21600:hours>=1440?7200:0;
  // Long views select real samples from time buckets, never synthetic values.
  const readings=bucketSeconds
@@ -55,13 +55,13 @@ export async function readCreekData(sql,hours){
       ROW_NUMBER() OVER (PARTITION BY o.node_num,o.telemetry_type,FLOOR(EXTRACT(EPOCH FROM o.observed_at)/${bucketSeconds}::numeric)
         ORDER BY o.observed_at DESC,o.source_id DESC) AS bucket_rank
     FROM creek_observations o JOIN creek_stations s USING(node_num)
-    WHERE s.enabled AND o.observed_at >= NOW()-(${hours}*INTERVAL '1 hour'))
+    WHERE (s.enabled OR s.station_type='archive') AND o.observed_at >= NOW()-(${hours}*INTERVAL '1 hour'))
     SELECT id,node_num,station_name,observed_at,received_at,telemetry_type,temperature_c,metrics,radio
     FROM bucketed WHERE bucket_rank=1 ORDER BY observed_at DESC LIMIT 12000`
   : await sql`SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
        o.telemetry_type,o.temperature_c,o.metrics,o.radio
      FROM creek_observations o JOIN creek_stations s USING(node_num)
-     WHERE s.enabled AND o.observed_at>=NOW()-(${hours}*INTERVAL '1 hour')
+     WHERE (s.enabled OR s.station_type='archive') AND o.observed_at>=NOW()-(${hours}*INTERVAL '1 hour')
      ORDER BY o.observed_at DESC LIMIT 25000`;
  const latest=await sql`SELECT DISTINCT ON(o.node_num,o.telemetry_type)
        o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
@@ -73,7 +73,7 @@ export async function readCreekData(sql,hours){
  const recent=await sql`SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
        o.telemetry_type,o.temperature_c,o.metrics,o.radio
      FROM creek_observations o JOIN creek_stations s USING(node_num)
-     WHERE s.enabled AND o.observed_at>=NOW()-INTERVAL '24 hours'
+     WHERE (s.enabled OR s.station_type='archive') AND o.observed_at>=NOW()-INTERVAL '24 hours'
      ORDER BY o.observed_at DESC LIMIT 1500`;
  const sensorEvents=await sql`SELECT DISTINCT ON (sensor) id,node_num,sensor,status,received_at
     FROM cc01_sensor_events WHERE node_num=1695962694 ORDER BY sensor,received_at DESC,id DESC`;
