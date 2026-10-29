@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261029-radio-identity-correction';
+const DASHBOARD_BUILD = '20261029-private-mini-me';
 const $=id=>document.getElementById(id);
 const SITES={2740603892:{name:'Moab',detail:'Moab · environmental temperature logger',kind:'relay',sensor:'Temperature sensor',flow:false},4241345683:{name:'Mini Me',detail:'Portable RAK4631 client · formerly SMLA',kind:'relay',sensor:'Radio battery telemetry',flow:false},1222051909:{name:'Cottonwood Relay 2',detail:'Cottonwood mesh network relay',kind:'relay',sensor:'Radio battery telemetry',flow:false},647393146:{name:'Seed Relay 1',detail:'Regional telemetry relay',kind:'relay',sensor:'Radio battery telemetry',flow:false},2650172798:{name:'Thousand Lake Mountain',detail:'Thousand Lake Mountain',kind:'relay',sensor:'Air temperature sensor',flow:false},1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:true},1683604927:{name:'Mill Creek',detail:'Power Dam',kind:'creek',sensor:'HOBO MX2001',mxOnly:true,flow:false},2425602407:{name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'U18 USGS Matheson Wetlands Well · Matheson Wetlands Preserve',kind:'groundwater',sensor:'HOBO MX2001',flow:false},3044869407:{name:'Hidden Valley',detail:'La Sal Mountains · 5,800 ft',kind:'relay',sensor:'HOBO temperature sensor',flow:false},1577197109:{name:'Fishlake Hightop',detail:'Fishlake Plateau · 11,600 ft',kind:'relay',sensor:'Temperature sensor',flow:false}};
 const site=()=>SITES[state.node];
@@ -489,7 +489,7 @@ $('export').addEventListener('click',()=>{
 });
 
 /* PS login: the server gates private readings, not just this station selector. */
-const PS_STATIONS=[2740603892,647393146,2650172798];
+const PS_STATIONS=[2740603892,647393146,2650172798,4241345683];
 let psRevision=0;
 function psShowAccess(unlocked){
  const select=$('stationSelect');

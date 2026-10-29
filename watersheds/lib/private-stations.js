@@ -1,6 +1,6 @@
 // Standalone site's private access is verified by the existing gateway owner password.
 // Never cache private responses, log credentials, or trust a client-side visibility flag.
-export const PRIVATE_STATIONS=Object.freeze([2740603892,647393146,2650172798]);
+export const PRIVATE_STATIONS=Object.freeze([2740603892,647393146,2650172798,4241345683]);
 const ids=new Set(PRIVATE_STATIONS);
 const BACKEND='https://meshtastic-ecru.vercel.app/api/watershed-alerts?ps=1';
 export const isPrivateStation=id=>ids.has(Number(id));

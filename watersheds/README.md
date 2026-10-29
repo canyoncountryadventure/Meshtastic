@@ -16,6 +16,9 @@ The standalone site's current source is directly under `/watersheds`, not the ou
 
 Observation cards retain independent sensor timestamps. Only Pack Creek has an established discharge rating curve; Mill Creek and South Cottonwood stage is shown without invented discharge. Gateway control, alarms, public email permissions, and water-quality records remain in their existing watershed tables.
 
+## Private stations
+Moab, Seed Relay 1, Thousand Lake Mountain and Mini Me (!fccdcc93) appear only under the discreet PS login at the bottom of the monitoring page. Signed, short-lived owner sessions authorize data; public reading endpoints must not return these stations, even when directly queried by node number. Ingest, historical observations and owner-only battery/notification administration remain intact.
+
 ## Dedicated email notifications
 
 The /notifications page manages only Moab Watersheds rules, recipients and email history in moab_watersheds. It uses the existing owner password with a separate scoped session cookie. The standalone API forwards only to Meshtastic /api/watershed-alerts; the gateway owns authentication and uses the configured sending service without copying its credentials. Watershed deliveries use their own provider idempotency prefix. Gateway ingest stores supported watershed measurements directly in moab_watersheds, evaluates watershed rules independently and queues/sends watershed alerts. No existing recipients are copied. Temperature rule entry and email content use Fahrenheit; stored evaluation uses Celsius. Relay rules permit air temperature, battery, and offline-duration alerts; Cottonwood Creek permits stage and water temperature; Pack Creek additionally permits estimated discharge.

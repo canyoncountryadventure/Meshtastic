@@ -1,13 +1,13 @@
 import { watershedSql, readCreekData } from '../lib/watershed-store.js';
 import { isGoogleSheetsBackupConfigured, readWatershedEmergencyBackups } from '../lib/google-sheets-backup.js';
-import { filterPrivateTelemetry } from '../lib/private-station-policy.js';
+import { filterPrivateTelemetry, isPrivateStation } from '../lib/private-station-policy.js';
 export default async function handler(req,res){
  if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({ok:false,error:'GET required'});}
  const params=new URL(req.url||'/','http://localhost').searchParams;
  const node=params.get('node');
  res.setHeader('Cache-Control','private, no-store');
  res.setHeader('Vercel-CDN-Cache-Control','no-store');
- if(node!==null&&[2740603892,647393146,2650172798].includes(Number(node)))return res.status(403).json({ok:false,error:'Private station login required on Southeastern Utah Watersheds'});
+ if(node!==null&&isPrivateStation(node))return res.status(403).json({ok:false,error:'Private station login required on Southeastern Utah Watersheds'});
  const requested=Number(params.get('hours')||168);
  const hours=[6,12,24,72,168,336,720,1440,2160,8760].includes(requested)?requested:168;
  try{
