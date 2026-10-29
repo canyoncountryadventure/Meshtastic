@@ -1,16 +1,20 @@
-# Moab Watersheds
+# Southeastern Utah Watersheds
 
-Creek-only monitoring site at https://seutahwatersheds.vercel.app.
+Production monitoring site: https://seutahwatersheds.vercel.app.
 
-Registered stations: Pack Creek (1949224949), Cottonwood Creek (1695962694), and Cottonwood Relay (2425602407). The relay is the explicitly requested air-temperature station; other temperature-only mesh stations remain excluded. Uses a separate Postgres database **moab_watersheds**, with its own creek_stations, creek_observations, and creek_sync_state tables. This database shares the existing Neon compute/project but is a distinct database from Meshtastic's neondb.
+## Unified telemetry (October 28, 2026)
 
-Production hosts use the server-only WATERSHED_DATABASE_URL. The Meshtastic gateway routes Pack Creek, Cottonwood Creek (CC01), and Cottonwood Relay (CC02) telemetry directly into moab_watersheds.creek_observations. Other nodes write to neondb.telemetry_readings. There is no mirror or background reconciler, so only one original observation is stored per incoming creek packet. The watershed host reads moab_watersheds directly. The Meshtastic host routes explicitly requested creek histories/health through a compatible read-only telemetry_readings view in moab_watersheds.
+The canonical Postgres telemetry database is **moab_watersheds** in Neon project **MeshtasticDB**. The Heltec gateway now writes each approved station packet once to `moab_watersheds.creek_observations`. The old `neondb.telemetry_readings` database is retained read-only as a safety copy, not as a second telemetry destination.
 
-Schema: ../migrations/20261014_moab_watersheds.sql. New creek stations must be explicitly registered in creek_stations and connected to ingest; they are not inferred from temperature telemetry. Frontend provides station selection and distinguishes creek water temperature from relay air temperature.
+On October 28, 2026, all **5,604** historical records in `neondb.telemetry_readings` were copied to `moab_watersheds.creek_observations`. The import verified 5,604 unique archive packet keys, preserved observed/received timestamps, raw payloads and station names, and kept old historical names for reused radios. The root gateway and standalone dashboard were deployed to Vercel. New Moab packets were verified arriving directly into `moab_watersheds` after cutover.
 
-UI source: repository-root watershed.html, watershed.css, watershed.js. Run node tools/prepare-watersheds.mjs from the repository root after source edits to refresh the standalone deployment folder. Deploy Vercel project seutahwatersheds from this folder. Existing Meshtastic /watershed serves the same interface.
+Active stations: Pack Creek, South Cottonwood, Cottonwood Relay, Cottonwood Relay 2 (formerly SMLA), Matheson Groundwater, Mill Creek (Power Dam), Hidden Valley, Fishlake Hightop, Moab, Seed Relay 1, and Thousand Lake Mountain. Three retired/historical radio IDs are retained for historical inspection without enabling offline alarms. Historical station identities Rock Moisture, Wingate Moisture and Revived are retained on individual observation records even where a radio node number was later reused.
 
-Observation cards keep independent sensor timestamps. Streamflow comes from calibrated SEN0313 stage and the copied rating curve. HOBO MX2001 temperature and reference stage remain independent. Charts default to 12 hours and offer 6-hour, 24-hour, 7-day and longer windows, break at gaps longer than three hours, and CSV exports include UTC, Mountain Time, sensor and rating status. No simulated measurements or fabricated station coordinates.
+Database migration: `../migrations/20261029_unified_se_utah_telemetry.sql`. It adds `packet_id` and per-observation `station_name`, registers the station roster, and updates the read-only compatibility view. A permanent unique packet-ID index guards against duplicated new deliveries. The migration is intentionally non-destructive; legacy backfill is separately executed using `archive:neondb:<original id>` keys.
+
+The standalone site's current source is directly under `/watersheds`, not the outdated repository-root watershed asset versions. `node tools/prepare-watersheds.mjs` is now validation-only so it cannot overwrite newer production pages. The Vercel project `seutahwatersheds` is deployed from GitHub `canyoncountryadventure/Meshtastic` using root directory `watersheds`.
+
+Observation cards retain independent sensor timestamps. Only Pack Creek has an established discharge rating curve; Mill Creek and South Cottonwood stage is shown without invented discharge. Gateway control, alarms, public email permissions, and water-quality records remain in their existing watershed tables.
 
 ## Dedicated email notifications
 
