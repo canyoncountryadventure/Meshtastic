@@ -1,6 +1,7 @@
 import { getSql } from './db.js';
 import { watershedSql } from '../lib/watershed-store.js';
 import { isWatershedNode } from '../lib/watershed-nodes.js';
+import { isPrivateStation } from '../lib/private-station-policy.js';
 import {
   calculateDischarge,
   ensureDatabaseReady,
@@ -130,7 +131,8 @@ export default async function handler(req, res) {
     const curveByNode = new Map(curves.map(curve => [Number(curve.node_num), curve]));
     const nodeParam = new URL(req.url || '/', 'http://localhost').searchParams.get('node');
     const wanted = nodeParam ? Number(nodeParam) : null;
-    const configs = Number.isFinite(wanted) ? STATIONS.filter(s => s.node === wanted) : STATIONS;
+    if(wanted!==null&&isPrivateStation(wanted))return res.status(403).json({ok:false,error:'Private station'});
+    const configs = (Number.isFinite(wanted) ? STATIONS.filter(s => s.node === wanted) : STATIONS).filter(s=>!isPrivateStation(s.node));
     if (!configs.length) return res.status(404).json({ ok: false, error: 'Unknown station' });
 
     const results = [];
