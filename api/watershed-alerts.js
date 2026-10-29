@@ -1,3 +1,4 @@
+import privateStationLogin from '../lib/private-station-login.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSql as sourceSql } from './db.js';
 import { watershedSql as getSql } from '../lib/watershed-store.js';
@@ -16,6 +17,7 @@ function authenticated(req) {
   return /^\d+$/.test(expiry) && Number(expiry)>Date.now() && equal(sig,signature(expiry));
 }
 export default async function handler(req,res) {
+  if(new URL(req.url||'/','http://localhost').searchParams.get('ps')==='1')return privateStationLogin(req,res);
   res.setHeader('Cache-Control','no-store');
   if (!['GET','POST'].includes(req.method)) return res.status(405).json({error:'GET or POST required'});
   if (!ownerKey()) return res.status(503).json({error:'Owner access has not been configured'});
