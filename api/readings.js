@@ -1,6 +1,7 @@
 import { getSql } from './db.js';
 import { watershedSql } from '../lib/watershed-store.js';
 import { isWatershedNode } from '../lib/watershed-nodes.js';
+import { isPrivateStation, publicOnly } from '../lib/private-station-policy.js';
 import { ensureDatabaseReady, getActiveRatingCurves, getRatingCurvePoints, rateReadings } from './rating-curves.js';
 
 function clampInt(value, fallback, min, max) {
@@ -21,6 +22,7 @@ export default async function handler(req, res) {
   const nodeParam = params.get('node');
   const node = nodeParam === null ? null : clampInt(nodeParam, null, 1, 4294967295);
   const bucketMinutes = clampInt(params.get('bucket_minutes'), 1, 0, 24 * 60);
+  if(node!==null&&isPrivateStation(node))return res.status(403).json({ok:false,error:'Private station login required on Southeastern Utah Watersheds'});
 
   try {
     // The dedicated watershed database exposes a compatible read-only view.
@@ -93,7 +95,7 @@ export default async function handler(req, res) {
       getActiveRatingCurves(watershed ? getSql() : sql, node),
       getRatingCurvePoints(watershed ? getSql() : sql, node),
     ]);
-    rows = rateReadings(rows, curves);
+    rows = rateReadings(publicOnly(rows), curves);
 
     // Short edge cache prevents repeated clicks/page reloads from waking Neon repeatedly.
     // Browser itself still revalidates; Vercel serves identical requests from edge for 60 seconds.
