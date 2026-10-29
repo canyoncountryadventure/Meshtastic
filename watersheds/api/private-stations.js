@@ -1,6 +1,6 @@
 import { sessionCookie } from '../lib/private-stations.js';
 // This proxy verifies passwords at the existing gateway, without copying a secret to Vercel.
-const UPSTREAM='https://meshtastic-ecru.vercel.app/api/private-stations';
+const UPSTREAM='https://meshtastic-ecru.vercel.app/api/watershed-alerts?ps=1';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('Vercel-CDN-Cache-Control','no-store');
  if(!['GET','POST'].includes(req.method))return res.status(405).json({ok:false,error:'GET or POST required'});
@@ -25,7 +25,7 @@ export default async function handler(req,res){
   const setCookie=upstream.headers.get('set-cookie');
   if(setCookie&&setCookie.startsWith('ps_session=')){
    // Change cookie path only. Preserve HttpOnly, Secure and SameSite attributes.
-   res.setHeader('Set-Cookie',setCookie.replace(/Path=\/api\/private-stations(?=;|$)/i,'Path=/'));
+   res.setHeader('Set-Cookie',setCookie.replace(/Path=\/api\/watershed-alerts(?=;|$)/i,'Path=/'));
   }
   return res.status(upstream.status).json(await upstream.json());
  }catch{return res.status(503).json({ok:false,error:'Private station login unavailable'});}
