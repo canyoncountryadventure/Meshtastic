@@ -15,25 +15,30 @@ const payload = {
   latest:[{node_num:node},{node_num:1222051909}],
   recent:[{node_num:node},{node_num:1222051909}]
 };
-test('Mini Me is a private station in both API implementations',()=>{
+test('Mini Me and Cottonwood Relay 2 are private stations in both API implementations',()=>{
  assert(PRIVATE_STATION_IDS.includes(node));
+ assert(PRIVATE_STATION_IDS.includes(1222051909));
  assert(PRIVATE_STATIONS.includes(node));
+ assert(PRIVATE_STATIONS.includes(1222051909));
  assert(isPrivateStation(node));
+ assert(isPrivateStation(1222051909));
  assert(standalonePrivate(node));
- assert(!isPrivateStation(1222051909));
+ assert(standalonePrivate(1222051909));
  for(const filter of [filterPrivateTelemetry,hidePrivate]){
   const publicData=filter(payload,false);
   for(const key of ['stations','readings','latest','recent']){
-   assert.deepEqual(publicData[key].map(x=>x.node_num),[1222051909],key);
+   assert.deepEqual(publicData[key].map(x=>x.node_num),[],key);
    assert.equal(filter(payload,true)[key].length,2);
   }
  }
 });
-test('Private Mini Me is absent from public selector and present in PS login group',()=>{
+test('Private Mini Me and Cottonwood Relay 2 are absent from the public selector and present in PS login group',()=>{
  const html=fs.readFileSync(new URL('../watersheds/index.html',import.meta.url),'utf8');
  const dashboard=fs.readFileSync(new URL('../watersheds/watershed-sensors-20261026-v27.js',import.meta.url),'utf8');
  assert(!html.includes('<option value="4241345683">Mini Me</option>'));
- assert(dashboard.includes('const PS_STATIONS=[2740603892,647393146,2650172798,4241345683]'));
+ assert(!html.includes('<option value="1222051909">Cottonwood Relay 2</option>'));
+ assert(dashboard.includes('const PS_STATIONS=[2740603892,647393146,2650172798,4241345683,1222051909]'));
+ assert(dashboard.includes("radioOnly:true"));
  assert(dashboard.includes('psShowAccess(true)'));
  assert(dashboard.includes('psShowAccess(data.authenticated===true)'));
 });
