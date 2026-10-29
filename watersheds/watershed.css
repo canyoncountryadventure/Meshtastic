@@ -117,3 +117,10 @@
 .ps-actions{display:flex;gap:6px}
 .ps-actions button{padding:5px 10px;font-size:11px}
 .ps-panel small{font-size:10px;line-height:1.3;color:#546673}
+
+/* Matheson U18: clearly distinguish instrument changes from groundwater trends. */
+.instrument-handoff-marker{stroke:#425e70;stroke-width:2;stroke-dasharray:5 4;stroke-opacity:.95}
+.instrument-handoff-label,.instrument-handoff-subtitle{fill:#2a4455;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;paint-order:stroke;stroke:white;stroke-width:3px;stroke-linejoin:round}
+.instrument-handoff-subtitle{font-size:11px;font-weight:600}
+.instrument-handoff-note{margin:4px 18px 14px;padding:10px 0 0;border-top:1px solid #e4e9ed;color:#485d6a;font-size:12px;line-height:1.5}
+@media(max-width:560px){.instrument-handoff-note{margin:4px 12px 12px;font-size:11px}.instrument-handoff-label{font-size:12px}}
