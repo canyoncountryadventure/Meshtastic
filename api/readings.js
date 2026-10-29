@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   try {
     // The dedicated watershed database exposes a compatible read-only view.
-    const watershed = node !== null && isWatershedNode(node);
+    const watershed = node === null || isWatershedNode(node);
     const sql = watershed ? watershedSql() : getSql();
     if (!watershed) await ensureDatabaseReady(sql);
     let rows;
