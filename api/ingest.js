@@ -14,7 +14,8 @@ const KNOWN_STATIONS = new Map([
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "Pack Creek"],
   [2650172798, 'Thousand Lake Mountain'],
-  [4241345683, 'Cottonwood Relay 2'], // !fccdcc93, repurposed station
+  [4241345683, 'Mini Me'], // !fccdcc93, formerly SMLA; portable RAK client
+  [1222051909, 'Cottonwood Relay 2'], // !48d70845, RAK4631 router
   [2004386937, 'Matheson Groundwater'], // !77788479, GW01 groundwater well
   [1695962694, 'Cottonwood Creek'], // !65165646, CC01: MB stage and MX2001 stage/temperature
   [2425602407, 'Cottonwood Relay'], // !9093c167, CC02

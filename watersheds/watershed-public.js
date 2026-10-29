@@ -2,7 +2,7 @@
  'use strict';
  const $=id=>document.getElementById(id);
  const el=(tag,text)=>{const v=document.createElement(tag);if(text!==undefined)v.textContent=text;return v;};
- const stations=[[1949224949,'Pack Creek'],[1695962694,'Cottonwood Creek'],[2425602407,'Cottonwood Relay'],[4241345683,'Cottonwood Relay 2'],[2004386937,'Matheson Groundwater'],[1683604927,'Mill Creek'],[3044869407,'Hidden Valley'],[1577197109,'Fishlake Hightop']];
+ const stations=[[1949224949,'Pack Creek'],[1695962694,'Cottonwood Creek'],[2425602407,'Cottonwood Relay'],[4241345683,'Mini Me'],[1222051909,'Cottonwood Relay 2'],[2004386937,'Matheson Groundwater'],[1683604927,'Mill Creek'],[3044869407,'Hidden Valley'],[1577197109,'Fishlake Hightop']];
  const parameterLabels={offline_hours:'Station unresponsive (hours)',discharge_cfs:'Estimated discharge (cfs)',water_level_ft:'Stage (ft)',temperature_c:'Temperature (°F)',battery_percent:'Battery (%)'};
  const parameterLabel=(parameter,node)=>parameter==='water_level_ft'&&Number(node)===2004386937?'Water depth above logger (ft)':parameter==='temperature_c'&&Number(node)===2004386937?'Groundwater temperature (°F)':parameterLabels[parameter]||parameter;
  let state=null;
@@ -17,7 +17,7 @@
  function options(select,values,selected){select.replaceChildren(...values.map(([value,label])=>{const o=el('option',label);o.value=value;return o;}));select.value=String(selected??values[0][0]);}
  function fillParameters(selected){
   const node=Number($('publicStation').value);
-  const choices=[2425602407,4241345683,3044869407,1577197109,2740603892,647393146,2650172798].includes(node)?['offline_hours','temperature_c','battery_percent']:[1695962694,2004386937,1683604927].includes(node)?['offline_hours','water_level_ft','temperature_c','battery_percent']:['offline_hours','discharge_cfs','water_level_ft','temperature_c','battery_percent'];
+  const choices=[2425602407,4241345683,1222051909,3044869407,1577197109,2740603892,647393146,2650172798].includes(node)?['offline_hours','temperature_c','battery_percent']:[1695962694,2004386937,1683604927].includes(node)?['offline_hours','water_level_ft','temperature_c','battery_percent']:['offline_hours','discharge_cfs','water_level_ft','temperature_c','battery_percent'];
   options($('publicParameter'),choices.map(x=>[x,parameterLabel(x,node)]),choices.includes(selected)?selected:choices[0]);
   sync();
  }

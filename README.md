@@ -18,7 +18,8 @@ Apply `migrations/20261014-email-alerts.sql` before deploying this feature. Run 
 
 | Display name | Node ID | Decimal node number | Data |
 |---|---|---:|---|
-| SMLA | !fccdcc93 | 4241345683 | Temperature and device telemetry |
+| Mini Me (formerly SMLA) | !fccdcc93 | 4241345683 | RAK4631 client and device telemetry |
+| Cottonwood Relay 2 | !48d70845 | 1222051909 | RAK4631 router and device telemetry |
 | Hidden Valley | !b57d051f | 3044869407 | Formerly Revived; temperature (°F) and battery (%) card |
 | Moab (Heltec) | !a35a4bf4 | 2740603892 | Local HOBO BLE temperature and gateway |
 | Fishlake Hightop | !5e021e35 | 1577197109 | HOBO temperature |
