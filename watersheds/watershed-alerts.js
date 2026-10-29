@@ -11,8 +11,8 @@ const batteryStations=[
  {id:3044869407,name:'Hidden Valley',color:'#bd4f64',external:true},
  {id:1577197109,name:'Fishlake Hightop',color:'#4f6f32',external:true},
  {id:647393146,name:'Seed Relay 1',color:'#2d8b8b',external:true},
- {id:1252758033,name:'Spare RAK',color:'#9a6a42',external:true},
- {id:4241345683,name:'Mini Me',color:'#8a8a55',external:true}
+ {id:2650172798,name:'Thousand Lake Mountain',color:'#9a6a42',external:true},
+ {id:4241345683,name:'Cottonwood Relay 2',color:'#8a8a55',external:true}
 ];
 const batteryState={hours:168,rows:[],enabled:new Set(batteryStations.map(s=>s.id)),loading:false};
 const message=t=>$('message').textContent=t;
@@ -38,7 +38,7 @@ function renderBatteryChart(){
 }
 async function loadBatteryHistory(){
  if(batteryState.loading)return;batteryState.loading=true;$('adminBatteryStatus').textContent='Loading battery history…';
- try{const base='/api/watershed-readings?hours='+batteryState.hours;const requests=[fetch(base,{cache:'no-store'}),...batteryStations.filter(s=>s.external).map(s=>fetch(base+'&node='+s.id,{cache:'no-store'}))];const payloads=await Promise.all(requests.map(async request=>{const response=await request;if(!response.ok)throw new Error('Battery history request failed');return response.json();}));batteryState.rows=payloads.flatMap(payload=>Array.isArray(payload.readings)?payload.readings:[]);renderBatteryChart();}
+ try{const base='/api/watershed-readings?hours='+batteryState.hours;const requests=[fetch(base,{cache:'no-store'})];const payloads=await Promise.all(requests.map(async request=>{const response=await request;if(!response.ok)throw new Error('Battery history request failed');return response.json();}));batteryState.rows=payloads.flatMap(payload=>Array.isArray(payload.readings)?payload.readings:[]);renderBatteryChart();}
  catch{$('adminBatteryStatus').textContent='Battery history is temporarily unavailable.';$('adminBatteryChart').innerHTML='<div class="empty">Could not load battery history. Try again shortly.</div>';}
  finally{batteryState.loading=false;}
 }
