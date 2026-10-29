@@ -3,6 +3,7 @@ import { watershedSql } from '../lib/watershed-store.js';
 import { getSql as mainSql } from './db.js';
 import { emailConfig } from '../lib/alerts.js';
 import { validateRule,storedRule,displayRule,normalizeEmails,STATIONS,PARAMETERS } from '../lib/watershed-alert-values.js';
+import { isPrivateStation } from '../lib/private-station-policy.js';
 
 const BASE='https://seutahwatersheds.vercel.app/notifications';
 const COOKIE='watershed_public_session';
@@ -85,9 +86,10 @@ export default async function handler(req,res){
   if(req.method==='GET'){
    const rules=await sql`SELECT id,node_num,station_name,parameter,direction,threshold,reset_value,enabled,active,created_at
      FROM alert_rules WHERE owner_email=${email} ORDER BY id DESC`;
-   return res.status(200).json({ok:true,email,rules:rules.map(displayRule),stations:STATIONS,parameters:PARAMETERS});
+   return res.status(200).json({ok:true,email,rules:rules.map(displayRule),stations:STATIONS.filter(([id])=>!isPrivateStation(id)),parameters:PARAMETERS});
   }
   if(body.action==='save_rule'){
+   if(isPrivateStation(body.node_num))return res.status(403).json({error:'Private stations are not available for public subscriptions'});
    const rule=validateRule(storedRule(body));
    const json=JSON.stringify([email]);
    const id=body.id?cleanId(body.id):null;
