@@ -11,6 +11,7 @@ export default async function handler(req, res) {
     const rows = await sql`
       SELECT observed_at, station_name, telemetry_type, temperature_c, metrics
       FROM telemetry_readings
+      WHERE node_num NOT IN (2740603892,647393146,2650172798)
       ORDER BY observed_at DESC
       LIMIT 1
     `;
