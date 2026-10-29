@@ -14,9 +14,11 @@ const STATIONS = [
   { node: 1577197109, name: 'Fishlake Hightop', battery: true },
   { node: 1949224949, name: "Pack Creek", battery: true, stage: true },
   { node: 2650172798, name: 'Thousand Lake Mountain', battery: true },
-  { node: 4241345683, name: 'SMLA', battery: true, measure: 'any' },
-  { node: 2004386937, name: 'Wingate Moisture', battery: true, measure: 'soil' },
+  { node: 4241345683, name: 'Cottonwood Relay 2', battery: true, measure: 'any' },
+  { node: 2004386937, name: 'Matheson Groundwater', battery: true, measure: 'any', since: '2026-10-23T00:00:00Z' },
   { node: 3044869407, name: 'Hidden Valley', battery: true, measure: 'any', since: '2026-10-05T00:00:00Z' },
+  { node: 1683604927, name: 'Mill Creek', battery: true, stage: true },
+  { node: 647393146, name: 'Seed Relay 1', battery: true, measure: 'device' },
 ];
 
 const EXPECTED_INTERVAL_MINUTES = 60;
