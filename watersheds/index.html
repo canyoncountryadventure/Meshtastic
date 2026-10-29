@@ -5,11 +5,11 @@
 <meta name="theme-color" content="#173f3a"><meta name="description" content="Live stream, groundwater, and environmental sensor observations from across southeastern Utah.">
 <title>Southeastern Utah Watersheds · Monitoring</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="/watershed.css?v=20261027-mill-creek">
+<link rel="stylesheet" href="/watershed.css?v=20261029-ps-login">
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)}</script>
 <script defer src="/_vercel/insights/script.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
-<script src="/watershed-sensors-20261026-v27.js?v=20261029-hide-historical" defer></script>
+<script src="/watershed-sensors-20261026-v27.js?v=20261029-ps-login" defer></script>
 <script src="/water-quality.js?v=20261026-latest-monitoring-date" defer></script>
 <script src="/visitor-count.js?v=20261026" defer></script>
 </head>
@@ -17,7 +17,7 @@
 <header class="masthead"><a class="brand" href="/watershed"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="m5 23 11-15 9 12 6-8 8 11M4 30c8-6 14 6 22 0s10-1 14-1M4 37c8-6 14 6 22 0s10-1 14-1"/></svg><span>SOUTHEASTERN UTAH<span>WATERSHEDS</span></span></a><nav aria-label="Main navigation"><a href="/notifications">Email notifications</a></nav><span class="network-label">STREAM MONITORING</span></header>
 <div class="program-tabs" role="tablist" aria-label="Monitoring program"><button id="streamTab" class="stream-tab" type="button" role="tab" aria-selected="true" aria-controls="streamPanel">Stream flow</button><button id="qualityTab" class="quality-tab" type="button" role="tab" aria-selected="false" aria-controls="qualityPanel">Water quality</button></div>
 <main id="streamPanel" role="tabpanel" aria-labelledby="streamTab">
-<section class="hero"><p class="eyebrow">Southeastern Utah Watersheds</p><h1>Watershed monitoring</h1><p class="intro">Live and historical stream, groundwater, and environmental observations from sensor and relay stations across southeastern Utah.</p><label class="station-select">Station <select id="stationSelect"><optgroup label="Water and Environmental Sensors"><option value="1949224949">Pack Creek</option><option value="1695962694">South Cottonwood</option><option value="1683604927">Mill Creek</option><option value="2004386937">Matheson Groundwater</option><option value="2740603892">Moab</option></optgroup><optgroup label="Radio and Relay Stations"><option value="2425602407">Cottonwood Relay</option><option value="4241345683">Cottonwood Relay 2</option><option value="3044869407">Hidden Valley</option><option value="1577197109">Fishlake Hightop</option><option value="647393146">Seed Relay 1</option><option value="2650172798">Thousand Lake Mountain</option></optgroup></select></label></section>
+<section class="hero"><p class="eyebrow">Southeastern Utah Watersheds</p><h1>Watershed monitoring</h1><p class="intro">Live and historical stream, groundwater, and environmental observations from sensor and relay stations across southeastern Utah.</p><label class="station-select">Station <select id="stationSelect"><optgroup label="Water and Environmental Sensors"><option value="1949224949">Pack Creek</option><option value="1695962694">South Cottonwood</option><option value="1683604927">Mill Creek</option><option value="2004386937">Matheson Groundwater</option></optgroup><optgroup label="Radio and Relay Stations"><option value="2425602407">Cottonwood Relay</option><option value="4241345683">Cottonwood Relay 2</option><option value="3044869407">Hidden Valley</option><option value="1577197109">Fishlake Hightop</option></optgroup></select></label></section>
 <section id="conditions" class="conditions">
 <div class="section-title"><div><p class="eyebrow">Latest observations</p><h2 id="stationTitle">Pack Creek</h2><p id="stationSubtitle" class="station-location">Pack Creek above confluence with Mill Creek · 4,020 ft</p></div><button id="refresh" type="button">↻ Refresh readings</button></div>
 <div class="observation-bar"><span id="observationStatus" role="status">Loading creek observations…</span><span>All times Mountain Time</span></div>
@@ -79,5 +79,12 @@
 <section class="site-directory"><div><p class="eyebrow">Monitoring network</p><h2>Sampling locations</h2></div><div id="qualitySiteDirectory" class="site-groups"></div></section>
 <section class="about"><h2>Methods</h2><div><p>Stations are matched by MLID first, then by a cleaned station name when the workbook has no valid MLID. The original source name, notes and workbook row are retained with each record.</p><p>Values and reported precision are preserved from the Southeast Utah workbook. Field units are stated where defined by the workbook columns. The workbook does not provide units for laboratory chemistry and radiological columns, so the site does not invent them.</p></div></section>
 </main>
-<footer><a class="footer-name" href="/watershed">SOUTHEASTERN UTAH WATERSHEDS</a><span>Stream flow · Water quality</span><span>Surface-water monitoring</span><span id="visitorCount" class="visitor-count" aria-live="polite" hidden><strong>—</strong> unique visitors</span></footer>
+<footer><a class="footer-name" href="/watershed">SOUTHEASTERN UTAH WATERSHEDS</a><span>Stream flow · Water quality</span><span>Surface-water monitoring</span><span id="visitorCount" class="visitor-count" aria-live="polite" hidden><strong>—</strong> unique visitors</span><div class="ps-access">
+<button id="psToggle" class="ps-trigger" type="button" aria-expanded="false" aria-controls="psPanel">PS login</button>
+<form id="psPanel" class="ps-panel" hidden>
+<label for="psPassword">Private stations</label>
+<input id="psPassword" type="password" autocomplete="current-password" placeholder="Password" aria-label="Private station password" maxlength="256">
+<div class="ps-actions"><button id="psUnlock" type="submit">Unlock</button><button id="psLogout" type="button" hidden>Log out</button></div>
+<small id="psStatus" role="status" aria-live="polite"></small>
+</form></div></footer>
 </body></html>
