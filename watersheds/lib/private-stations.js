@@ -2,7 +2,7 @@
 // Never cache private responses, log credentials, or trust a client-side visibility flag.
 export const PRIVATE_STATIONS=Object.freeze([2740603892,647393146,2650172798]);
 const ids=new Set(PRIVATE_STATIONS);
-const BACKEND='https://meshtastic-ecru.vercel.app/api/private-stations';
+const BACKEND='https://meshtastic-ecru.vercel.app/api/watershed-alerts?ps=1';
 export const isPrivateStation=id=>ids.has(Number(id));
 export function sessionCookie(req){
  const value=String(req.headers.cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith('ps_session='))||'';
