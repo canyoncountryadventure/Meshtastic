@@ -64,7 +64,7 @@ test('Notifications admin battery chart includes Spare RAK and uses authenticate
  const graph=fs.readFileSync(new URL('../watersheds/watershed-alerts.js',import.meta.url),'utf8');
  const api=fs.readFileSync(new URL('../api/watershed-alerts.js',import.meta.url),'utf8');
  const history=fs.readFileSync(new URL('../lib/watershed-battery-history.js',import.meta.url),'utf8');
- assert.match(page,/20261030-spare-rak-admin-battery/);
+ assert.match(page,/20261030-battery-default-off/);
  assert.match(graph,/\{id:1252758033,name:'Spare RAK'/);
  assert.match(graph,/action:'battery_history_hours'/);
  assert.doesNotMatch(graph,/fetch\(base,\{cache:'no-store'\}\)/);
@@ -113,4 +113,15 @@ test('Every station recent-measurements table includes transmission provenance',
  assert.equal(label({telemetry_type:'rugged_troll',metrics:{},raw:{source_file:'troll.csv'}}),'IMPORTED');
  assert.equal(label({telemetry_type:'mx2001',metrics:{source:'field_installation_reading'}}),'FIELD');
  assert.equal(label({telemetry_type:'mx2001',metrics:{},radio:{}}),'UNKNOWN');
+});
+
+test('Battery history starts with all stations unselected and preserves manual toggles',()=>{
+ const script=fs.readFileSync(new URL('../watersheds/watershed-alerts.js',import.meta.url),'utf8');
+ const page=fs.readFileSync(new URL('../watersheds/notifications.html',import.meta.url),'utf8');
+ assert.match(script,/const batteryState=\{hours:168,rows:\[\],enabled:new Set\(\),loading:false\}/);
+ assert.doesNotMatch(script,/enabled:new Set\(batteryStations\.map/);
+ assert.match(script,/if\(!batteryState\.enabled\.size\)/);
+ assert.match(script,/Select one or more stations above to display battery history/);
+ assert.match(script,/input\.checked=batteryState\.enabled\.has\(station\.id\)/);
+ assert.match(page,/All stations start unchecked/);
 });

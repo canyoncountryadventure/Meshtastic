@@ -16,7 +16,7 @@ const batteryStations=[
  {id:1222051909,name:'Cottonwood Relay 2',color:'#7b6eab',external:true},
  {id:1252758033,name:'Spare RAK',color:'#4969b8',external:true}
 ];
-const batteryState={hours:168,rows:[],enabled:new Set(batteryStations.map(s=>s.id)),loading:false};
+const batteryState={hours:168,rows:[],enabled:new Set(),loading:false};
 const message=t=>$('message').textContent=t;
 async function api(body){const r=await fetch('/api/watershed-alerts',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const d=await r.json();if(!r.ok){if(r.status===401){$('settings').hidden=true;$('loginPanel').hidden=false;$('logout').hidden=true;}throw new Error(d.error||'Request failed');}return d;}
 async function run(fn){try{await fn();}catch(e){message(e.message);}}
@@ -28,6 +28,12 @@ function renderBatteryToggles(){
 }
 function renderBatteryChart(){
  const target=$('adminBatteryChart');if(!target)return;
+ if(!batteryState.enabled.size){
+  $('adminBatteryStatus').textContent='No stations selected.';
+  $('adminBatteryReadout').textContent='Select a station to inspect its readings.';
+  target.innerHTML='<div class="empty">Select one or more stations above to display battery history.</div>';
+  return;
+ }
  const series=batteryStations.map(station=>({station,points:batteryState.rows.filter(r=>Number(r.node_num)===station.id&&batteryValue(r)!==null).map(r=>({x:Date.parse(r.observed_at),y:batteryValue(r)})).filter(p=>Number.isFinite(p.x)).sort((a,b)=>a.x-b.x)})).filter(s=>batteryState.enabled.has(s.station.id)&&s.points.length);
  const count=series.reduce((sum,s)=>sum+s.points.length,0);$('adminBatteryStatus').textContent=count?count+' battery reading'+(count===1?'':'s')+' shown · '+series.length+' station'+(series.length===1?'':'s'):'No battery percentage readings in this period.';
  if(!count){target.innerHTML='<div class="empty">No battery percentage readings for the selected stations and period.</div>';return;}
