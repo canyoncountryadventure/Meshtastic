@@ -13,7 +13,8 @@ const batteryStations=[
  {id:647393146,name:'Seed Relay 1',color:'#2d8b8b',external:true},
  {id:2650172798,name:'Thousand Lake Mountain',color:'#9a6a42',external:true},
  {id:4241345683,name:'Mini Me',color:'#8a8a55',external:true},
- {id:1222051909,name:'Cottonwood Relay 2',color:'#7b6eab',external:true}
+ {id:1222051909,name:'Cottonwood Relay 2',color:'#7b6eab',external:true},
+ {id:1252758033,name:'Spare RAK',color:'#4969b8',external:true}
 ];
 const batteryState={hours:168,rows:[],enabled:new Set(batteryStations.map(s=>s.id)),loading:false};
 const message=t=>$('message').textContent=t;
@@ -39,7 +40,17 @@ function renderBatteryChart(){
 }
 async function loadBatteryHistory(){
  if(batteryState.loading)return;batteryState.loading=true;$('adminBatteryStatus').textContent='Loading battery history…';
- try{const base='/api/watershed-readings?hours='+batteryState.hours;const requests=[fetch(base,{cache:'no-store'})];const payloads=await Promise.all(requests.map(async request=>{const response=await request;if(!response.ok)throw new Error('Battery history request failed');return response.json();}));batteryState.rows=payloads.flatMap(payload=>Array.isArray(payload.readings)?payload.readings:[]);renderBatteryChart();}
+ try{
+  // Read owner-authorized battery telemetry, including private radio-only stations.
+  // The public watershed-readings API intentionally hides these stations.
+  const result=await api({action:'battery_history_hours',hours:batteryState.hours});
+  if(!Array.isArray(result.series))throw new Error('Invalid battery history response');
+  batteryState.rows=result.series.flatMap(station=>(station.points||[]).map(point=>({
+    node_num:station.node_num,observed_at:point.at,telemetry_type:'device',
+    metrics:{battery_level:point.percent}
+  })));
+  renderBatteryChart();
+ }
  catch{$('adminBatteryStatus').textContent='Battery history is temporarily unavailable.';$('adminBatteryChart').innerHTML='<div class="empty">Could not load battery history. Try again shortly.</div>';}
  finally{batteryState.loading=false;}
 }

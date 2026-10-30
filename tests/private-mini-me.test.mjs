@@ -58,3 +58,17 @@ test('All public station read APIs reject Mini Me by node ID',()=>{
  const publicAlerts=fs.readFileSync(new URL('../watersheds/watershed-public.js',import.meta.url),'utf8');
  assert(!publicAlerts.includes("[4241345683,'Mini Me']"));
 });
+
+test('Notifications admin battery chart includes Spare RAK and uses authenticated history',()=>{
+ const page=fs.readFileSync(new URL('../watersheds/notifications.html',import.meta.url),'utf8');
+ const graph=fs.readFileSync(new URL('../watersheds/watershed-alerts.js',import.meta.url),'utf8');
+ const api=fs.readFileSync(new URL('../api/watershed-alerts.js',import.meta.url),'utf8');
+ const history=fs.readFileSync(new URL('../lib/watershed-battery-history.js',import.meta.url),'utf8');
+ assert.match(page,/20261030-spare-rak-admin-battery/);
+ assert.match(graph,/\{id:1252758033,name:'Spare RAK'/);
+ assert.match(graph,/action:'battery_history_hours'/);
+ assert.doesNotMatch(graph,/fetch\(base,\{cache:'no-store'\}\)/);
+ assert.match(api,/body.action==='battery_history_hours'/);
+ assert.match(history,/BATTERY_HISTORY_HOURS=Object.freeze\(\[24,168,720,2160\]\)/);
+ assert.match(history,/SPARE_RAK_CUTOVER_MS/);
+});
