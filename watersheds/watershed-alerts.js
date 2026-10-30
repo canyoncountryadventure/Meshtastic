@@ -61,17 +61,15 @@ async function load(){data=await api();$('settings').hidden=false;$('loginPanel'
  $('history').replaceChildren();if(!data.history.length){const row=el('tr'),cell=el('td','No emails yet.');cell.colSpan=4;row.append(cell);$('history').append(row);}for(const item of data.history){const row=el('tr');row.append(el('td',new Date(item.created_at).toLocaleString('en-US',{timeZone:'America/Denver'})),el('td',item.recipient),el('td',item.subject),el('td',item.status));$('history').append(row);}}
 function renderGatewayControl(){
  const c=data.gateway_control;if(!c)return;
- $('gatewayWater').checked=c.water_enabled;$('gatewayHobo').checked=c.hobo_enabled;
- $('gatewayAdminNode').value=String(c.authorized_admin_node||0);
- const desired='Requested: WATER '+(c.water_enabled?'on':'paused')+', HOBO '+(c.hobo_enabled?'on':'paused');
- const applied=c.applied_at?'Applied: WATER '+(c.applied_water_enabled?'on':'paused')+', HOBO '+(c.applied_hobo_enabled?'on':'paused')+' · '+new Date(c.applied_at).toLocaleString('en-US',{timeZone:'America/Denver'}):'Heltec has not yet reported applying any control settings.';
+ $('gatewayWater').checked=c.water_enabled;
+ const desired='Requested: MB7388 stage polling '+(c.water_enabled?'on':'paused');
+ const applied=c.applied_at?'Applied: MB7388 stage polling '+(c.applied_water_enabled?'on':'paused')+' · '+new Date(c.applied_at).toLocaleString('en-US',{timeZone:'America/Denver'}):'Heltec has not yet reported applying the requested stage-poll setting.';
  const mismatch=c.applied_version===null||Number(c.applied_version)!==Number(c.version)||
-   c.applied_water_enabled!==c.water_enabled||c.applied_hobo_enabled!==c.hobo_enabled;
- $('gatewayApplied').textContent=desired+' · '+applied+(mismatch?' · Not matching requested controls yet':' · Confirmed');
+   c.applied_water_enabled!==c.water_enabled;
+ $('gatewayApplied').textContent=desired+' · '+applied+' · HOBO/MX2001 not installed'+(mismatch?' · Not matching requested setting yet':' · Confirmed');
 }
 $('gatewayForm').onsubmit=e=>{e.preventDefault();run(async()=>{
- await api({action:'save_gateway_control',water_enabled:$('gatewayWater').checked,
- hobo_enabled:$('gatewayHobo').checked,authorized_admin_node:Number($('gatewayAdminNode').value)});
+ await api({action:'save_gateway_control',water_enabled:$('gatewayWater').checked});
  await load();message('Control saved to Neon. Waiting for Heltec to confirm.');
 });};
 document.querySelectorAll('[data-battery-hours]').forEach(button=>button.addEventListener('click',()=>{batteryState.hours=Number(button.dataset.batteryHours);document.querySelectorAll('[data-battery-hours]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));loadBatteryHistory();}));
