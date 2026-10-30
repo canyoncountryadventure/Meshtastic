@@ -72,3 +72,10 @@ test('Notifications admin battery chart includes Spare RAK and uses authenticate
  assert.match(history,/BATTERY_HISTORY_HOURS=Object.freeze\(\[24,168,720,2160\]\)/);
  assert.match(history,/SPARE_RAK_CUTOVER_MS/);
 });
+
+test('Owner battery history uses a single bound bucket expression for sampled rows',()=>{
+ const source=fs.readFileSync(new URL('../lib/watershed-battery-history.js',import.meta.url),'utf8');
+ assert.doesNotMatch(source,/SELECT DISTINCT ON/);
+ assert.equal((source.match(/ROW_NUMBER\(\) OVER/g)||[]).length,2);
+ assert.equal((source.match(/WHERE bucket_rank=1/g)||[]).length,2);
+});
