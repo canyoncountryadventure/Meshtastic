@@ -34,13 +34,11 @@
 <details class="owner-area"><summary>Owner administration · password required</summary><section id="loginPanel" class="panel"><h2>Owner administration</h2><p>Owners can review all notification rules, recipients, and delivery history. Public subscribers only see their own.</p><form id="loginForm"><label>Owner password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Sign in</button></form></section>
 <div id="settings" hidden>
 <section class="panel" id="batteryHistoryPanel"><div class="panel-heading"><div><h2>Station battery history</h2><p class="muted">Toggle stations to compare reported battery percentage on one graph.</p></div><div class="battery-ranges" role="group" aria-label="Battery history range"><button type="button" data-battery-hours="24">24 hours</button><button type="button" data-battery-hours="168" aria-pressed="true">7 days</button><button type="button" data-battery-hours="720">30 days</button><button type="button" data-battery-hours="2160">90 days</button></div></div><div id="batteryStationToggles" class="battery-station-toggles" aria-label="Stations shown on battery graph"></div><div id="adminBatteryStatus" class="muted" role="status">Loading battery history…</div><div id="adminBatteryChart" class="admin-battery-chart"><div class="empty">Loading battery history…</div></div><div id="adminBatteryReadout" class="chart-readout" aria-live="polite">Point to a reading to inspect it.</div></section>
-<section class="panel" id="gatewayControlPanel"><h2>Heltec V7 · CC01 polling</h2>
-<p class="muted">Controls only Heltec-requested WATER READ and HOBO READ; CC01 automatic telemetry continues. Heltec checks desired settings over Wi-Fi about every 2 minutes. A selected radio node may also send PAUSE / RESUME DMs.</p>
+<section class="panel" id="gatewayControlPanel"><h2>Heltec V7 · South Cottonwood MB7388 polling</h2>
+<p class="muted">Controls only Heltec-requested MB7388 stage reads; South Cottonwood automatic telemetry continues. This station has no HOBO/MX2001 sensor, so HOBO polling is disabled and is not shown here. Heltec checks the requested setting over Wi-Fi about every 2 minutes.</p>
 <form id="gatewayForm">
 <div class="form-grid">
-<label class="toggle"><input id="gatewayWater" type="checkbox" checked> WATER READ enabled</label>
-<label class="toggle"><input id="gatewayHobo" type="checkbox" checked> HOBO READ enabled</label>
-<label>Authorized DM radio node number (0 disables remote radio controls)<input id="gatewayAdminNode" type="number" min="0" max="4294967295" step="1"></label>
+<label class="toggle"><input id="gatewayWater" type="checkbox" checked> MB7388 WATER READ enabled</label>
 </div>
 <p id="gatewayApplied" class="muted" role="status"></p>
 <div class="actions"><button type="submit">Save Heltec polling settings</button></div>
