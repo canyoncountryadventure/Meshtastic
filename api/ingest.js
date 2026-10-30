@@ -7,9 +7,9 @@ import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
 import { backupRow, saveEmergencyBackup, stablePacketId } from '../lib/google-sheets-backup.js';
 
 const KNOWN_STATIONS = new Map([
-  [1252758033, 'Hidden Valley (retired)'],
+  [1252758033, 'Spare RAK'],
   [1436900584, 'Hidden Valley (historic)'],
-  [2224121796, 'Infra_i04 (historic)'], // !4aab9211, hidden from dashboard; retain incoming history
+  [2224121796, 'Infra_i04 (historic)'], // retained historic identity; never map to Spare RAK
   [2740603892, 'Moab'],
   [1577197109, 'Fishlake Hightop'],
   [1949224949, "Pack Creek"],
