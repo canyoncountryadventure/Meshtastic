@@ -95,3 +95,22 @@ test('Heltec polling admin is all-node, credentialed, and preserves on-air DM de
  assert.match(api,/authorized_admin_node=\$\{adminNode\}/);
  assert.doesNotMatch(html,/Heltec V7 · South Cottonwood MB7388 polling/);
 });
+
+test('Every station recent-measurements table includes transmission provenance',()=>{
+ const script=fs.readFileSync(new URL('../watersheds/watershed-sensors-20261026-v27.js',import.meta.url),'utf8');
+ const page=fs.readFileSync(new URL('../watersheds/index.html',import.meta.url),'utf8');
+ assert.match(page,/20261030-unified-transmission-source/);
+ assert.match(script,/label:'Source',cell:r=>transmissionLabel\(r\)/);
+ assert.equal((script.match(/label:'Source',cell:r=>transmissionLabel\(r\)/g)||[]).length,1);
+ assert.match(script,/radioOnly\?\['observed_at_UTC'.*'transmission_source'\]/);
+ const source=script.slice(script.indexOf('function transmissionLabel(r)'),script.indexOf('const transmissionDetail='));
+ const label=new Function(source+';return transmissionLabel;')();
+ assert.equal(label({node_num:2004386937,telemetry_type:'mx2001',metrics:{source:'heltec_dm'},radio:{gateway:'Heltec Hub'}}),'DM');
+ assert.equal(label({node_num:1949224949,telemetry_type:'water_distance',metrics:{},radio:{gateway:'Heltec Hub'}}),'AUTO');
+ assert.equal(label({node_num:1222051909,telemetry_type:'device',metrics:{battery_level:96}}),'AUTO');
+ assert.equal(label({telemetry_type:'environment',metrics:{source:'heltec_ble'}}),'BLE');
+ assert.equal(label({telemetry_type:'environment',metrics:{source:'hobo_manual_backfill'}}),'IMPORTED');
+ assert.equal(label({telemetry_type:'rugged_troll',metrics:{},raw:{source_file:'troll.csv'}}),'IMPORTED');
+ assert.equal(label({telemetry_type:'mx2001',metrics:{source:'field_installation_reading'}}),'FIELD');
+ assert.equal(label({telemetry_type:'mx2001',metrics:{},radio:{}}),'UNKNOWN');
+});
