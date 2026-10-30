@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email notifications · Southeastern Utah Watersheds</title><link rel="stylesheet" href="/watershed.css?v=20261015-stations"><link rel="stylesheet" href="/watershed-alerts.css?v=20261027-battery-history"><script src="/watershed-alerts.js?v=20261030-spare-rak-admin-battery" defer></script><script src="/watershed-public.js?v=20261029-all-stations" defer></script></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email notifications · Southeastern Utah Watersheds</title><link rel="stylesheet" href="/watershed.css?v=20261015-stations"><link rel="stylesheet" href="/watershed-alerts.css?v=20261027-battery-history"><script src="/watershed-alerts.js?v=20261030-all-node-polling" defer></script><script src="/watershed-public.js?v=20261029-all-stations" defer></script></head><body>
 <header class="masthead"><a class="brand" href="/watershed">SOUTHEASTERN UTAH WATERSHEDS</a><nav><a href="/watershed">Monitoring</a><button id="logout" hidden>Sign out</button></nav></header>
 <main class="notification-shell"><section class="hero"><h1>Email notifications</h1><p class="intro">Notification rules for stream, groundwater, sensor, and relay stations across Southeastern Utah.</p></section><p id="message" role="status" aria-live="polite"></p>
 
@@ -34,15 +34,32 @@
 <details class="owner-area"><summary>Owner administration · password required</summary><section id="loginPanel" class="panel"><h2>Owner administration</h2><p>Owners can review all notification rules, recipients, and delivery history. Public subscribers only see their own.</p><form id="loginForm"><label>Owner password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Sign in</button></form></section>
 <div id="settings" hidden>
 <section class="panel" id="batteryHistoryPanel"><div class="panel-heading"><div><h2>Station battery history</h2><p class="muted">Toggle stations to compare reported battery percentage on one graph.</p></div><div class="battery-ranges" role="group" aria-label="Battery history range"><button type="button" data-battery-hours="24">24 hours</button><button type="button" data-battery-hours="168" aria-pressed="true">7 days</button><button type="button" data-battery-hours="720">30 days</button><button type="button" data-battery-hours="2160">90 days</button></div></div><div id="batteryStationToggles" class="battery-station-toggles" aria-label="Stations shown on battery graph"></div><div id="adminBatteryStatus" class="muted" role="status">Loading battery history…</div><div id="adminBatteryChart" class="admin-battery-chart"><div class="empty">Loading battery history…</div></div><div id="adminBatteryReadout" class="chart-readout" aria-live="polite">Point to a reading to inspect it.</div></section>
-<section class="panel" id="gatewayControlPanel"><h2>Heltec V7 · South Cottonwood MB7388 polling</h2>
-<p class="muted">Controls only Heltec-requested MB7388 stage reads; South Cottonwood automatic telemetry continues. This station has no HOBO/MX2001 sensor, so HOBO polling is disabled and is not shown here. Heltec checks the requested setting over Wi-Fi about every 2 minutes.</p>
+<section class="panel" id="gatewayControlPanel"><h2>Heltec V7 · Mesh polling control</h2>
+<p class="muted">Configure the authorized DM sender and South Cottonwood's automatic water-sensor polling here. For any other radio, generate a polling command below and send it as a direct message to Heltec from your authorized Meshtastic radio. This website does not send LoRa messages.</p>
 <form id="gatewayForm">
 <div class="form-grid">
-<label class="toggle"><input id="gatewayWater" type="checkbox" checked> MB7388 WATER READ enabled</label>
+<label class="toggle"><input id="gatewayWater" type="checkbox" checked> South Cottonwood · automatic WATER READ</label>
+<label>Authorized DM sender node ID <input id="gatewayAdminNode" type="text" inputmode="text" placeholder="!c22d7fec" maxlength="16" autocomplete="off" required></label>
 </div>
 <p id="gatewayApplied" class="muted" role="status"></p>
-<div class="actions"><button type="submit">Save Heltec polling settings</button></div>
-</form></section>
+<div class="actions"><button type="submit">Save gateway settings</button></div>
+</form>
+<div class="gateway-poll-builder">
+<h3>Poll any Meshtastic node</h3>
+<p class="muted">The current V7 firmware supports any numeric node ID. Built-in pollers: South Cottonwood and Matheson. Four additional repeating stations can be configured by DM.</p>
+<div class="form-grid">
+<label>Target station <select id="gatewayPollNode"></select></label>
+<label id="gatewayCustomWrap" hidden>Custom node ID <input id="gatewayPollCustom" type="text" placeholder="!1234abcd or decimal" maxlength="16" autocomplete="off"></label>
+<label>Action <select id="gatewayPollAction"><option value="schedule">Poll repeatedly</option><option value="once">Poll once now</option><option value="off">Stop scheduled polling</option></select></label>
+<label id="gatewayIntervalWrap">Interval <select id="gatewayPollMinutes"><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="360">6 hours</option><option value="720">12 hours</option><option value="1440">24 hours</option></select></label>
+<label id="gatewayModeWrap">Request <select id="gatewayPollMode"><option value="READ">READ (HOBO / supported logger)</option><option value="WATER">WATER READ (ultrasonic)</option><option value="BOTH">WATER READ then READ</option></select></label>
+</div>
+<p class="gateway-command-label">DM this command <strong>to Heltec</strong></p>
+<div class="gateway-command-row"><output id="gatewayDmCommand" aria-live="polite"></output><button type="button" id="gatewayDmCopy">Copy command</button></div>
+<p id="gatewayDmHelp" class="muted" role="status"></p>
+<p class="muted">Send from <strong id="gatewaySenderLabel">your authorized node</strong>. Then DM <code>POLL STATUS</code> to Heltec to check its reply. Cottonwood and Matheson have dedicated polling routines; <code>OFF</code> only works for additional configured nodes. A node must support the requested sensor command to return a reading.</p>
+</div>
+</section>
 <section class="panel"><div class="panel-heading"><h2>Notification rules</h2><button id="newRule">Add rule</button></div><p id="serviceStatus" class="muted"></p><div id="rules"></div></section>
 <section id="editorPanel" class="panel" hidden><h2 id="editorTitle">Notification rule</h2><form id="ruleForm"><input id="ruleId" type="hidden"><div class="form-grid"><label>Station<select id="station"></select></label><label>Parameter<select id="parameter"></select></label><label id="directionWrap">Alert when<select id="direction"><option value="above">Above</option><option value="below">Below</option></select></label><label id="thresholdWrap">Threshold<input id="threshold" type="number" step="any" required></label><label id="resetWrap"><span id="recoveryLabel">Allow another alert when below</span><input aria-describedby="recoveryHelp" id="reset" type="number" step="any" required></label><label class="toggle"><input id="enabled" type="checkbox" checked>Enabled</label></div><p id="recoveryHelp" class="muted" aria-live="polite"></p><h3>Email recipients</h3><p class="muted">Add up to 20 addresses. Each recipient receives a separate email.</p><div class="actions"><input id="newEmail" type="email" placeholder="name@example.com" aria-label="Recipient email"><button id="addEmail" type="button">Add email</button></div><div id="recipients"></div><p class="muted">Temperatures are in °F. Battery is the radio’s reported percentage. Station unresponsive checks the time since the last telemetry packet received from the selected station and emails once per outage, then resets when packets resume. Other thresholds require fresh measurements.</p><div class="actions"><button type="submit">Save rule</button><button id="cancelEdit" type="button">Cancel</button></div></form></section>
 <section class="panel"><div class="panel-heading"><h2>Email history</h2><button id="refresh">Refresh</button></div><div class="table-scroll"><table><thead><tr><th>Time · MT</th><th>Recipient</th><th>Notification</th><th>Status</th></tr></thead><tbody id="history"></tbody></table></div></section></div></details></main></body></html>

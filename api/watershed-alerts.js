@@ -73,10 +73,14 @@ export default async function handler(req,res) {
       return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS,gateway_control:control[0]||null});
     }
     if (body.action==='save_gateway_control') {
-      if(typeof body.water_enabled!=='boolean')
-         return res.status(400).json({error:'Invalid gateway control settings'});
+      const adminNode=Number(body.authorized_admin_node);
+      if(typeof body.water_enabled!=='boolean'||!Number.isSafeInteger(adminNode)||
+         adminNode<1||adminNode>4294967295)
+         return res.status(400).json({error:'Choose WATER READ on/off and an authorized Meshtastic node ID'});
+      // South Cottonwood has no HOBO. Do not alter another station's poll schedule here.
       const changed=await sql`UPDATE cc01_gateway_control SET
         water_enabled=${body.water_enabled},hobo_enabled=FALSE,
+        authorized_admin_node=${adminNode},
         version=version+1,updated_at=NOW()
         WHERE id=1 RETURNING version`;
       if(!changed.length)return res.status(503).json({error:'Gateway control not initialized'});

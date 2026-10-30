@@ -59,19 +59,82 @@ function parameterOptions(selected){const node=Number($('station').value),airNod
 async function load(){data=await api();$('settings').hidden=false;$('loginPanel').hidden=true;$('logout').hidden=false;$('station').replaceChildren(...data.stations.map(([id,name])=>{const o=el('option',name);o.value=id;return o;}));parameterOptions();renderGatewayControl();renderBatteryToggles();loadBatteryHistory();$('serviceStatus').textContent=data.email.configured?'Email delivery connected. Add recipients to a rule to enable notifications.':'Email delivery is not configured.';
  $('rules').replaceChildren();for(const rule of data.rules){const card=el('article');card.className='rule-card';const info=el('div');info.append(el('h3',rule.station_name+' · '+label(rule.parameter,rule.node_num)),el('p',rule.parameter==='offline_hours'?'Email after '+rule.threshold+' hours without telemetry':rule.direction+' '+rule.threshold+' · allow another alert after going '+(rule.direction==='above'?'below ':'above ')+rule.reset_value),el('p',rule.recipients.length?rule.recipients.join(', '):'No recipients'),el('p',!rule.enabled?'Paused':!rule.recipients.length?'Add recipients':rule.active?'Threshold active':'Ready'));const actions=el('div');actions.className='actions';for(const [title,fn] of [['Edit / emails',()=>edit(rule)],['Send test',()=>run(async()=>{const d=await api({action:'test',id:rule.id});await load();message(d.sent+' test email(s) accepted.');})],['Delete',()=>run(async()=>{if(!confirm('Delete this notification rule?'))return;await api({action:'delete_rule',id:rule.id});await load();message('Rule deleted.');})]]){const b=el('button',title);b.onclick=fn;if(title==='Send test')b.disabled=!data.email.configured||!rule.recipients.length;actions.append(b);}card.append(info,actions);$('rules').append(card);}
  $('history').replaceChildren();if(!data.history.length){const row=el('tr'),cell=el('td','No emails yet.');cell.colSpan=4;row.append(cell);$('history').append(row);}for(const item of data.history){const row=el('tr');row.append(el('td',new Date(item.created_at).toLocaleString('en-US',{timeZone:'America/Denver'})),el('td',item.recipient),el('td',item.subject),el('td',item.status));$('history').append(row);}}
+const hexNode=n=>'!'+Number(n).toString(16).padStart(8,'0');
+function parseNodeId(value){
+ const text=String(value??'').trim();
+ if(/^![0-9a-f]{8}$/i.test(text))return Number.parseInt(text.slice(1),16);
+ if(/^0x[0-9a-f]{1,8}$/i.test(text))return Number.parseInt(text.slice(2),16);
+ if(/^\\d{1,10}$/.test(text)){const n=Number(text);return Number.isSafeInteger(n)&&n<=4294967295?n:null;}
+ return null;
+}
+function initializePollTargets(){
+ const selected=$('gatewayPollNode').value,select=$('gatewayPollNode');
+ const stations=Array.isArray(data?.stations)?data.stations:[];
+ const all=[...stations,[1252758033,'Spare RAK']];
+ const seen=new Set();
+ select.replaceChildren();
+ for(const [raw,name] of all){
+  const id=Number(raw);if(!Number.isSafeInteger(id)||id<=0||seen.has(id))continue;seen.add(id);
+  const option=el('option',name+' · '+hexNode(id));option.value=String(id);select.append(option);
+ }
+ const custom=el('option','Other node · enter ID');custom.value='custom';select.append(custom);
+ select.value=selected&&[...select.options].some(o=>o.value===selected)?selected:String(2004386937);
+ if(!select.value)select.value='custom';
+}
+function pollingTarget(){
+ const value=$('gatewayPollNode').value;
+ if(value==='custom')return parseNodeId($('gatewayPollCustom').value);
+ return parseNodeId(value);
+}
+function commandForPoll({node,action,minutes,mode}){
+ if(!Number.isSafeInteger(node)||node<1||node>4294967295)return {command:'',help:'Enter a valid 8-digit !hex node ID or decimal node number.'};
+ const cc01=node===1695962694,matheson=node===2004386937;
+ const id=cc01?'COTTONWOOD':matheson?'MATHESON':node===1683604927?'MILL CREEK':node===1949224949?'PACK CREEK':hexNode(node).toUpperCase();
+ if(cc01||matheson){
+  if(action!=='schedule')return {command:'',help:cc01?'Cottonwood uses a dedicated poller. Adjust its interval here; use PAUSE SENSOR / RESUME SENSOR for its water sensor.':'Matheson uses a dedicated recurring READ poller. This V7 firmware does not support POLL MATHESON OFF or one-shot commands.'};
+  return {command:'POLL '+id+' '+minutes,help:cc01?'Cottonwood uses the configured WATER READ / HOBO toggles, not the request mode below.': 'Matheson runs READ (HOBO MX2001). The request mode is fixed for this dedicated poller.'};
+ }
+ if(action==='off')return {command:'POLL '+id+' OFF',help:'Stops this additional node’s repeating schedule if one exists.'};
+ if(action==='once')return {command:'POLL '+id+' '+mode,help:'Queues a one-time '+(mode==='BOTH'?'WATER READ then READ':mode==='WATER'?'WATER READ':'READ')+' after the current polling cycle.'};
+ return {command:'POLL '+id+' '+minutes+' '+mode,help:'Sets recurring '+(mode==='BOTH'?'WATER READ then READ':mode==='WATER'?'WATER READ':'READ')+' on this node. V7 supports four additional recurring entries.'};
+}
+function renderPollCommand(){
+ const custom=$('gatewayPollNode').value==='custom',action=$('gatewayPollAction').value,node=pollingTarget();
+ $('gatewayCustomWrap').hidden=!custom;
+ $('gatewayIntervalWrap').hidden=action!=='schedule';
+ $('gatewayModeWrap').hidden=(node===1695962694||node===2004386937)||action==='off';
+ const result=commandForPoll({node,action,minutes:$('gatewayPollMinutes').value,mode:$('gatewayPollMode').value});
+ $('gatewayDmCommand').textContent=result.command||'Command unavailable';
+ $('gatewayDmCopy').disabled=!result.command;
+ $('gatewayDmHelp').textContent=result.help;
+}
 function renderGatewayControl(){
  const c=data.gateway_control;if(!c)return;
  $('gatewayWater').checked=c.water_enabled;
- const desired='Requested: MB7388 stage polling '+(c.water_enabled?'on':'paused');
- const applied=c.applied_at?'Applied: MB7388 stage polling '+(c.applied_water_enabled?'on':'paused')+' · '+new Date(c.applied_at).toLocaleString('en-US',{timeZone:'America/Denver'}):'Heltec has not yet reported applying the requested stage-poll setting.';
+ $('gatewayAdminNode').value=Number(c.authorized_admin_node)>0?hexNode(c.authorized_admin_node):'';
+ $('gatewaySenderLabel').textContent=Number(c.authorized_admin_node)>0?hexNode(c.authorized_admin_node):'an authorized node';
+ const desired='Requested: Cottonwood WATER READ '+(c.water_enabled?'ON':'OFF');
+ const applied=c.applied_at?'Applied: Cottonwood WATER READ '+(c.applied_water_enabled?'ON':'OFF')+' · '+new Date(c.applied_at).toLocaleString('en-US',{timeZone:'America/Denver'}):'Heltec has not reported applying these settings';
  const mismatch=c.applied_version===null||Number(c.applied_version)!==Number(c.version)||
    c.applied_water_enabled!==c.water_enabled;
- $('gatewayApplied').textContent=desired+' · '+applied+' · HOBO/MX2001 not installed'+(mismatch?' · Not matching requested setting yet':' · Confirmed');
+ $('gatewayApplied').textContent=desired+' · '+applied+' · HOBO READ '+(c.applied_hobo_enabled?'ON':'OFF')+' · Sender '+$('gatewaySenderLabel').textContent+(mismatch?' · Not yet confirmed':' · Confirmed (cloud settings)');
+ initializePollTargets();renderPollCommand();
 }
 $('gatewayForm').onsubmit=e=>{e.preventDefault();run(async()=>{
- await api({action:'save_gateway_control',water_enabled:$('gatewayWater').checked});
- await load();message('Control saved to Neon. Waiting for Heltec to confirm.');
+ const adminNode=parseNodeId($('gatewayAdminNode').value);
+ if(!adminNode)throw new Error('Enter the authorized radio as !xxxxxxxx or a decimal node number.');
+ await api({action:'save_gateway_control',water_enabled:$('gatewayWater').checked,authorized_admin_node:adminNode});
+ await load();message('Authorized sender and Cottonwood control saved. Heltec retrieves changes over Wi-Fi about every 2 minutes.');
 });};
+for(const key of ['gatewayPollNode','gatewayPollAction','gatewayPollMinutes','gatewayPollMode'])
+ $(key).addEventListener('change',renderPollCommand);
+$('gatewayPollCustom').addEventListener('input',renderPollCommand);
+$('gatewayDmCopy').onclick=async()=>{
+ const command=$('gatewayDmCommand').textContent;
+ if(!command||$('gatewayDmCopy').disabled)return;
+ try{await navigator.clipboard.writeText(command);$('gatewayDmHelp').textContent='Copied. DM '+command+' directly to Heltec from '+$('gatewaySenderLabel').textContent+'.';}
+ catch{$('gatewayDmHelp').textContent='Select and copy the displayed command manually.';}
+};
 document.querySelectorAll('[data-battery-hours]').forEach(button=>button.addEventListener('click',()=>{batteryState.hours=Number(button.dataset.batteryHours);document.querySelectorAll('[data-battery-hours]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));loadBatteryHistory();}));
 function renderRecipients(){$('recipients').replaceChildren();recipients.forEach((email,i)=>{const row=el('div'),b=el('button','Remove');row.className='recipient';b.type='button';b.onclick=()=>{recipients.splice(i,1);renderRecipients();};row.append(el('span',email),b);$('recipients').append(row);});}
 function edit(rule={node_num:1949224949,parameter:'discharge_cfs',direction:'above',threshold:10,reset_value:9,enabled:true,recipients:[]}){$('ruleId').value=rule.id||'';$('station').value=rule.node_num;parameterOptions(rule.parameter);$('direction').value=rule.direction;$('threshold').value=rule.threshold;$('reset').value=rule.reset_value;$('enabled').checked=rule.enabled;recipients=[...rule.recipients];renderRecipients();recoveryHelp();$('editorPanel').hidden=false;$('editorPanel').scrollIntoView({block:'start'});}
