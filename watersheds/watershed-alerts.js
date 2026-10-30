@@ -64,7 +64,7 @@ function parseNodeId(value){
  const text=String(value??'').trim();
  if(/^![0-9a-f]{8}$/i.test(text))return Number.parseInt(text.slice(1),16);
  if(/^0x[0-9a-f]{1,8}$/i.test(text))return Number.parseInt(text.slice(2),16);
- if(/^\\d{1,10}$/.test(text)){const n=Number(text);return Number.isSafeInteger(n)&&n<=4294967295?n:null;}
+ if(/^\d{1,10}$/.test(text)){const n=Number(text);return Number.isSafeInteger(n)&&n<=4294967295?n:null;}
  return null;
 }
 function initializePollTargets(){
