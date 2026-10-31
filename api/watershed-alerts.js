@@ -8,6 +8,19 @@ import { readOwnerBatteryHistory, BATTERY_HISTORY_DAYS, readOwnerBatteryWindow, 
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
 const ownerKey=()=>process.env.WATERSHED_OWNER_PASSWORD || process.env.WATERSHED_ALERTS_ADMIN_KEY || process.env.ALERTS_ADMIN_KEY;
+const POLL_INTERVALS=new Set([5,10,15,20,30,60,120,180,360,720,1440]);
+const CC01_NODE=1695962694, MATHESON_NODE=2004386937;
+function validatedPollCommand(body){
+ const node=Number(body.node_num),operation=body.operation,mode=body.mode||'READ';
+ const interval=operation==='schedule'?Number(body.interval_minutes):null;
+ if(!Number.isSafeInteger(node)||node<1||node>4294967295||!['schedule','off','once'].includes(operation)||!['READ','WATER','BOTH'].includes(mode))
+  throw new Error('Choose a valid node, polling action, and sensor mode');
+ if(operation==='schedule'&&!POLL_INTERVALS.has(interval))throw new Error('Choose a supported polling interval');
+ // The dedicated pollers have fixed sensor protocols; keep the field deployment intact.
+ if(node===CC01_NODE&&(operation==='once'||mode!=='WATER'))throw new Error('South Cottonwood supports recurring WATER READ or OFF');
+ if(node===MATHESON_NODE&&(operation==='once'||mode!=='READ'))throw new Error('Matheson supports recurring HOBO READ or OFF');
+ return {node,operation,mode,interval};
+}
 function signature(value) { return createHmac('sha256',ownerKey()).update('watershed:' + value).digest('hex'); }
 function authenticated(req) {
   const prefix='watershed_alerts_session=';
@@ -64,13 +77,39 @@ export default async function handler(req,res) {
       }
     }
     if (req.method==='GET') {
-      const [rules,history,config,control]=await Promise.all([
+      const [rules,history,config,control,pollRequests]=await Promise.all([
         sql`SELECT * FROM alert_rules ORDER BY id`,
         sql`SELECT id,rule_id,recipient,subject,status,attempts,error,created_at,sent_at FROM alert_deliveries ORDER BY id DESC LIMIT 50`,
         sourceSql()`SELECT sender,updated_at FROM alert_email_config WHERE id=1`,
-        sql`SELECT water_enabled,hobo_enabled,authorized_admin_node,version,updated_at,applied_water_enabled,applied_hobo_enabled,applied_version,applied_at FROM cc01_gateway_control WHERE id=1`,
+        sql`SELECT water_enabled,hobo_enabled,authorized_admin_node,version,updated_at,applied_water_enabled,applied_hobo_enabled,applied_version,applied_at,poll_cloud_capable,poll_cloud_seen_at FROM cc01_gateway_control WHERE id=1`,
+        sql`SELECT id,node_num,operation,interval_minutes,mode,status,error,created_at,applied_at FROM gateway_poll_commands ORDER BY id DESC LIMIT 50`,
       ]);
-      return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS,gateway_control:control[0]||null});
+      return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS,gateway_control:control[0]||null,poll_requests:pollRequests});
+    }
+    if (body.action==='queue_gateway_poll') {
+      let command;
+      try {command=validatedPollCommand(body);}
+      catch(error){return res.status(400).json({error:error.message});}
+      const active=command.operation==='schedule';
+      // Supersede older unapplied changes to the same node. Never enqueue a
+      // conflicting ON followed by OFF that could surprise a distant station.
+      const rows=await sql`
+        WITH abandoned AS (
+          UPDATE gateway_poll_commands SET status='superseded'
+          WHERE node_num=${command.node} AND status='pending'
+          RETURNING id
+        )
+        INSERT INTO gateway_poll_commands(node_num,operation,interval_minutes,mode)
+        VALUES(${command.node},${command.operation},${command.interval},${command.mode})
+        RETURNING id,node_num,operation,interval_minutes,mode,status,created_at`;
+      if(!rows.length)return res.status(503).json({error:'Unable to queue gateway command'});
+      // Existing Heltec firmware already supports Cottonwood ON/OFF through
+      // the cloud control flags. Keep the dedicated state consistent.
+      if(command.node===CC01_NODE){
+        await sql`UPDATE cc01_gateway_control SET water_enabled=${active},hobo_enabled=FALSE,
+          version=version+1,updated_at=NOW() WHERE id=1`;
+      }
+      return res.status(202).json({ok:true,command:rows[0],note:'Queued for Heltec; applied status requires updated gateway firmware'});
     }
     if (body.action==='save_gateway_control') {
       const adminNode=Number(body.authorized_admin_node);

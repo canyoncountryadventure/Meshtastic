@@ -192,15 +192,35 @@ async function cc01ControlHandler(req,res){
  try{
   const sql=watershedSql();
   if(req.method==='GET'){
-   const rows=await sql`SELECT version,water_enabled,hobo_enabled,authorized_admin_node FROM cc01_gateway_control WHERE id=1`;
+   const [rows,pending]=await Promise.all([
+     sql`SELECT version,water_enabled,hobo_enabled,authorized_admin_node FROM cc01_gateway_control WHERE id=1`,
+     sql`SELECT id,node_num,operation,interval_minutes,mode FROM gateway_poll_commands WHERE status='pending' ORDER BY id ASC LIMIT 1`
+   ]);
    if(!rows.length)return res.status(503).json({error:'Control not initialized'});
-   const r=rows[0];return res.status(200).json({version:Number(r.version),water_enabled:r.water_enabled,hobo_enabled:r.hobo_enabled,authorized_admin_node:Number(r.authorized_admin_node)});
+   const r=rows[0];return res.status(200).json({version:Number(r.version),water_enabled:r.water_enabled,hobo_enabled:r.hobo_enabled,authorized_admin_node:Number(r.authorized_admin_node),poll_command:pending[0]||null});
+  }
+  if(body.type==='poll_ack'){
+   const id=Number(body.id),outcome=String(body.status||'');
+   if(!Number.isSafeInteger(id)||id<1||!['applied','failed'].includes(outcome))
+     return res.status(400).json({error:'Invalid gateway polling acknowledgment'});
+   const errorText=outcome==='failed'?String(body.error||'Rejected by gateway').slice(0,120):null;
+   const applied=await sql`UPDATE gateway_poll_commands SET status=${outcome},error=${errorText},
+     applied_at=NOW() WHERE id=${id} AND status='pending' RETURNING id`;
+   if(!applied.length){
+     const existing=await sql`SELECT status FROM gateway_poll_commands WHERE id=${id}`;
+     if(!existing.length)return res.status(404).json({error:'Unknown poll command'});
+     return res.status(200).json({ok:true,status:existing[0].status});
+   }
+   return res.status(200).json({ok:true,status:outcome});
   }
   if(body.type==='report'){
    if(typeof body.water_enabled!=='boolean'||typeof body.hobo_enabled!=='boolean'||
      !Number.isSafeInteger(Number(body.version))||Number(body.version)<0)return res.status(400).json({error:'Invalid report'});
    await sql`UPDATE cc01_gateway_control SET applied_water_enabled=${body.water_enabled},applied_hobo_enabled=${body.hobo_enabled},
-     applied_version=${Number(body.version)},applied_at=NOW() WHERE id=1`;
+     applied_version=${Number(body.version)},applied_at=NOW(),
+     poll_cloud_capable=CASE WHEN ${body.poll_cloud_capable===true} THEN TRUE ELSE poll_cloud_capable END,
+     poll_cloud_seen_at=CASE WHEN ${body.poll_cloud_capable===true} THEN NOW() ELSE poll_cloud_seen_at END
+     WHERE id=1`;
    return res.status(200).json({ok:true});
   }
   if(body.type==='event'){
