@@ -64,7 +64,7 @@ test('Notifications admin battery chart includes Spare RAK and uses authenticate
  const graph=fs.readFileSync(new URL('../watersheds/watershed-alerts.js',import.meta.url),'utf8');
  const api=fs.readFileSync(new URL('../api/watershed-alerts.js',import.meta.url),'utf8');
  const history=fs.readFileSync(new URL('../lib/watershed-battery-history.js',import.meta.url),'utf8');
- assert.match(page,/20261030-battery-default-off/);
+ assert.match(page,/20261030-cloud-poll-control/);
  assert.match(graph,/\{id:1252758033,name:'Spare RAK'/);
  assert.match(graph,/action:'battery_history_hours'/);
  assert.doesNotMatch(graph,/fetch\(base,\{cache:'no-store'\}\)/);
