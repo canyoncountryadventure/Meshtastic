@@ -197,7 +197,7 @@ async function cc01ControlHandler(req,res){
      sql`SELECT id,node_num,operation,interval_minutes,mode FROM gateway_poll_commands WHERE status='pending' ORDER BY id ASC LIMIT 1`
    ]);
    if(!rows.length)return res.status(503).json({error:'Control not initialized'});
-   const r=rows[0];return res.status(200).json({version:Number(r.version),water_enabled:r.water_enabled,hobo_enabled:r.hobo_enabled,authorized_admin_node:Number(r.authorized_admin_node),poll_command:pending[0]||null});
+   const r=rows[0];return res.status(200).json({version:Number(r.version),water_enabled:r.water_enabled,hobo_enabled:r.hobo_enabled,authorized_admin_node:Number(r.authorized_admin_node),poll_command:pending[0]?{...pending[0],id:Number(pending[0].id),node_num:Number(pending[0].node_num),interval_minutes:pending[0].interval_minutes===null?null:Number(pending[0].interval_minutes)}:null});
   }
   if(body.type==='poll_ack'){
    const id=Number(body.id),outcome=String(body.status||'');
