@@ -20,18 +20,3 @@ test('DM polling commands support dedicated and custom nodes',()=>{
  assert.equal(commandForPoll({node:1252758033,action:'once',minutes:60,mode:'WATER'}).command,'POLL !4AAB9211 WATER');
  assert.equal(commandForPoll({node:2004386937,action:'off',minutes:60,mode:'READ'}).command,'');
 });
-
-test('Website supports actual authenticated cloud queue, gateway delivery, and ack',()=>{
- const page=fs.readFileSync(new URL('../watersheds/notifications.html',import.meta.url),'utf8');
- const client=fs.readFileSync(new URL('../watersheds/watershed-alerts.js',import.meta.url),'utf8');
- const admin=fs.readFileSync(new URL('../api/watershed-alerts.js',import.meta.url),'utf8');
- const ingest=fs.readFileSync(new URL('../api/ingest.js',import.meta.url),'utf8');
- assert.match(page,/Apply from website/);
- assert.match(page,/20261030-cloud-poll-control/);
- assert.match(client,/action:'queue_gateway_poll'/);
- assert.match(client,/PENDING|pending/);
- assert.match(admin,/validatedPollCommand/);
- assert.match(admin,/gateway_poll_commands/);
- assert.match(ingest,/body.type==='poll_ack'/);
- assert.match(ingest,/poll_command:pending\[0\]\|\|null/);
-});

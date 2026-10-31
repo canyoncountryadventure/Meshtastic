@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email notifications · Southeastern Utah Watersheds</title><link rel="stylesheet" href="/watershed.css?v=20261015-stations"><link rel="stylesheet" href="/watershed-alerts.css?v=20261027-battery-history"><script src="/watershed-alerts.js?v=20261030-cloud-poll-control" defer></script><script src="/watershed-public.js?v=20261029-all-stations" defer></script></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email notifications · Southeastern Utah Watersheds</title><link rel="stylesheet" href="/watershed.css?v=20261015-stations"><link rel="stylesheet" href="/watershed-alerts.css?v=20261027-battery-history"><script src="/watershed-alerts.js?v=20261030-battery-default-off" defer></script><script src="/watershed-public.js?v=20261029-all-stations" defer></script></head><body>
 <header class="masthead"><a class="brand" href="/watershed">SOUTHEASTERN UTAH WATERSHEDS</a><nav><a href="/watershed">Monitoring</a><button id="logout" hidden>Sign out</button></nav></header>
 <main class="notification-shell"><section class="hero"><h1>Email notifications</h1><p class="intro">Notification rules for stream, groundwater, sensor, and relay stations across Southeastern Utah.</p></section><p id="message" role="status" aria-live="polite"></p>
 
@@ -35,7 +35,7 @@
 <div id="settings" hidden>
 <section class="panel" id="batteryHistoryPanel"><div class="panel-heading"><div><h2>Station battery history</h2><p class="muted">All stations start unchecked. Select stations to compare their reported battery percentages on one graph.</p></div><div class="battery-ranges" role="group" aria-label="Battery history range"><button type="button" data-battery-hours="24">24 hours</button><button type="button" data-battery-hours="168" aria-pressed="true">7 days</button><button type="button" data-battery-hours="720">30 days</button><button type="button" data-battery-hours="2160">90 days</button></div></div><div id="batteryStationToggles" class="battery-station-toggles" aria-label="Stations shown on battery graph"></div><div id="adminBatteryStatus" class="muted" role="status">Loading battery history…</div><div id="adminBatteryChart" class="admin-battery-chart"><div class="empty">Loading battery history…</div></div><div id="adminBatteryReadout" class="chart-readout" aria-live="polite">Point to a reading to inspect it.</div></section>
 <section class="panel" id="gatewayControlPanel"><h2>Heltec V7 · Mesh polling control</h2>
-<p class="muted">Configure the authorized DM sender and South Cottonwood's automatic water-sensor polling here. For any other radio, generate a polling command below and send it as a direct message to Heltec from your authorized Meshtastic radio. The website queues secure commands to Neon for Heltec to execute over LoRa after its next Wi-Fi synchronization. Gateway firmware with cloud-polling support is required.</p>
+<p class="muted">Configure the authorized DM sender and South Cottonwood's automatic water-sensor polling here. For any other radio, generate a polling command below and send it as a direct message to Heltec from your authorized Meshtastic radio. This website does not send LoRa messages.</p>
 <form id="gatewayForm">
 <div class="form-grid">
 <label class="toggle"><input id="gatewayWater" type="checkbox" checked> South Cottonwood · automatic WATER READ</label>
@@ -54,12 +54,10 @@
 <label id="gatewayIntervalWrap">Interval <select id="gatewayPollMinutes"><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="360">6 hours</option><option value="720">12 hours</option><option value="1440">24 hours</option></select></label>
 <label id="gatewayModeWrap">Request <select id="gatewayPollMode"><option value="READ">READ (HOBO / supported logger)</option><option value="WATER">WATER READ (ultrasonic)</option><option value="BOTH">WATER READ then READ</option></select></label>
 </div>
-<p class="gateway-command-label">Apply directly from the website. Manual DM fallback is shown below.</p>
-<div class="gateway-command-row"><output id="gatewayDmCommand" aria-live="polite"></output><button type="button" id="gatewayPollApply">Apply from website</button><button type="button" id="gatewayDmCopy">Copy DM instead</button></div>
-<p id="gatewayCloudStatus" class="muted" role="status">Checking gateway cloud-control support…</p>
-<div id="gatewayCommandHistory" class="gateway-command-history" aria-live="polite"></div>
+<p class="gateway-command-label">DM this command <strong>to Heltec</strong></p>
+<div class="gateway-command-row"><output id="gatewayDmCommand" aria-live="polite"></output><button type="button" id="gatewayDmCopy">Copy command</button></div>
 <p id="gatewayDmHelp" class="muted" role="status"></p>
-<p class="muted">Website commands do not require a second radio. Manual DMs can still be sent from <strong id="gatewaySenderLabel">your authorized node</strong>. Then DM <code>POLL STATUS</code> to Heltec to check its reply. Cottonwood and Matheson have dedicated polling routines; <code>OFF</code> only works for additional configured nodes. A node must support the requested sensor command to return a reading.</p>
+<p class="muted">Send from <strong id="gatewaySenderLabel">your authorized node</strong>. Then DM <code>POLL STATUS</code> to Heltec to check its reply. Cottonwood and Matheson have dedicated polling routines; <code>OFF</code> only works for additional configured nodes. A node must support the requested sensor command to return a reading.</p>
 </div>
 </section>
 <section class="panel"><div class="panel-heading"><h2>Notification rules</h2><button id="newRule">Add rule</button></div><p id="serviceStatus" class="muted"></p><div id="rules"></div></section>

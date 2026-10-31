@@ -125,22 +125,6 @@ function renderGatewayControl(){
    c.applied_water_enabled!==c.water_enabled;
  $('gatewayApplied').textContent=desired+' · '+applied+' · HOBO READ '+(c.applied_hobo_enabled?'ON':'OFF')+' · Sender '+$('gatewaySenderLabel').textContent+(mismatch?' · Not yet confirmed':' · Confirmed (cloud settings)');
  initializePollTargets();renderPollCommand();
- const capable=c.poll_cloud_capable===true;
- $('gatewayCloudStatus').textContent=capable?
- 'Heltec cloud polling: enabled · Last check '+(c.poll_cloud_seen_at?new Date(c.poll_cloud_seen_at).toLocaleString('en-US',{timeZone:'America/Denver'}):'unknown'):
- 'Heltec has not reported cloud polling capability. Website commands will remain pending until updated gateway firmware is flashed.';
- const requests=Array.isArray(data.poll_requests)?data.poll_requests:[];
- $('gatewayCommandHistory').replaceChildren();
- const head=el('h3','Recent website polling requests');$('gatewayCommandHistory').append(head);
- if(!requests.length)$('gatewayCommandHistory').append(el('p','No website polling commands yet.'));
- for(const command of requests.slice(0,15)){
-  const station=data.stations?.find(s=>Number(s[0])===Number(command.node_num));
-  const text=(station?.[1]||hexNode(command.node_num))+' · '+(command.operation==='schedule'?command.interval_minutes+' min '+command.mode:command.operation==='off'?'OFF':'READ NOW')+' · '+String(command.status).toUpperCase()+
-   ' · '+new Date(command.created_at).toLocaleString('en-US',{timeZone:'America/Denver'});
-  const line=el('p',text+(command.error?' · '+command.error:''));
-  line.className='gateway-command-status';
-  $('gatewayCommandHistory').append(line);
- }
 }
 $('gatewayForm').onsubmit=e=>{e.preventDefault();run(async()=>{
  const adminNode=parseNodeId($('gatewayAdminNode').value);
@@ -151,15 +135,6 @@ $('gatewayForm').onsubmit=e=>{e.preventDefault();run(async()=>{
 for(const key of ['gatewayPollNode','gatewayPollAction','gatewayPollMinutes','gatewayPollMode'])
  $(key).addEventListener('change',renderPollCommand);
 $('gatewayPollCustom').addEventListener('input',renderPollCommand);
-$('gatewayPollApply').onclick=()=>run(async()=>{
- const node=pollingTarget(),operation=$('gatewayPollAction').value;
- if(!node)throw new Error('Choose a valid station or node ID.');
- const mode=(node===1695962694?'WATER':node===2004386937?'READ':$('gatewayPollMode').value);
- const response=await api({action:'queue_gateway_poll',node_num:node,operation,
-  interval_minutes:operation==='schedule'?Number($('gatewayPollMinutes').value):undefined,mode});
- await load();
- message('Website command #'+response.command.id+' queued for Heltec. Check status below for APPLIED confirmation.');
-});
 $('gatewayDmCopy').onclick=async()=>{
  const command=$('gatewayDmCommand').textContent;
  if(!command||$('gatewayDmCopy').disabled)return;
