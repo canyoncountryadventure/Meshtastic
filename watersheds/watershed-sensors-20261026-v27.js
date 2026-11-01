@@ -320,7 +320,7 @@ function renderSensorDiagnostics(){
    const cleared=latest && last && new Date(latest.received_at).getTime()>new Date(last.received_at).getTime();
    const suspended=state.cc01Polling && (kind==='water'?state.cc01Polling.applied_water_enabled===false:state.cc01Polling.applied_hobo_enabled===false);
    const active=state.node===1695962694&&!!last&&!cleared&&!suspended;
-   const label=kind==='water'?'Needs maintenance':last?.status==='ble_unavailable'?'BLE to HOBO unavailable':'HOBO read failed';
+   const label=kind==='water'?'Station unavailable':last?.status==='ble_unavailable'?'BLE to HOBO unavailable':'HOBO read failed';
    for(const id of ids){const el=$(id);if(!el)continue;el.hidden=!active;
      if(active)el.textContent=label+' · reported '+date(last.received_at);
    }
