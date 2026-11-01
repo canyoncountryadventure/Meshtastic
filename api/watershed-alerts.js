@@ -2,7 +2,8 @@ import privateStationLogin from '../lib/private-station-login.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSql as sourceSql } from './db.js';
 import { watershedSql as getSql } from '../lib/watershed-store.js';
-import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, storedRule } from '../lib/watershed-alert-values.js';
+import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, storedRule, readingValue } from '../lib/watershed-alert-values.js';
+import { rateReading } from '../lib/watershed-rating.js';
 import { dispatchEmails, emailConfig } from '../lib/alerts.js';
 import { readOwnerBatteryHistory, BATTERY_HISTORY_DAYS, readOwnerBatteryWindow, BATTERY_HISTORY_HOURS } from '../lib/watershed-battery-history.js';
 
@@ -100,6 +101,30 @@ export default async function handler(req,res) {
       }
     } else if (body.action==='delete_rule') {
       await sql`DELETE FROM alert_rules WHERE id=${body.id}`;
+    } else if (body.action==='station_update') {
+      const rows=await sql`SELECT id,node_num,station_name,parameter,recipients FROM alert_rules WHERE id=${body.id}`;
+      const rule=rows[0]; if (!rule || !rule.recipients.length) throw new Error('Save at least one recipient first');
+      const config=await sourceSql()`SELECT id FROM alert_email_config WHERE id=1`;
+      if (!config.length) throw new Error('Connect the email service first');
+      const observations=await sql`SELECT o.source_id AS id,o.node_num,o.observed_at,o.telemetry_type,o.temperature_c,o.metrics,o.radio,s.rating_curve
+        FROM creek_observations o JOIN creek_stations s USING(node_num)
+        WHERE o.node_num=${rule.node_num}
+        ORDER BY o.observed_at DESC,o.source_id DESC LIMIT 50`;
+      const curve=observations[0]?.rating_curve?.active===true?observations[0].rating_curve:null;
+      const reading=observations.map(row=>rateReading(row,curve)).find(row=>readingValue(row,rule.parameter,curve)!==null);
+      if (!reading) throw new Error('No usable current value is available for this rule');
+      const measured=readingValue(reading,rule.parameter,curve);
+      const unit=rule.parameter==='discharge_cfs'?' cfs':rule.parameter==='water_level_ft'?' ft':rule.parameter==='temperature_c'?' °F':rule.parameter==='battery_percent'?'%':' hours';
+      const stage=Number(reading.metrics?.water_level_ft);
+      const detail=rule.parameter==='discharge_cfs'&&Number.isFinite(stage)
+        ? `\nStage: ${stage.toFixed(2)} ft\nRating: v${reading.rating_curve_version ?? '—'} · ${reading.discharge_rating_status ?? 'unavailable'}\nDischarge is estimated from stage.\n` : '';
+      const subject=`Watershed update: ${rule.station_name}`;
+      const bodyText=`${rule.station_name} update\n\nLatest ${PARAMETERS[rule.parameter]}: ${measured}${unit}\nObserved: ${new Date(reading.observed_at).toISOString()}${detail}\nDashboard: https://seutahwatersheds.vercel.app/\n`;
+      await sql`INSERT INTO alert_deliveries(rule_id,reading_id,recipient,subject,body)
+        SELECT ${rule.id},${reading.id},email,${subject},${bodyText}
+        FROM jsonb_array_elements_text(${JSON.stringify(rule.recipients)}::jsonb) email`;
+      const result=await dispatchEmails(sql,20,{config:await emailConfig(sourceSql()),idempotencyPrefix:'watershed-manual-update'});
+      return res.status(200).json({ok:true,value:measured,unit,...result});
     } else if (body.action==='test') {
       const rows=await sql`SELECT id,station_name,recipients FROM alert_rules WHERE id=${body.id}`;
       const rule=rows[0]; if (!rule || !rule.recipients.length) throw new Error('Save at least one recipient first');
