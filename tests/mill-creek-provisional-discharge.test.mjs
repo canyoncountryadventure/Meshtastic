@@ -1,0 +1,29 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {calculateDischarge,rateReading} from '../watersheds/lib/watershed-rating.js';
+const curve={active:true,provisional:true,method:'linear_two_point',curve_version:1,
+  coefficient_a:39.04761904761905,stage_offset_ft:1.3463414634146342,exponent_b:1,valid_stage_min_ft:1.5,valid_stage_max_ft:2.55};
+test('Mill Creek provisional linear equation fits both field observations',()=>{
+  assert.equal(calculateDischarge(1.5,curve),6);
+  assert.equal(calculateDischarge(2.55,curve),47);
+  assert.equal(calculateDischarge(2.0,curve),25.524);
+  assert.equal(calculateDischarge(0.5,curve),0);
+  const sensor=h=>({node_num:1683604927,telemetry_type:'mx2001',metrics:{water_level_ft:h}});
+  assert.equal(rateReading(sensor(1.0),curve).discharge_rating_status,'extrapolated_low');
+  assert.equal(rateReading(sensor(2.0),curve).discharge_rating_status,'within_measured_range');
+  assert.equal(rateReading(sensor(3.0),curve).discharge_rating_status,'extrapolated_high');
+  assert.equal(rateReading({node_num:1683604927,telemetry_type:'device',metrics:{water_level_ft:1.5}},curve).discharge_cfs,undefined);
+});
+test('Mill Creek dashboard connects stage, provisional cfs and displayed caveat',()=>{
+  const js=fs.readFileSync(new URL('../watersheds/watershed-sensors-20261026-v27.js',import.meta.url),'utf8');
+  const html=fs.readFileSync(new URL('../watersheds/index.html',import.meta.url),'utf8');
+  const store=fs.readFileSync(new URL('../watersheds/lib/watershed-store.js',import.meta.url),'utf8');
+  assert.match(js,/mxOnly:true,flow:true/);
+  assert.match(js,/rated=latest\(mxOnly\?'mx2001':'water_distance',flow\)/);
+  assert.match(js,/site\(\)\.mxOnly&&\['stage','flow'\]\.includes\(state\.metric\)/);
+  assert.match(js,/Est\. flow · cfs/);
+  assert.match(js,/Provisional 2-point estimate · extrapolated/);
+  assert.match(html,/id="flowLabel"/);
+  assert.match(store,/provisional:rating_curve\.provisional===true/);
+});

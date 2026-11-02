@@ -87,7 +87,8 @@ export async function readCreekData(sql,hours){
    ...station,rating_curve:rating_curve?.active===true?{
      coefficient_a:rating_curve.coefficient_a,stage_offset_ft:rating_curve.stage_offset_ft,
      exponent_b:rating_curve.exponent_b,curve_version:rating_curve.curve_version,
-     valid_stage_min_ft:rating_curve.valid_stage_min_ft,valid_stage_max_ft:rating_curve.valid_stage_max_ft
+     valid_stage_min_ft:rating_curve.valid_stage_min_ft,valid_stage_max_ft:rating_curve.valid_stage_max_ft,
+     provisional:rating_curve.provisional===true,method:rating_curve.method??null,calibration_points:rating_curve.calibration_points??null
    }:null
  }));
  // This node ID was previously Hidden Valley. Retain old rows in Neon, but

@@ -52,3 +52,8 @@ The temperature chart displays Rugged TROLL 100 and HOBO MX2001 as separate, dif
 ### Mill Creek rating calibration (November 2, 2026)
 
 The production `moab_watersheds` database contains a `creek_rating_measurements` table with the first user-reported Mill Creek / Power Dam stage–discharge observation: **2.55 ft = 47 cfs**. The measurement date/time and method were not supplied; `measured_at` is NULL, not invented. The table appears on Mill Creek's website below its stage chart. A single point **does not activate a fitted discharge rating**, and the dashboard continues reporting stage and temperature rather than speculative live discharge estimates. Schema and idempotent starting value are recorded in `migrations/20261102_mill_creek_rating_measurements.sql`.
+
+
+### Mill Creek provisional discharge estimate (Nov 2, 2026)
+
+Mill Creek / Power Dam, node `1683604927`, has two **user-reported** stage–discharge observations: 1.50 ft → 6 cfs, and 2.55 ft → 47 cfs. A provisional **linear two-point** stage rating is activated: `Q = max(0, 39.04761904761905 × (h − 1.3463414634146342))`, Q=cfs, h=ft. This exactly passes through the two observations, with a mathematically implied zero-flow intercept (**not measured**). The bracketed stage range is 1.50–2.55 ft. Above and below are flagged extrapolated, with high uncertainty. Mill Creek uses **HOBO MX2001 stage** for the estimated discharge card, trend, chart and recent-measurements flow column, not a nonexistent ultrasonic sensor. The card remains clearly marked PROVISIONAL and does not alter other station curves.
