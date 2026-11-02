@@ -83,7 +83,7 @@ export async function readCreekData(sql,hours){
     p.measured_at,p.measurement_date,p.measurement_time_local,p.point_quality,
     p.included_in_rating,p.rating_curve_version,p.notes
    FROM creek_rating_measurements p JOIN creek_stations s USING(node_num)
-   WHERE s.enabled ORDER BY p.node_num,p.stage_ft,p.point_id`;
+   WHERE s.enabled AND NOT (p.node_num=1949224949 AND p.entry_key LIKE 'pack-v6-%') ORDER BY p.node_num,p.stage_ft,p.point_id`;
  const curves=stationRatingCurves(stations);
  const publicStations=stations.map(({rating_curve,...station})=>({
    ...station,rating_curve:rating_curve?.active===true?{
