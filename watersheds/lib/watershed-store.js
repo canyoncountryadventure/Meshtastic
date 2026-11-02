@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { rateReadings } from './watershed-rating.js';
+import { rateReadings, stationRatingCurves } from './watershed-rating.js';
 import { evaluateReadings,dispatchEmails,emailConfig } from './alerts.js';
 import { evaluateOfflineRules } from './watershed-offline.js';
 export function watershedSql(){
@@ -79,10 +79,12 @@ export async function readCreekData(sql,hours){
     FROM cc01_sensor_events WHERE node_num=1695962694 ORDER BY sensor,received_at DESC,id DESC`;
  const controls=await sql`SELECT water_enabled,hobo_enabled,applied_water_enabled,applied_hobo_enabled,applied_at FROM cc01_gateway_control WHERE id=1`;
  // Field calibration records are not a fitted discharge equation.
- const ratingMeasurements=await sql`SELECT p.point_id,p.node_num,p.stage_ft,p.discharge_cfs,p.measured_at,p.point_quality
+ const ratingMeasurements=await sql`SELECT p.point_id,p.node_num,p.stage_ft,p.discharge_cfs,p.observed_discharge_cfs,
+    p.measured_at,p.measurement_date,p.measurement_time_local,p.point_quality,
+    p.included_in_rating,p.rating_curve_version,p.notes
    FROM creek_rating_measurements p JOIN creek_stations s USING(node_num)
    WHERE s.enabled ORDER BY p.node_num,p.stage_ft,p.point_id`;
- const curves=stations.map(s=>s.rating_curve).filter(Boolean);
+ const curves=stationRatingCurves(stations);
  const publicStations=stations.map(({rating_curve,...station})=>({
    ...station,rating_curve:rating_curve?.active===true?{
      coefficient_a:rating_curve.coefficient_a,stage_offset_ft:rating_curve.stage_offset_ft,

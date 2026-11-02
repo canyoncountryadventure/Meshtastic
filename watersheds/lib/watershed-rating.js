@@ -35,6 +35,13 @@ export function rateReading(reading, curve) {
   };
 }
 
+// Normalize embedded station ratings for use by the telemetry matcher.
+ // New provisional curves may not include their own node_num field.
+export function stationRatingCurves(stations) {
+  return (stations || []).filter(station=>station.rating_curve?.active === true)
+    .map(station=>({ ...station.rating_curve, node_num:Number(station.node_num) }));
+}
+
 export function rateReadings(readings, curves) {
   const byNode = new Map((curves || []).map(curve => [Number(curve.node_num), curve]));
   return (readings || []).map(reading => rateReading(reading, byNode.get(Number(reading.node_num))));

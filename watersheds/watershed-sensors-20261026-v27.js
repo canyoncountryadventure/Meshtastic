@@ -137,18 +137,42 @@ function renderRatingMeasurements(){
  const points=state.ratingMeasurements.filter(p=>Number(p.node_num)===state.node);
  box.hidden=!points.length;
  if(!points.length){rows.innerHTML='';return;}
- $('ratingPointsCount').textContent=points.length+' calibration point'+(points.length===1?'':'s');
+ const included=points.filter(p=>p.included_in_rating!==false).length;
+ const excluded=points.length-included;
+ $('ratingPointsCount').textContent=included+' included'+(excluded?' · '+excluded+' excluded':'');
+ const precision=v=>{
+   const x=n(v);
+   if(x===null)return '—';
+   return Number(x.toFixed(4)).toString();
+ };
+ const status=p=>{
+   if(p.included_in_rating===false)return 'Excluded · model-derived estimate';
+   if(p.point_quality==='modeled_adjustment')return 'Adjusted for fit';
+   if(p.point_quality==='observed')return 'Observed · included';
+   if(p.point_quality==='user_reported')return 'User-reported · included';
+   return 'Included';
+ };
  rows.innerHTML=points.map(p=>{
-   const stageValue=n(p.stage_ft),flowValue=n(p.discharge_cfs);
-   const when=p.measured_at?date(p.measured_at):'Not provided';
-   return '<tr><td>'+htmlSafe(stageValue===null?'—':stageValue.toFixed(2))+'</td>'+
-     '<td>'+htmlSafe(flowValue===null?'—':flowValue.toFixed(2))+'</td>'+
-     '<td>'+htmlSafe(when)+'</td>'+
-     '<td>'+htmlSafe(p.point_quality==='user_reported'?'User reported':p.point_quality??'Unknown')+'</td></tr>';
+   const sourceDate=p.measurement_date?String(p.measurement_date).slice(0,10):null;
+   const measured=sourceDate
+     ?sourceDate+(p.measurement_time_local?' · '+p.measurement_time_local:'')
+     :p.measured_at?date(p.measured_at):'Not provided';
+   const observed=p.observed_discharge_cfs===null||p.observed_discharge_cfs===undefined
+     ?(p.point_quality==='user_reported'?p.discharge_cfs:null):p.observed_discharge_cfs;
+   const fitted=p.included_in_rating===false?null:p.discharge_cfs;
+   const hint=p.included_in_rating===false&&n(p.discharge_cfs)!==null
+      ?' · est. '+precision(p.discharge_cfs)+' cfs (not fitted)':'';
+   return '<tr><td>'+htmlSafe(precision(p.stage_ft))+'</td>'+
+     '<td>'+htmlSafe(precision(observed))+'</td>'+
+     '<td>'+htmlSafe(precision(fitted))+'</td>'+
+     '<td>'+htmlSafe(measured)+'</td>'+
+     '<td title="'+htmlSafe(p.notes??'')+'">'+htmlSafe(status(p)+hint)+'</td></tr>';
  }).join('');
- $('ratingPointsNote').textContent=points.length<2
-   ?'One stage–discharge observation is recorded. No rating equation or calculated discharge has been activated. More measurements are needed.'
-   :'Calibration points recorded. Provisional two-point linear discharge estimates are enabled; values outside 1.50–2.55 ft are extrapolated.';
+ $('ratingPointsNote').textContent=state.node===1949224949
+   ?'Pack Creek V6: eight included points (one adjusted for fitting) and one excluded model-derived peak. Observed Q and Q used for fitting are shown separately.'
+   :points.length===2
+     ?'Mill Creek: provisional two-point linear discharge estimate. Values outside 1.50–2.55 ft are extrapolated.'
+     :'Stage–discharge calibration points recorded; further measurements improve the rating.';
 }
 // Trends are short-term measured changes, not long-term statistical trend tests.
 function shortTrend(type,convert,windowHours,minSpanHours,staleHours,baseThreshold,relativeThreshold){

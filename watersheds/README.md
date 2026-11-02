@@ -57,3 +57,10 @@ The production `moab_watersheds` database contains a `creek_rating_measurements`
 ### Mill Creek provisional discharge estimate (Nov 2, 2026)
 
 Mill Creek / Power Dam, node `1683604927`, has two **user-reported** stage–discharge observations: 1.50 ft → 6 cfs, and 2.55 ft → 47 cfs. A provisional **linear two-point** stage rating is activated: `Q = max(0, 39.04761904761905 × (h − 1.3463414634146342))`, Q=cfs, h=ft. This exactly passes through the two observations, with a mathematically implied zero-flow intercept (**not measured**). The bracketed stage range is 1.50–2.55 ft. Above and below are flagged extrapolated, with high uncertainty. Mill Creek uses **HOBO MX2001 stage** for the estimated discharge card, trend, chart and recent-measurements flow column, not a nonexistent ultrasonic sensor. The card remains clearly marked PROVISIONAL and does not alter other station curves.
+
+
+### Pack Creek calibration table, and Mill Creek cfs regression correction (Nov 2, 2026)
+
+The dashboard reads Pack Creek's Version 6 calibration points from the `moab_watersheds.creek_rating_measurements` dataset, copied from the canonical 9 entries of `neondb.rating_curve_points` (curve V6). Eight observations were included in the fit and one **model-derived 68.6 cfs estimate at 3.94 ft** was **excluded**. The April 27 observation **2.3905 cfs** at **0.6904 ft** is retained separately from the fitted adjustment to **2.75 cfs**. Dates, times when known, and source classifications are preserved. The Pack rating equation remains unchanged.
+
+The Mill Creek cfs card was blank because `readCreekData()` passed embedded station rating objects to `rateReadings()` without injecting the top-level `creek_stations.node_num`. Mill Creek's newly created provisional rating lacked `node_num` within the JSON, so the lookup missed it. `stationRatingCurves()` now associates each active curve with its parent station ID, fixing current, recent and historical MX2001 readings. Tests cover both station ratings and exclude disabled curves.
