@@ -78,6 +78,10 @@ export async function readCreekData(sql,hours){
  const sensorEvents=await sql`SELECT DISTINCT ON (sensor) id,node_num,sensor,status,received_at
     FROM cc01_sensor_events WHERE node_num=1695962694 ORDER BY sensor,received_at DESC,id DESC`;
  const controls=await sql`SELECT water_enabled,hobo_enabled,applied_water_enabled,applied_hobo_enabled,applied_at FROM cc01_gateway_control WHERE id=1`;
+ // Field calibration records are not a fitted discharge equation.
+ const ratingMeasurements=await sql`SELECT p.point_id,p.node_num,p.stage_ft,p.discharge_cfs,p.measured_at,p.point_quality
+   FROM creek_rating_measurements p JOIN creek_stations s USING(node_num)
+   WHERE s.enabled ORDER BY p.node_num,p.stage_ft,p.point_id`;
  const curves=stations.map(s=>s.rating_curve).filter(Boolean);
  const publicStations=stations.map(({rating_curve,...station})=>({
    ...station,rating_curve:rating_curve?.active===true?{
@@ -90,6 +94,6 @@ export async function readCreekData(sql,hours){
  // do not attribute them to the reassigned Spare RAK station.
  const currentAssignment=r=>Number(r.node_num)!==1252758033||Date.parse(r.observed_at)>=Date.parse('2026-10-29T00:00:00Z');
  return {stations:publicStations,readings:rateReadings(readings.filter(currentAssignment),curves),latest:rateReadings(latest.filter(currentAssignment),curves),
-   recent:rateReadings(recent.filter(currentAssignment),curves),sensor_events:sensorEvents,
+   recent:rateReadings(recent.filter(currentAssignment),curves),rating_measurements:ratingMeasurements,sensor_events:sensorEvents,
    cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
 }

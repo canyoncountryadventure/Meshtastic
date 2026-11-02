@@ -47,3 +47,8 @@ Production deployments require both root (`meshtastic`) and nested (`seutahwater
 
 ## Matheson U18 temperature sensor transition (October 23, 2026)
 The temperature chart displays Rugged TROLL 100 and HOBO MX2001 as separate, differently colored series and marks the verified HOBO installation at **3:35 PM MDT October 23** with a dashed vertical instrument-change marker. The last TROLL observation was 11:00 AM MDT, 61.2 °F; the first verified post-installation HOBO temperature was 6:28 PM MDT, 64.2 °F. Sensing depths differ (35.30 ft TROLL vs 18.25 ft MX2001 below top of casing). The roughly 3 °F difference is not attributed to sudden groundwater warming without overlap or calibration. Legacy Rock Moisture air-temperature telemetry and pre-installation MX2001 readings are excluded from the U18 groundwater-temperature plot. Groundwater-temperature trend calculations use only verified post-installation MX2001 observations and require at least 21 days of data. Water-surface elevations continue to use the shared top-of-casing calculation.
+
+
+### Mill Creek rating calibration (November 2, 2026)
+
+The production `moab_watersheds` database contains a `creek_rating_measurements` table with the first user-reported Mill Creek / Power Dam stage–discharge observation: **2.55 ft = 47 cfs**. The measurement date/time and method were not supplied; `measured_at` is NULL, not invented. The table appears on Mill Creek's website below its stage chart. A single point **does not activate a fitted discharge rating**, and the dashboard continues reporting stage and temperature rather than speculative live discharge estimates. Schema and idempotent starting value are recorded in `migrations/20261102_mill_creek_rating_measurements.sql`.

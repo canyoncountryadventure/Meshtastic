@@ -1,10 +1,10 @@
 (() => {
 'use strict';
-const DASHBOARD_BUILD = '20261030-unified-transmission-source';
+const DASHBOARD_BUILD = '20261102-mill-creek-provisional-rating-points';
 const $=id=>document.getElementById(id);
 const SITES={1252758033:{name:'Spare RAK',detail:'Spare RAK4631 · !4aab9211',kind:'relay',sensor:'Radio battery telemetry',radioOnly:true,flow:false},2740603892:{name:'Moab',detail:'Moab · environmental temperature logger',kind:'relay',sensor:'Temperature sensor',flow:false},4241345683:{name:'Mini Me',detail:'Portable RAK4631 client · formerly SMLA',kind:'relay',sensor:'Radio battery telemetry',flow:false},1222051909:{name:'Cottonwood Relay 2',detail:'Cottonwood mesh network relay',kind:'relay',sensor:'Radio battery telemetry',radioOnly:true,flow:false},647393146:{name:'Seed Relay 1',detail:'Regional telemetry relay',kind:'relay',sensor:'Radio battery telemetry',flow:false},2650172798:{name:'Thousand Lake Mountain',detail:'Thousand Lake Mountain',kind:'relay',sensor:'Air temperature sensor',flow:false},1949224949:{name:'Pack Creek',detail:'Pack Creek above confluence with Mill Creek · 4,020 ft',kind:'creek',sensor:'SEN0313',flow:true},1695962694:{name:'South Cottonwood',detail:'S. Cottonwood at HWY 95 · 5,200 ft',kind:'creek',sensor:'MB7388',flow:true},1683604927:{name:'Mill Creek',detail:'Power Dam',kind:'creek',sensor:'HOBO MX2001',mxOnly:true,flow:false},2425602407:{name:'Cottonwood Relay',detail:'Elk Ridge · 7,900 ft',kind:'relay',sensor:'Air temperature sensor',flow:false},2004386937:{name:'Matheson Groundwater',detail:'U18 USGS Matheson Wetlands Well · Matheson Wetlands Preserve',kind:'groundwater',sensor:'HOBO MX2001',flow:false},3044869407:{name:'Hidden Valley',detail:'La Sal Mountains · 5,800 ft',kind:'relay',sensor:'HOBO temperature sensor',flow:false},1577197109:{name:'Fishlake Hightop',detail:'Fishlake Plateau · 11,600 ft',kind:'relay',sensor:'Temperature sensor',flow:false}};
 const site=()=>SITES[state.node];
-const state={node:1949224949,hours:12,metric:'flow',readings:[],latest:[],recent:[],allRecent:[],allReadings:[],allLatest:[],trendReadings:[],stationInfo:[],sampleIntervalHours:null,sensorEvents:[],cc01Polling:null,backupReadings:false,measurementPage:0,measurementPageSize:12,busy:false};
+const state={node:1949224949,hours:12,metric:'flow',readings:[],latest:[],recent:[],allRecent:[],allReadings:[],allLatest:[],trendReadings:[],stationInfo:[],ratingMeasurements:[],sampleIntervalHours:null,sensorEvents:[],cc01Polling:null,backupReadings:false,measurementPage:0,measurementPageSize:12,busy:false};
 const n=value=>value===null||value===undefined||value===''?null:Number.isFinite(Number(value))?Number(value):null;
 const SPARE_RAK_CUTOVER_MS=Date.parse('2026-10-29T00:00:00Z');
 const valid=r=>!(Number(r.node_num)===1252758033&&new Date(r.observed_at).getTime()<SPARE_RAK_CUTOVER_MS)&&!(Number(r.node_num)===2004386937&&r.telemetry_type==='mx2001'&&new Date(r.observed_at).getTime()<MATHESON_MX_FINAL_INSTALLED_AT)&&Object.hasOwn(SITES,Number(r.node_num))&&(r.telemetry_type==='device'||(SITES[Number(r.node_num)].radioOnly?false:(['relay','air'].includes(SITES[Number(r.node_num)].kind)?r.telemetry_type==='environment':Number(r.node_num)===2004386937?['rugged_troll','mx2001','environment'].includes(r.telemetry_type):(SITES[Number(r.node_num)].mxOnly?r.telemetry_type==='mx2001':['water_distance','mx2001'].includes(r.telemetry_type)))));
@@ -130,6 +130,25 @@ function showRatingEquation(){
  $('ratingVersion').textContent='VERSION '+String(curve.curve_version??'—');
  const min=n(curve.valid_stage_min_ft),max=n(curve.valid_stage_max_ft);
  $('ratingRange').textContent='Q in cfs · h = calibrated stage in feet'+(min!==null&&max!==null?' · measured rating range '+min.toFixed(3)+'–'+max.toFixed(3)+' ft':'');
+}
+function renderRatingMeasurements(){
+ const box=$('ratingPoints'),rows=$('ratingPointsRows');
+ if(!box||!rows)return;
+ const points=state.ratingMeasurements.filter(p=>Number(p.node_num)===state.node);
+ box.hidden=!points.length;
+ if(!points.length){rows.innerHTML='';return;}
+ $('ratingPointsCount').textContent=points.length+' calibration point'+(points.length===1?'':'s');
+ rows.innerHTML=points.map(p=>{
+   const stageValue=n(p.stage_ft),flowValue=n(p.discharge_cfs);
+   const when=p.measured_at?date(p.measured_at):'Not provided';
+   return '<tr><td>'+htmlSafe(stageValue===null?'—':stageValue.toFixed(2))+'</td>'+
+     '<td>'+htmlSafe(flowValue===null?'—':flowValue.toFixed(2))+'</td>'+
+     '<td>'+htmlSafe(when)+'</td>'+
+     '<td>'+htmlSafe(p.point_quality==='user_reported'?'User reported':p.point_quality??'Unknown')+'</td></tr>';
+ }).join('');
+ $('ratingPointsNote').textContent=points.length<2
+   ?'One stage–discharge observation is recorded. No rating equation or calculated discharge has been activated. More measurements are needed.'
+   :'Calibration observations are recorded; estimated discharge remains off until a defensible curve is fitted and activated.';
 }
 // Trends are short-term measured changes, not long-term statistical trend tests.
 function shortTrend(type,convert,windowHours,minSpanHours,staleHours,baseThreshold,relativeThreshold){
@@ -351,7 +370,7 @@ function selectStation(){
  ensureMeasurementMarkup();
  state.readings=state.allReadings.filter(r=>Number(r.node_num)===state.node);state.latest=state.allLatest.filter(r=>Number(r.node_num)===state.node);state.recent=state.allRecent.filter(r=>Number(r.node_num)===state.node);state.measurementPage=0;
  if(['relay','air'].includes(site().kind)&&['flow','stage','elevation'].includes(state.metric))state.metric='temp';else if(state.metric==='elevation'&&site().kind!=='groundwater')state.metric=site().flow?'flow':'stage';else if(site().kind==='groundwater'&&['flow','stage'].includes(state.metric))state.metric='elevation';else if(state.metric==='flow'&&!site().flow)state.metric='stage';
- renderConditions();renderChart();showRatingEquation();renderRows();renderRoutes();
+ renderConditions();renderChart();showRatingEquation();renderRatingMeasurements();renderRows();renderRoutes();
 }
 function series(){
  const m=metrics[state.metric];
@@ -496,7 +515,7 @@ async function load(){
  if(state.node===2004386937)state.trendReadings=(trendData?.readings||data.readings).filter(valid).filter(r=>Number(r.node_num)===2004386937);
  else state.trendReadings=[];
  state.allRecent=Array.isArray(data.recent)?data.recent.filter(valid).sort((a,b)=>new Date(b.observed_at)-new Date(a.observed_at)):[];
- state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.sampleIntervalHours=n(data.sample_interval_hours_by_node?.[String(state.node)]??data.sample_interval_hours);state.sensorEvents=Array.isArray(data.sensor_events)?data.sensor_events:[];state.cc01Polling=data.cc01_polling||null;state.backupReadings=data.backup_readings===true;if(state.backupReadings&&state.metric==='flow')state.metric='stage';selectStation();
+ state.stationInfo=Array.isArray(data.stations)?data.stations:[];state.ratingMeasurements=Array.isArray(data.rating_measurements)?data.rating_measurements:[];state.sampleIntervalHours=n(data.sample_interval_hours_by_node?.[String(state.node)]??data.sample_interval_hours);state.sensorEvents=Array.isArray(data.sensor_events)?data.sensor_events:[];state.cc01Polling=data.cc01_polling||null;state.backupReadings=data.backup_readings===true;if(state.backupReadings&&state.metric==='flow')state.metric='stage';selectStation();
  if(state.backupReadings){$('error').textContent='Live database temporarily unavailable. Displaying pending emergency backup telemetry; these observations are not yet stored in Neon.';$('error').hidden=false;}
  }catch(error){ console.error('Watershed data or rendering error, build '+DASHBOARD_BUILD+':',error);const reason=error instanceof Error?error.message:'Unknown issue';$('error').textContent='Could not load measurements ('+reason+'). '+(state.latest.length?'Previously loaded readings may remain. ':'')+'Build: '+DASHBOARD_BUILD+'.';$('error').hidden=false;if(!state.latest.length){$('observationStatus').textContent='Creek observations unavailable';$('chart').innerHTML='<div class="empty">Observations are temporarily unavailable.</div>';$('rows').innerHTML='<tr><td colspan="'+recentColumns().length+'">Observations unavailable.</td></tr>';}}
  finally{state.busy=false;$('refresh').disabled=false;$('refresh').textContent='↻ Refresh readings';document.querySelectorAll('[data-hours]').forEach(b=>b.disabled=false);}

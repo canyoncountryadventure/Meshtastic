@@ -38,3 +38,10 @@ test('watershed telemetry graphs default to 12 hours in both deployment roots', 
     }
   }
 });
+
+// Mill Creek must display its provisional rating point without fitting a curve.
+import { readFileSync as readMillCreekFile } from 'node:fs';
+const millWeb = readMillCreekFile(new URL('../watersheds/watershed-sensors-20261026-v27.js', import.meta.url), 'utf8');
+const millIndex = readMillCreekFile(new URL('../watersheds/index.html', import.meta.url), 'utf8');
+const millStore = readMillCreekFile(new URL('../watersheds/lib/watershed-store.js', import.meta.url), 'utf8');
+if (!millWeb.includes('renderRatingMeasurements()') || !millWeb.includes('No rating equation or calculated discharge has been activated') || !millIndex.includes('id="ratingPointsRows"') || !millStore.includes('rating_measurements:ratingMeasurements')) throw new Error('Provisional rating point presentation contract missing');
