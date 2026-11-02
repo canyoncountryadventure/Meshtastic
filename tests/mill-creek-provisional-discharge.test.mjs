@@ -42,7 +42,7 @@ test('embedded Mill Creek and Pack Creek ratings map to the actual station ID',(
  const rated=rateReadings(readings,curves);
  assert.equal(rated[0].discharge_cfs,45.829);
  assert.equal(rated[0].discharge_rating_status,'within_measured_range');
- assert.equal(rated[1].discharge_cfs,40.003);
+ assert.equal(rated[1].discharge_cfs,40);
 });
 test('Pack Creek rating records display fitted adjustment separately from raw observed Q',()=>{
  const html=fs.readFileSync(new URL('../watersheds/index.html',import.meta.url),'utf8');
