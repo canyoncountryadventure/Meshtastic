@@ -130,3 +130,20 @@
 .rating-points-table td,.rating-points-table th{text-align:left;padding:8px 10px;font-size:12px}
 .rating-points-table td:nth-child(1),.rating-points-table td:nth-child(2){font-variant-numeric:tabular-nums;font-weight:600}
 #ratingPointsNote{margin:11px 0 0;font-size:12px;color:#415e59}
+
+/* Compact, keyboard-accessible calibration tables for Pack and Mill Creek. */
+.rating-points-collapsible{padding:0;background:#fff;border:1px solid #d8e2e4;border-left:3px solid #729d96}
+.rating-points-summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:42px;padding:9px 15px;cursor:pointer;color:#355c58}
+.rating-points-summary::-webkit-details-marker{display:none}
+.rating-points-summary:focus-visible{outline:2px solid #397da3;outline-offset:2px}
+.rating-points-summary:hover{background:#f4f8f8}
+.rating-points-summary-label{font-size:12px;font-weight:700}
+.rating-points-summary-count{font-size:11px;color:#677c80;white-space:nowrap}
+.rating-points-toggle{display:flex;gap:7px;align-items:center;margin-left:auto;color:#2c6865;font-size:11px;font-weight:600;white-space:nowrap}
+.rating-points-hide{display:none}
+.rating-points-chevron{display:inline-block;font-size:17px;line-height:1;transition:transform .15s ease}
+.rating-points-collapsible[open] .rating-points-show{display:none}
+.rating-points-collapsible[open] .rating-points-hide{display:inline}
+.rating-points-collapsible[open] .rating-points-chevron{transform:rotate(180deg)}
+.rating-points-content{border-top:1px solid #e2e9e9;padding:4px 15px 13px}
+@media(max-width:560px){.rating-points-summary{padding:10px;gap:8px;flex-wrap:wrap}.rating-points-summary-label{font-size:11px}.rating-points-summary-count{font-size:10px}.rating-points-toggle{font-size:10px}.rating-points-content{padding:3px 9px 12px}}
