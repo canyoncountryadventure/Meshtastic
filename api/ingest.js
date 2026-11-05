@@ -1,7 +1,6 @@
 import { getSql } from './db.js';
 import { watershedSql, insertDirectCreekReading, processWatershedAlerts, ensureCreekPacketSchema } from '../lib/watershed-store.js';
 import { isWatershedNode } from '../lib/watershed-nodes.js';
-import { ensureDatabaseReady } from './rating-curves.js';
 import { evaluateReadings, dispatchEmails } from '../lib/alerts.js';
 import { backupRow, saveEmergencyBackup, stablePacketId } from '../lib/google-sheets-backup.js';
 
@@ -142,15 +141,6 @@ function validate(body) {
   return nodeNum;
 }
 
-let mainPacketSchema;
-async function ensureMainPacketSchema(sql) {
-  if (!mainPacketSchema) mainPacketSchema = (async () => {
-    await sql`ALTER TABLE telemetry_readings ADD COLUMN IF NOT EXISTS packet_id TEXT`;
-    await sql`CREATE UNIQUE INDEX IF NOT EXISTS telemetry_readings_packet_id_uq ON telemetry_readings(packet_id) WHERE packet_id IS NOT NULL`;
-  })().catch(error => { mainPacketSchema = null; throw error; });
-  return mainPacketSchema;
-}
-
 function databaseUnavailable(error) {
   const message = String(error?.message || error || '').toLowerCase();
   const status = Number(error?.status || error?.statusCode || error?.cause?.status);
@@ -238,8 +228,6 @@ export default async function handler(req, res) {
           });
           if (!reading.duplicate) creekReadings.push(reading);
         } else {
-          await ensureDatabaseReady(sql);
-          await ensureMainPacketSchema(sql);
           reading = await insertReading(sql, body, packetId);
         }
         if (!reading.duplicate) readings.push(reading);
