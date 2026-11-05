@@ -21,7 +21,8 @@ jobs:
       - name: Syntax-check modified JavaScript
         run: |
           for f in \
-            api/ingest.js api/watershed-alerts.js lib/watershed-store.js \
+            api/ingest.js api/watershed-alerts.js api/readings.js api/station-health.js \
+            lib/watershed-store.js \
             watersheds/api/watershed-readings.js watersheds/lib/watershed-store.js \
             watersheds/watershed-sensors-20261026-v27.js watersheds/watershed-alerts.js \
             watersheds/api/water-quality.js watersheds/water-quality.js; do
