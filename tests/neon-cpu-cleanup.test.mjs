@@ -48,3 +48,11 @@ test('hourly offline jobs and per-packet duplication removed',()=>{
  assert.match(ingest,/if \(mainReadings\.length\)/);
  assert.match(ingest,/processWatershedAlerts\(creekSql, creekReadings/);
 });
+
+test('routine telemetry and health APIs do not execute schema migrations',()=>{
+ for(const path of ['api/ingest.js','api/readings.js','api/station-health.js']){
+   const code=text(path);
+   assert.doesNotMatch(code,/ensureDatabaseReady/);
+ }
+ assert.doesNotMatch(text('api/ingest.js'),/ensureMainPacketSchema|ALTER TABLE telemetry_readings/);
+});
