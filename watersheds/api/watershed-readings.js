@@ -8,13 +8,14 @@ export default async function handler(req,res){
  const params=new URL(req.url||'/','http://localhost').searchParams;
  const requested=Number(params.get('hours')||168);
  const hours=[6,12,24,72,168,336,720,1440,2160,8760,1000000].includes(requested)?requested:168;
- const node=Number(params.get('node'));
+ const rawNode=params.get('node');
+ const node=rawNode!==null&&Number.isSafeInteger(Number(rawNode))&&Number(rawNode)>0?Number(rawNode):null;
  res.setHeader('Cache-Control','private, no-store');
  res.setHeader('Vercel-CDN-Cache-Control','no-store');
  const authenticated=await hasPrivateAccess(req);
  if(isPrivateStation(node)&&!authenticated)return res.status(403).json({ok:false,error:'Private station login required'});
  try{
-  const data=await readCreekData(watershedSql(),hours);
+  const data=await readCreekData(watershedSql(),hours,node);
   return res.status(200).json({ok:true,hours,...hidePrivate(data,authenticated)});
  }catch(error){
   console.error('Watershed query failed',error.name);
