@@ -260,21 +260,24 @@ export default async function handler(req, res) {
       }
     }
 
-    // Alert failures must not reject a successfully stored measurement.
-    // The primary alert engine still processes previously configured Pack Creek
-    // thresholds, but never inserts Pack Creek telemetry into neondb.
-    let alerts;
+    // Preserve the main Meshtastic alert engine, but do not wake it for
+    // watershed-only packets. The watershed engine handles those separately.
+    // The scheduled heartbeat retries pending main-database email deliveries.
+    const mainReadings = readings.filter(r => !isWatershedNode(Number(r.node_num)));
+    let alerts = { processing: 'not_needed' };
     let alertSql = sql;
-    try {
-      alertSql = alertSql || getSql();
-      await evaluateReadings(alertSql, readings);
-      alerts = await dispatchEmails(alertSql);
-    } catch (error) {
-      console.error('Alert processing failed', error.name);
-      alerts = { processing: 'failed' };
+    if (mainReadings.length) {
+      try {
+        alertSql = alertSql || getSql();
+        await evaluateReadings(alertSql, mainReadings);
+        alerts = await dispatchEmails(alertSql);
+      } catch (error) {
+        console.error('Main mesh alert processing failed', error.name);
+        alerts = { processing: 'failed' };
+      }
     }
     if (creekReadings.length) {
-      try { await processWatershedAlerts(creekSql,creekReadings,alertSql); }
+      try { await processWatershedAlerts(creekSql, creekReadings, alertSql || getSql()); }
       catch(error) { console.error('Watershed alert processing failed',error.name); }
     }
 
