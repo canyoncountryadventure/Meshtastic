@@ -2,7 +2,7 @@ import { getSql } from './db.js';
 import { watershedSql } from '../lib/watershed-store.js';
 import { isWatershedNode } from '../lib/watershed-nodes.js';
 import { isPrivateStation, publicOnly } from '../lib/private-station-policy.js';
-import { ensureDatabaseReady, getActiveRatingCurves, getRatingCurvePoints, rateReadings } from './rating-curves.js';
+import { getActiveRatingCurves, getRatingCurvePoints, rateReadings } from './rating-curves.js';
 
 function clampInt(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10);
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     // The dedicated watershed database exposes a compatible read-only view.
     const watershed = node === null || isWatershedNode(node);
     const sql = watershed ? watershedSql() : getSql();
-    if (!watershed) await ensureDatabaseReady(sql);
+    // Schema migrations are applied separately, not on every API cold start.
     let rows;
 
     if (bucketMinutes > 0 && node !== null) {

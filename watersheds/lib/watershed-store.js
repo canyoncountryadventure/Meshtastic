@@ -1,7 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { rateReadings, stationRatingCurves } from './watershed-rating.js';
 import { evaluateReadings,dispatchEmails,emailConfig } from './alerts.js';
-import { evaluateOfflineRules } from './watershed-offline.js';
 export function watershedSql(){
  if(!process.env.WATERSHED_DATABASE_URL)throw new Error('Watershed database is not configured');
  return neon(process.env.WATERSHED_DATABASE_URL, { fetchOptions: { signal: AbortSignal.timeout(8000) } });
@@ -36,8 +35,6 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
  const curves=await sql`SELECT rating_curve FROM creek_stations WHERE enabled AND rating_curve IS NOT NULL`;
  await evaluateReadings(sql,readings,{curves:curves.map(c=>c.rating_curve),
    dashboardUrl:'https://seutahwatersheds.vercel.app/',subjectPrefix:'Moab Watersheds: '});
- // Every arriving packet can detect another silent station. The scheduled check also catches whole-network outages.
- await evaluateOfflineRules(sql);
  // Email service configuration remains managed centrally; only watershed alerts
  // and readings are stored in moab_watersheds.
  if(mainSql){
@@ -45,7 +42,7 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
    if(config)await dispatchEmails(sql,1,{config,idempotencyPrefix:'watershed-alert'});
  }
 }
-export async function readCreekData(sql,hours){
+export async function readCreekData(sql,hours,node=null){
  const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled ORDER BY station_name`;
  const bucketSeconds=hours>=8760?86400:hours>=2160?21600:hours>=1440?7200:0;
  // Long views select real samples from time buckets, never synthetic values.
@@ -55,35 +52,37 @@ export async function readCreekData(sql,hours){
       ROW_NUMBER() OVER (PARTITION BY o.node_num,o.telemetry_type,FLOOR(EXTRACT(EPOCH FROM o.observed_at)/${bucketSeconds}::numeric)
         ORDER BY o.observed_at DESC,o.source_id DESC) AS bucket_rank
     FROM creek_observations o JOIN creek_stations s USING(node_num)
-    WHERE s.enabled AND o.observed_at >= NOW()-(${hours}*INTERVAL '1 hour'))
+    WHERE s.enabled AND (${node}::bigint IS NULL OR o.node_num=${node})
+      AND o.observed_at >= NOW()-(${hours}*INTERVAL '1 hour'))
     SELECT id,node_num,station_name,observed_at,received_at,telemetry_type,temperature_c,metrics,radio
     FROM bucketed WHERE bucket_rank=1 ORDER BY observed_at DESC LIMIT 12000`
   : await sql`SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
        o.telemetry_type,o.temperature_c,o.metrics,o.radio
      FROM creek_observations o JOIN creek_stations s USING(node_num)
-     WHERE s.enabled AND o.observed_at>=NOW()-(${hours}*INTERVAL '1 hour')
+     WHERE s.enabled AND (${node}::bigint IS NULL OR o.node_num=${node})
+       AND o.observed_at>=NOW()-(${hours}*INTERVAL '1 hour')
      ORDER BY o.observed_at DESC LIMIT 25000`;
  const latest=await sql`SELECT DISTINCT ON(o.node_num,o.telemetry_type)
        o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
        o.telemetry_type,o.temperature_c,o.metrics,o.radio
      FROM creek_observations o JOIN creek_stations s USING(node_num)
-     WHERE s.enabled ORDER BY o.node_num,o.telemetry_type,o.observed_at DESC`;
+     WHERE s.enabled AND (${node}::bigint IS NULL OR o.node_num=${node})
+       ORDER BY o.node_num,o.telemetry_type,o.observed_at DESC`;
  // Raw 24-hour observations keep trend calculations and relay history precise
  // even when the long-range graph is sampled daily.
  const recent=await sql`SELECT o.source_id AS id,o.node_num,s.station_name,o.observed_at,o.received_at,
        o.telemetry_type,o.temperature_c,o.metrics,o.radio
      FROM creek_observations o JOIN creek_stations s USING(node_num)
-     WHERE s.enabled AND o.observed_at>=NOW()-INTERVAL '24 hours'
+     WHERE s.enabled AND (${node}::bigint IS NULL OR o.node_num=${node})
+       AND o.observed_at>=NOW()-INTERVAL '24 hours'
      ORDER BY o.observed_at DESC LIMIT 1500`;
- const sensorEvents=await sql`SELECT DISTINCT ON (sensor) id,node_num,sensor,status,received_at
-    FROM cc01_sensor_events WHERE node_num=1695962694 ORDER BY sensor,received_at DESC,id DESC`;
- const controls=await sql`SELECT water_enabled,hobo_enabled,applied_water_enabled,applied_hobo_enabled,applied_at FROM cc01_gateway_control WHERE id=1`;
  // Field calibration records are not a fitted discharge equation.
  const ratingMeasurements=await sql`SELECT p.point_id,p.node_num,p.stage_ft,p.discharge_cfs,p.observed_discharge_cfs,
     p.measured_at,p.measurement_date,p.measurement_time_local,p.point_quality,
     p.included_in_rating,p.rating_curve_version,p.notes
    FROM creek_rating_measurements p JOIN creek_stations s USING(node_num)
-   WHERE s.enabled AND NOT (p.node_num=1949224949 AND p.entry_key LIKE 'pack-v6-%') ORDER BY p.node_num,p.stage_ft,p.point_id`;
+   WHERE s.enabled AND (${node}::bigint IS NULL OR p.node_num=${node})
+      AND NOT (p.node_num=1949224949 AND p.entry_key LIKE 'pack-v6-%') ORDER BY p.node_num,p.stage_ft,p.point_id`;
  const curves=stationRatingCurves(stations);
  const publicStations=stations.map(({rating_curve,...station})=>({
    ...station,rating_curve:rating_curve?.active===true?{
@@ -97,6 +96,6 @@ export async function readCreekData(sql,hours){
  // do not attribute them to the reassigned Spare RAK station.
  const currentAssignment=r=>Number(r.node_num)!==1252758033||Date.parse(r.observed_at)>=Date.parse('2026-10-29T00:00:00Z');
  return {stations:publicStations,readings:rateReadings(readings.filter(currentAssignment),curves),latest:rateReadings(latest.filter(currentAssignment),curves),
-   recent:rateReadings(recent.filter(currentAssignment),curves),rating_measurements:ratingMeasurements,sensor_events:sensorEvents,
-   cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
+   recent:rateReadings(recent.filter(currentAssignment),curves),rating_measurements:ratingMeasurements,
+   sensor_events:[],cc01_polling:null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
 }
