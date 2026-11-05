@@ -4,7 +4,6 @@ import { isWatershedNode } from '../lib/watershed-nodes.js';
 import { isPrivateStation } from '../lib/private-station-policy.js';
 import {
   calculateDischarge,
-  ensureDatabaseReady,
   getActiveRatingCurves,
 } from './rating-curves.js';
 
@@ -127,7 +126,7 @@ export default async function handler(req, res) {
 
   try {
     const sql = getSql();
-    await ensureDatabaseReady(sql);
+    // Database schema is initialized by versioned migrations, not GET requests.
     const curves = await getActiveRatingCurves(sql);
     const curveByNode = new Map(curves.map(curve => [Number(curve.node_num), curve]));
     const nodeParam = new URL(req.url || '/', 'http://localhost').searchParams.get('node');
