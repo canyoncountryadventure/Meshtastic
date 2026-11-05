@@ -8,6 +8,9 @@ test('public and private monitoring remain uncached',()=>{
  assert.match(handler,/private, no-store/);
  assert.match(handler,/Vercel-CDN-Cache-Control','no-store'/);
  assert.match(text('watersheds/watershed-sensors-20261026-v27.js'),/cache:'no-store'/);
+ assert.match(text('watersheds/api/water-quality.js'),/Cache-Control','private, no-store'/);
+ assert.match(text('watersheds/api/water-quality.js'),/Vercel-CDN-Cache-Control','no-store'/);
+ assert.match(text('watersheds/water-quality.js'),/fetch\('\/api\/water-quality',\{cache:'no-store'\}\)/);
 });
 test('monitoring queries scope sensor data to node, retaining since inception',()=>{
  const handler=text('watersheds/api/watershed-readings.js');
