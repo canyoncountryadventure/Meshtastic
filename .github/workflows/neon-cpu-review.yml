@@ -1,0 +1,30 @@
+name: Review Neon CPU cleanup (staging only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [neon-cpu-cleanup-20261104]
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'lib/**'
+      - 'watersheds/**'
+      - 'tests/neon-cpu-cleanup.test.mjs'
+      - '.github/workflows/neon-cpu-review.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax-check modified JavaScript
+        run: |
+          for f in \
+            api/ingest.js api/watershed-alerts.js lib/watershed-store.js \
+            watersheds/api/watershed-readings.js watersheds/lib/watershed-store.js \
+            watersheds/watershed-sensors-20261026-v27.js watersheds/watershed-alerts.js; do
+            node --check "$f"
+          done
+      - name: Verify source guardrails
+        run: node --test tests/neon-cpu-cleanup.test.mjs
