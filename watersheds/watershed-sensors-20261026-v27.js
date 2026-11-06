@@ -20,6 +20,7 @@ function transmissionLabel(r){
  const source=String(r?.metrics?.source??r?.raw?.source??'').trim().toLowerCase();
  if(source==='heltec_dm')return 'DM';
  if(source==='heltec_ble')return 'BLE';
+ if(source==='telemetry_app'||source==='auto'||source==='automatic')return 'AUTO';
  if(source==='field_installation_reading'||source==='user_supplied_starting_reading'||r?.metrics?.field_observation===true||r?.raw?.not_telemetry===true)return 'FIELD';
  if(source.includes('backfill')||source.includes('import')||r?.telemetry_type==='rugged_troll'||r?.raw?.source_file)return 'IMPORTED';
  if(source)return 'UNKNOWN';
