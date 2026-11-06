@@ -2,6 +2,28 @@ import { neon } from '@neondatabase/serverless';
 import { rateReadings, stationRatingCurves } from './watershed-rating.js';
 import { evaluateReadings,dispatchEmails,emailConfig } from './alerts.js';
 import { evaluateOfflineRules } from './watershed-offline.js';
+
+const MILL_CREEK_NODE=1683604927;
+const MILL_CREEK_RATING=Object.freeze({
+ active:true,coefficient_a:1.0653659355880896,stage_offset_ft:0,
+ exponent_b:4.0453542619202745,curve_version:2,
+ valid_stage_min_ft:1.5,valid_stage_max_ft:2.55,
+ provisional:true,method:'power_law_three_point',calibration_points:3
+});
+const MILL_CREEK_RATING_POINTS=Object.freeze([
+ {point_id:'mill-v2-150',node_num:MILL_CREEK_NODE,stage_ft:1.5,discharge_cfs:5.4935152149373705,observed_discharge_cfs:5.4935152149373705,measured_at:null,measurement_date:null,measurement_time_local:null,point_quality:'confirmed',included_in_rating:true,rating_curve_version:2,notes:'Included Mill Creek calibration point: 1.50 ft = 5.49 cfs.'},
+ {point_id:'mill-v2-162',node_num:MILL_CREEK_NODE,stage_ft:1.62,discharge_cfs:7.5,observed_discharge_cfs:7.5,measured_at:'2026-11-06T19:40:00.000Z',measurement_date:'2026-11-06',measurement_time_local:'12:40 MST',point_quality:'confirmed',included_in_rating:true,rating_curve_version:2,notes:'Confirmed Mill Creek discharge measurement: 1.62 ft = 7.5 cfs.'},
+ {point_id:'mill-v2-255',node_num:MILL_CREEK_NODE,stage_ft:2.55,discharge_cfs:47,observed_discharge_cfs:47,measured_at:null,measurement_date:null,measurement_time_local:null,point_quality:'confirmed',included_in_rating:true,rating_curve_version:2,notes:'Confirmed Mill Creek discharge measurement: 2.55 ft = 47 cfs.'}
+]);
+async function ensureMillCreekRating(sql){
+ await sql`UPDATE creek_stations SET rating_curve=${JSON.stringify(MILL_CREEK_RATING)}::jsonb
+   WHERE node_num=${MILL_CREEK_NODE}
+     AND COALESCE((rating_curve->>'curve_version')::integer,0)<${MILL_CREEK_RATING.curve_version}`;
+}
+function currentRatingMeasurements(points){
+ return [...points.filter(point=>Number(point.node_num)!==MILL_CREEK_NODE),...MILL_CREEK_RATING_POINTS]
+   .sort((a,b)=>Number(a.node_num)-Number(b.node_num)||Number(a.stage_ft)-Number(b.stage_ft));
+}
 export function watershedSql(){
  if(!process.env.WATERSHED_DATABASE_URL)throw new Error('Watershed database is not configured');
  return neon(process.env.WATERSHED_DATABASE_URL, { fetchOptions: { signal: AbortSignal.timeout(8000) } });
@@ -32,6 +54,7 @@ export async function insertDirectCreekReading(sql, reading) {
  return {...rows[0],station_name:reading.station_name};
 }
 export async function processWatershedAlerts(sql, readings, mainSql) {
+ await ensureMillCreekRating(sql);
  if(!readings.length)return;
  const curves=await sql`SELECT rating_curve FROM creek_stations WHERE enabled AND rating_curve IS NOT NULL`;
  await evaluateReadings(sql,readings,{curves:curves.map(c=>c.rating_curve),
@@ -46,6 +69,7 @@ export async function processWatershedAlerts(sql, readings, mainSql) {
  }
 }
 export async function readCreekData(sql,hours){
+ await ensureMillCreekRating(sql);
  const stations=await sql`SELECT node_num,station_name,waterbody,station_type,rating_curve FROM creek_stations WHERE enabled ORDER BY station_name`;
  const bucketSeconds=hours>=8760?86400:hours>=2160?21600:hours>=1440?7200:0;
  // Long views select real samples from time buckets, never synthetic values.
@@ -97,6 +121,6 @@ export async function readCreekData(sql,hours){
  // do not attribute them to the reassigned Spare RAK station.
  const currentAssignment=r=>Number(r.node_num)!==1252758033||Date.parse(r.observed_at)>=Date.parse('2026-10-29T00:00:00Z');
  return {stations:publicStations,readings:rateReadings(readings.filter(currentAssignment),curves),latest:rateReadings(latest.filter(currentAssignment),curves),
-   recent:rateReadings(recent.filter(currentAssignment),curves),rating_measurements:ratingMeasurements,sensor_events:sensorEvents,
+   recent:rateReadings(recent.filter(currentAssignment),curves),rating_measurements:currentRatingMeasurements(ratingMeasurements),sensor_events:sensorEvents,
    cc01_polling:controls[0]||null,sample_interval_hours:bucketSeconds?bucketSeconds/3600:null};
 }
