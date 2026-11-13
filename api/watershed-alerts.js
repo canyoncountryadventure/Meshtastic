@@ -141,7 +141,7 @@ export default async function handler(req,res) {
     } else throw new Error('Unknown action');
     return res.status(200).json({ok:true});
   } catch(error) {
-    console.error('Alerts request failed',error.name);
+    console.error('Alerts request failed',{action:String(body?.action||'none'),name:error.name,message:error.message,code:error.code||null});
     const safe=/Choose|Reset|Threshold|Enter|Use up|Stage|Only Pack|Save at|Connect|Wait one|Unknown action/.test(error.message);
     return res.status(safe?400:500).json({error:safe?error.message:'Could not save or load alerts'});
   }
