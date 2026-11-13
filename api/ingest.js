@@ -22,6 +22,7 @@ const KNOWN_STATIONS = new Map([
   [3044869407, 'Hidden Valley'], // !b57d051f, formerly Revived; deployed October 16
   [1683604927, 'Mill Creek'], // !6459c5bf, Power Dam MX2001
   [647393146, 'Seed Relay 1'], // !26966f7a
+  [3943979587, 'Whitepine'], // !eb145a43, battery-only relay
 ]);
 
 const ACCEPTED_TYPES = new Set(['telemetry', 'device', 'mx2001', 'rock_test', 'soil', 'water_distance']);

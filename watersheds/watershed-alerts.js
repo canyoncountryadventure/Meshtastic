@@ -14,7 +14,8 @@ const batteryStations=[
  {id:2650172798,name:'Thousand Lake Mountain',color:'#9a6a42',external:true},
  {id:4241345683,name:'Mini Me',color:'#8a8a55',external:true},
  {id:1222051909,name:'Cottonwood Relay 2',color:'#7b6eab',external:true},
- {id:1252758033,name:'Spare RAK',color:'#4969b8',external:true}
+ {id:1252758033,name:'Spare RAK',color:'#4969b8',external:true},
+ {id:3943979587,name:'Whitepine',color:'#c2613b',external:true}
 ];
 const batteryState={hours:168,rows:[],enabled:new Set(),loading:false};
 const message=t=>$('message').textContent=t;
@@ -61,7 +62,7 @@ async function loadBatteryHistory(){
  finally{batteryState.loading=false;}
 }
 function label(parameter,node){return parameter==='temperature_c'?([2425602407,4241345683,3044869407,1577197109,2740603892,647393146,2650172798].includes(Number(node))?'Air temperature (°F)':Number(node)===2004386937?'Groundwater temperature (°F)':'Water temperature (°F)'):parameter==='water_level_ft'&&Number(node)===2004386937?'Water depth above logger (ft)':data.parameters[parameter];}
-function parameterOptions(selected){const node=Number($('station').value),airNodes=[2425602407,4241345683,3044869407,1577197109,2740603892,647393146,2650172798],choices=node===1222051909?['offline_hours','battery_percent']:airNodes.includes(node)?['offline_hours','temperature_c','battery_percent']:[1695962694,2004386937,1683604927].includes(node)?['offline_hours','water_level_ft','temperature_c','battery_percent']:['offline_hours','discharge_cfs','water_level_ft','temperature_c','battery_percent'];$('parameter').replaceChildren(...choices.map(p=>{const o=el('option',label(p,node));o.value=p;return o;}));$('parameter').value=choices.includes(selected)?selected:choices[0];}
+function parameterOptions(selected){const node=Number($('station').value),airNodes=[2425602407,4241345683,3044869407,1577197109,2740603892,647393146,2650172798],choices=[1222051909,3943979587].includes(node)?['offline_hours','battery_percent']:airNodes.includes(node)?['offline_hours','temperature_c','battery_percent']:[1695962694,2004386937,1683604927].includes(node)?['offline_hours','water_level_ft','temperature_c','battery_percent']:['offline_hours','discharge_cfs','water_level_ft','temperature_c','battery_percent'];$('parameter').replaceChildren(...choices.map(p=>{const o=el('option',label(p,node));o.value=p;return o;}));$('parameter').value=choices.includes(selected)?selected:choices[0];}
 function renderManualUpdate(){
  const form=$('manualUpdateForm');if(!form)return;
  const select=$('manualUpdateRule'),notice=$('manualUpdateRecipients'),button=$('manualUpdateSend'),rules=Array.isArray(data?.rules)?data.rules:[];
