@@ -80,20 +80,11 @@ test('Owner battery history uses a single bound bucket expression for sampled ro
  assert.equal((source.match(/WHERE bucket_rank=1/g)||[]).length,2);
 });
 
-test('Heltec polling admin is all-node, credentialed, and preserves on-air DM delivery',()=>{
+test('Notifications omit the retired South Cottonwood gateway polling controls',()=>{
  const html=fs.readFileSync(new URL('../watersheds/notifications.html',import.meta.url),'utf8');
  const js=fs.readFileSync(new URL('../watersheds/watershed-alerts.js',import.meta.url),'utf8');
- const api=fs.readFileSync(new URL('../api/watershed-alerts.js',import.meta.url),'utf8');
- assert.match(html,/Heltec V7 · Mesh polling control/);
- assert.match(html,/id="gatewayAdminNode"/);
- assert.match(html,/id="gatewayPollCustom"/);
- assert.match(html,/id="gatewayPollMode"/);
- assert.match(js,/function commandForPoll/);
- assert.match(js,/POLL STATUS/);
- assert.match(js,/navigator.clipboard.writeText/);
- assert.match(js,/authorized_admin_node:adminNode/);
- assert.match(api,/authorized_admin_node=\$\{adminNode\}/);
- assert.doesNotMatch(html,/Heltec V7 · South Cottonwood MB7388 polling/);
+ assert.doesNotMatch(html,/gatewayControlPanel|Heltec V7 · Mesh polling control|South Cottonwood · automatic WATER READ/);
+ assert.doesNotMatch(js,/renderGatewayControl|commandForPoll|gatewayForm/);
 });
 
 test('Every station recent-measurements table includes transmission provenance',()=>{
