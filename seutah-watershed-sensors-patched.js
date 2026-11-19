@@ -569,7 +569,7 @@ $('export').addEventListener('click',()=>{
 });
 
 /* PS login: the server gates private readings, not just this station selector. */
- const PS_STATIONS=[647393146,2650172798,4241345683,1252758033,3044869407,3943979587];
+ const PS_STATIONS=[2740603892,647393146,2650172798,4241345683,1252758033,3044869407,3943979587];
 let psRevision=0;
 function psShowAccess(unlocked){
  const select=$('stationSelect');
@@ -633,5 +633,8 @@ $('psLogout').addEventListener('click',async()=>{
  }catch{/* Unavailable auth fails closed. Public stations remain visible. */}
 })();
 
+// Moab is password-protected; remove its public entry before the first data render.
+const moabPublicEntry=$('stationSelect').querySelector('option[value="2740603892"]');
+if(moabPublicEntry)moabPublicEntry.remove();
 load();
 })();
