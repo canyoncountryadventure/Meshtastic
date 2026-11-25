@@ -114,8 +114,8 @@ export default async function handler(req,res){
   // Read-only, except that prior manual decisions are displayed as annotations.
   if (body.action==='compare') {
     const requested=body.series, hours=Number(body.hours);
-    if(!Array.isArray(requested)||requested.length<2||requested.length>6)
-      return res.status(400).json({error:'Select between two and six sensor series'});
+    if(!Array.isArray(requested)||requested.length<2||requested.length>16)
+      return res.status(400).json({error:'Select between two and sixteen sensor series'});
     if(!WINDOWS.includes(hours))return res.status(400).json({error:'Choose a supported analysis window'});
     const selected=requested.map(x=>{
       const node=Number(x.node_num),parsed=parseSeries(x.series_key);
@@ -128,7 +128,10 @@ export default async function handler(req,res){
     if(new Set(selected.map(x=>x.parsed.metric)).size!==1)
       return res.status(400).json({error:'Compare the same parameter across sensors (stage, discharge, or temperature)'});
     const end=new Date(),start=new Date(end.getTime()-hours*3600000);
-    const items=await Promise.all(selected.map(async({node,parsed})=>{
+    const rowLimit=requested.length>6?3500:5500;
+    const items=[];
+    for(let offset=0;offset<selected.length;offset+=4){
+     const batch=await Promise.all(selected.slice(offset,offset+4).map(async({node,parsed})=>{
       const [stations,rows]=await Promise.all([
         sql`SELECT node_num,station_name,rating_curve FROM creek_stations WHERE node_num=${node} AND enabled=true`,
         sql`SELECT o.source_id AS id,o.node_num,o.telemetry_type,o.observed_at,o.received_at,o.temperature_c,o.metrics,
@@ -137,14 +140,16 @@ export default async function handler(req,res){
             LEFT JOIN qaqc_reviews r ON r.observation_id=o.source_id AND r.series_key=${parsed.key}
             WHERE o.node_num=${node} AND o.telemetry_type=${parsed.type}
             AND o.observed_at BETWEEN ${start.toISOString()}::timestamptz AND ${end.toISOString()}::timestamptz
-            ORDER BY o.observed_at DESC,o.source_id DESC LIMIT 5500`
+            ORDER BY o.observed_at DESC,o.source_id DESC LIMIT ${rowLimit}`
       ]);
       if(!stations.length)return {node_num:node,series_key:parsed.key,error:'Station unavailable',points:[]};
       const curve=stations[0].rating_curve;
       return {node_num:node,station_name:stations[0].station_name,series_key:parsed.key,
         points:rows.map(r=>{const point=asPoint(r,parsed.metric,curve);return point?{id:point.id,value:point.value,observed_at:point.observed_at,review:r.review||null}:null;})
-          .filter(Boolean).reverse(),truncated:rows.length>=5500};
-    }));
+          .filter(Boolean).reverse(),truncated:rows.length>=rowLimit};
+     }));
+     items.push(...batch);
+    }
     return res.status(200).json({ok:true,hours,metric:selected[0].parsed.metric,start:start.toISOString(),end:end.toISOString(),
       series:items,reviewDecisionsDoNotAlterRaw:true});
   }
