@@ -574,69 +574,31 @@ $('export').addEventListener('click',()=>{
  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=site().name.toLowerCase().replaceAll(' ','-')+'-'+(state.hours===SINCE_INCEPTION_HOURS?'since-inception':state.hours+'h')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 
-/* PS login: the server gates private readings, not just this station selector. */
- const PS_STATIONS=[647393146,2650172798,4241345683,1252758033,3044869407,3943979587];
-let psRevision=0;
-function psShowAccess(unlocked){
+/* Owner access comes from the unified System Administration login cookie.
+   The server enforces privacy for all telemetry and history endpoints. */
+const PS_STATIONS=[647393146,2650172798,4241345683,1252758033,3044869407,3943979587];
+function syncOwnerStations(unlocked){
  const select=$('stationSelect');
  let group=$('psStationGroup');
  if(unlocked&&!group){
   group=document.createElement('optgroup');group.id='psStationGroup';group.label='Private stations';
-  for(const id of PS_STATIONS){
-   const option=document.createElement('option');option.value=String(id);option.textContent=SITES[id].name;group.append(option);
-  }
+  for(const id of PS_STATIONS){if(!SITES[id])continue;const option=document.createElement('option');option.value=String(id);option.textContent=SITES[id].name;group.append(option);}
   select.append(group);
- }else if(!unlocked&&group){group.remove();}
- $('psToggle').textContent=unlocked?'PS · unlocked':'PS login';
- $('psPassword').hidden=unlocked;$('psPassword').required=!unlocked;
- $('psUnlock').hidden=unlocked;$('psLogout').hidden=!unlocked;
+ }else if(!unlocked&&group)group.remove();
  if(!unlocked&&PS_STATIONS.includes(state.node)){
-  // A revoked/expired session must never leave previously loaded private measurements onscreen.
   state.node=1949224949;select.value=String(state.node);
   state.readings=[];state.latest=[];state.recent=[];state.allReadings=[];state.allLatest=[];state.allRecent=[];state.trendReadings=[];
-  $('chart').replaceChildren();$('rows').replaceChildren();$('observationStatus').textContent='Loading public station readings';
+  $('chart').replaceChildren();$('rows').replaceChildren();
+  $('observationStatus').textContent='Loading public station readings';
   if(!state.busy)load();else window.location.reload();
  }
 }
-async function psRequest(action,password){
- const response=await fetch('/api/private-stations',{
-  method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-  cache:'no-store',body:JSON.stringify(action==='login'?{action,password}:{action})
- });
- const data=await response.json().catch(()=>({}));
- if(!response.ok)throw new Error(data.error||'Station login unavailable');
- return data;
-}
-$('psToggle').addEventListener('click',()=>{
- const isOpen=$('psToggle').getAttribute('aria-expanded')==='true';
- $('psPanel').hidden=isOpen;$('psToggle').setAttribute('aria-expanded',String(!isOpen));
- if(!isOpen&&!$('psPassword').hidden)$('psPassword').focus();
-});
-$('psPanel').addEventListener('submit',async event=>{
- event.preventDefault();
- const password=$('psPassword').value;
- $('psStatus').textContent='Checking…';$('psUnlock').disabled=true;
- const revision=++psRevision;
- try{
-  await psRequest('login',password);$('psPassword').value='';
-  if(revision!==psRevision)return;
-  psShowAccess(true);$('psStatus').textContent='Private stations unlocked.';
- }catch(error){$('psPassword').value='';$('psStatus').textContent=error.message;}
- finally{$('psUnlock').disabled=false;}
-});
-$('psLogout').addEventListener('click',async()=>{
- $('psLogout').disabled=true;$('psStatus').textContent='Signing out…';++psRevision;
- try{await psRequest('logout');window.location.reload();}
- catch(error){$('psStatus').textContent=error.message;$('psLogout').disabled=false;}
-});
 (async()=>{
- const revision=++psRevision;
  try{
   const response=await fetch('/api/private-stations',{cache:'no-store',credentials:'same-origin'});
   if(!response.ok)return;
-  const data=await response.json();
-  if(revision===psRevision)psShowAccess(data.authenticated===true);
- }catch{/* Unavailable auth fails closed. Public stations remain visible. */}
+  const data=await response.json();syncOwnerStations(data.authenticated===true);
+ }catch{/* Private stations fail closed. */}
 })();
 
 load();
