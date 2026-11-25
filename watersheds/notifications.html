@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>System Administration · Southeastern Utah Watersheds</title><link rel="stylesheet" href="/watershed.css?v=20261015-stations"><link rel="stylesheet" href="/watershed-alerts.css?v=20261027-battery-history"><link rel="stylesheet" href="/qaqc.css?v=20261124-v1"><script src="/system-admin-auth-20261124.js?v=login-v3" defer></script><script src="/watershed-public.js?v=20261029-all-stations" defer></script><script type="module" src="/qaqc.js?v=20261124-v1"></script></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>System Administration · Southeastern Utah Watersheds</title><link rel="stylesheet" href="/watershed.css?v=20261015-stations"><link rel="stylesheet" href="/watershed-alerts.css?v=20261027-battery-history"><link rel="stylesheet" href="/qaqc.css?v=20261124-v2"><script src="/system-admin-auth-20261124.js?v=login-v3" defer></script><script src="/watershed-public.js?v=20261029-all-stations" defer></script><script type="module" src="/qaqc.js?v=20261124-v1"></script><script type="module" src="/qaqc-compare.js?v=20261124-v1"></script></head><body>
 <header class="masthead"><a class="brand" href="/watershed">SOUTHEASTERN UTAH WATERSHEDS</a><nav><a href="/watershed">Monitoring</a><button id="logout" hidden>Sign out</button></nav></header>
 <main class="notification-shell"><section class="hero"><h1>System Administration</h1><p class="intro">Owner controls for station QA/QC, notification rules, battery diagnostics, and private-station access. Configure alerts and review questionable measurements without altering the original telemetry.</p></section><p id="message" role="status" aria-live="polite"></p>
 
@@ -74,6 +74,44 @@
 <details class="qa-disclosure" open><summary>Candidate errors and review decisions</summary><div id="qaqcIssues">Open the analyzer to see flags.</div></details>
 <details class="qa-disclosure"><summary>Manual decision audit log</summary><button id="qaqcReloadAudit" type="button">Refresh review history</button><div id="qaqcAudit">No review history loaded.</div></details>
 <p id="qaqcCaveat" class="qa-caveat">Raw observations are never deleted. Flagging does not change streamflow ratings or public displays.</p>
+</div></details>
+<details id="qaqcComparePanel" class="qa-panel qa-compare">
+<summary><span>Statistics &amp; sensor comparisons</span><span class="qa-sub">SD · variability ranking · sensor agreement</span></summary>
+<div class="qa-body">
+<p class="qa-caption">Compare stream stage, discharge, or temperature at the same time resolution. Rank sensor variability, inspect trends, and check agreement between instruments without editing raw measurements.</p>
+<div class="qa-compare-controls">
+<label>Parameter<select id="qcCompareMetric"><option value="stage_ft" selected>Water level / stage (ft)</option><option value="discharge_cfs">Rated discharge (cfs)</option><option value="temperature_f">Temperature (°F)</option></select></label>
+<label>Comparison period<select id="qcCompareWindow"><option value="24">24 hours</option><option value="72" selected>3 days</option><option value="168">7 days</option><option value="336">14 days</option><option value="720">30 days</option></select></label>
+<label>Matched time interval<select id="qcCompareInterval"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="180">3 hours</option></select></label>
+</div>
+<div class="qa-compare-selector-head"><strong>Select sensors to compare</strong><span id="qcCompareCount" class="qa-sub">0 of 6 selected</span></div>
+<div id="qcCompareSeries" class="qa-compare-series"></div>
+<div class="qa-btns qa-compare-buttons"><button id="qcCompareRun" type="button">Compare selected sensors</button><button id="qcCompareSelectDefaults" type="button">Reset to Pack + Mill Creek</button></div>
+<details class="qa-advanced"><summary>Comparison settings · expand</summary>
+<div class="qa-compare-controls">
+<label>Rank by<select id="qcCompareRank"><option value="noiseSd" selected>Detrended SD (high-frequency scatter)</option><option value="sd">Raw standard deviation</option><option value="mad">Robust median absolute deviation</option><option value="range">Observed range</option><option value="firstDiffSd">Difference SD (jagged changes)</option><option value="coverage">Time-bin completeness</option></select></label>
+<label>Chart vertical scale<select id="qcCompareScale"><option value="centered" selected>Median-centered (variation)</option><option value="raw">Raw recorded values</option><option value="zscore">Standardized (z-score)</option></select></label>
+<label class="qa-compare-checkline"><input type="checkbox" id="qcCompareExcludeRejected"> Exclude manually rejected readings from analysis</label>
+</div>
+<p class="qa-caption">Use a common time interval for fair comparison. Bins use the median of actual readings, never invented interpolated measurements. Manual review decisions remain in the database either way.</p>
+</details>
+<div id="qcCompareStatus" class="qa-status" role="status" aria-live="polite">Expand to load the available stations.</div>
+<div id="qcCompareSummary" class="qa-stats"></div>
+<p id="qcCompareInterpret" class="qa-caption"></p>
+<div class="qa-compare-chart-frame"><svg id="qcCompareChart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 345" role="img" aria-label="Matched station observations plotted on a common time axis"></svg></div>
+<div id="qcCompareLegend" class="qa-compare-legend-wrap"></div>
+<p id="qcCompareChartCaption" class="qa-caption"></p>
+<details class="qa-disclosure" open><summary>Variability leaderboard · click comparison settings to change ranking</summary>
+<div class="qa-compare-table-wrap"><table id="qcCompareTable"></table></div>
+<p id="qcCompareRankNote" class="qa-caption"></p>
+</details>
+<details class="qa-disclosure"><summary>Two-sensor agreement · correlation and paired differences</summary>
+<div class="qa-compare-controls"><label>Sensor A<select id="qcComparePairA"></select></label><label>Sensor B<select id="qcComparePairB"></select></label></div>
+<div id="qcComparePairResult" class="qa-stats"></div>
+<p id="qcComparePairGuidance" class="qa-caption">Same-station sensor comparisons are most useful for testing sensor agreement.</p>
+</details>
+<div id="qcCompareExports" class="qa-btns" hidden><button type="button" id="qcCompareSummaryExport">Export statistics CSV</button><button type="button" id="qcCompareDataExport">Export matched observations CSV</button></div>
+<p class="qa-caveat"><strong>Interpretation:</strong> Standard deviation describes observed variability, not an instrument's true accuracy. A noisier creek is not necessarily a worse sensor. Detrended scatter and co-located sensor disagreement are better diagnostic indicators, but natural rapid changes can still affect them.</p>
 </div></details>
 <details class="admin-collapse"><summary>Station battery history · all stations</summary>
 <section class="panel" id="batteryHistoryPanel"><div class="panel-heading"><div><h2>Station battery history</h2><p class="muted">All stations start unchecked. Select stations to compare their reported battery percentages on one graph.</p></div><div class="battery-ranges" role="group" aria-label="Battery history range"><button type="button" data-battery-hours="24">24 hours</button><button type="button" data-battery-hours="168" aria-pressed="true">7 days</button><button type="button" data-battery-hours="720">30 days</button><button type="button" data-battery-hours="2160">90 days</button></div></div><div id="batteryStationToggles" class="battery-station-toggles" aria-label="Stations shown on battery graph"></div><div id="adminBatteryStatus" class="muted" role="status">Loading battery history…</div><div id="adminBatteryChart" class="admin-battery-chart"><div class="empty">Loading battery history…</div></div><div id="adminBatteryReadout" class="chart-readout" aria-live="polite">Point to a reading to inspect it.</div></section></details>
