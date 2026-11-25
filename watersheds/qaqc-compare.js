@@ -33,7 +33,7 @@ function defaults(options){
 function renderPicker(reset=true){
  const options=group(),existing=reset?defaults(options):state.selected.filter(k=>options.some(x=>key(x)===k));
  if(existing.length<2&&options.length>=2)existing.push(...defaults(options).filter(k=>!existing.includes(k)).slice(0,2-existing.length));
- state.selected=existing.slice(0,6);
+ state.selected=existing.slice(0,16);
  const root=el('qcCompareSeries');root.replaceChildren();
  for(const item of options){
   const id=key(item),label=document.createElement('label');label.className='qa-compare-check';
@@ -41,7 +41,7 @@ function renderPicker(reset=true){
   checkbox.setAttribute('aria-label','Include '+item.station_name+' '+item.series_key);
   checkbox.onchange=()=>{
     if(checkbox.checked&&!state.selected.includes(id)){
-      if(state.selected.length===6){checkbox.checked=false;status('Compare up to six sensor series at a time.',true);return;}
+      if(state.selected.length===16){checkbox.checked=false;status('Compare up to sixteen series in one network scan.',true);return;}
       state.selected.push(id);
     }else if(!checkbox.checked)state.selected=state.selected.filter(k=>k!==id);
     updateSelectionLabel();
@@ -52,7 +52,7 @@ function renderPicker(reset=true){
  }
  updateSelectionLabel();
 }
-function updateSelectionLabel(){el('qcCompareCount').textContent=state.selected.length+' of 6 selected';}
+function updateSelectionLabel(){el('qcCompareCount').textContent=state.selected.length+' selected (16 max)';}
 async function loadCatalog(){
  const response=await api({op:'catalog'});
  state.catalog=response.series||[];
@@ -69,7 +69,7 @@ function settings(){
 }
 async function runComparison(){
  const picked=selections();
- if(picked.length<2||picked.length>6){status('Select 2–6 sensor series measuring the same parameter.',true);return;}
+ if(picked.length<2||picked.length>16){status('Select 2–16 sensor series measuring the same parameter.',true);return;}
  state.busy=true;el('qcCompareRun').disabled=true;
  status('Reading raw measurements and calculating matched-interval statistics…');
  try{
@@ -90,6 +90,8 @@ function renderAll(){
    ...r,stats:measureSeries(r.points||[],{...settings(),metric:state.data.metric,start:state.data.start,end:state.data.end})
  }));
  const ranked=rankSensors(state.results,order);
+ state.results.forEach(x=>{x.plotColor=null;});
+ ranked.slice(0,6).forEach((x,i)=>{x.plotColor=COLORS[i];});
  const sufficient=ranked.filter(x=>x.stats.bins.length>=6);
  const top=sufficient.find(x=>Number.isFinite(x.stats[order]));
  status('Compared '+state.results.length+' series over '+state.data.hours+' hours · interval '+settings().stepMinutes+
@@ -138,7 +140,7 @@ function renderTable(ranked){
  for(const item of ranked){
   const s=item.stats,tr=document.createElement('tr');
   const name=document.createElement('td'),d=document.createElement('span');
-  d.className='qa-series-dot';d.style.background=item.color;
+  d.className='qa-series-dot';d.style.background=item.plotColor||'#b9c5cc';
   name.append(d,document.createTextNode(item.label));
   const sub=document.createElement('small');sub.textContent=' ('+s.coveredBins+'/'+s.totalBins+' bins'+(item.truncated?', truncated':'')+')';name.append(sub);
   tr.append(name);
@@ -171,7 +173,7 @@ function renderChart(){
  if(!state.results.length)return;
  const mode=el('qcCompareScale').value,WIDTH=1100,HEIGHT=345,left=67,right=22,top=26,bottom=50;
  const start=Date.parse(state.data.start),end=Date.parse(state.data.end);
- const tracks=state.results.map(item=>({item,points:item.stats.bins.map(point=>({
+ const tracks=state.results.filter(item=>item.plotColor).map(item=>({item,points:item.stats.bins.map(point=>({
    ...point,scaled:normalize(item,point,mode)
  })).filter(p=>Number.isFinite(p.scaled))}));
  const values=tracks.flatMap(x=>x.points.map(p=>p.scaled));
@@ -196,12 +198,12 @@ function renderChart(){
   for(const seg of segments){
    if(seg.length<2)continue;
    const poly=svgEl(svg,'polyline',{points:seg.map(p=>x(p.at).toFixed(1)+','+y(p.scaled).toFixed(1)).join(' '),
-      fill:'none',stroke:track.item.color,'stroke-width':2.2,'stroke-linejoin':'round','stroke-linecap':'round'});
+      fill:'none',stroke:track.item.plotColor,'stroke-width':2.2,'stroke-linejoin':'round','stroke-linecap':'round'});
    const title=document.createElementNS('http://www.w3.org/2000/svg','title');
    title.textContent=track.item.label;poly.append(title);
   }
   for(const p of track.points){
-   const mark=svgEl(svg,'circle',{cx:x(p.at).toFixed(1),cy:y(p.scaled).toFixed(1),r:2.3,fill:track.item.color});
+   const mark=svgEl(svg,'circle',{cx:x(p.at).toFixed(1),cy:y(p.scaled).toFixed(1),r:2.3,fill:track.item.plotColor});
    const title=document.createElementNS('http://www.w3.org/2000/svg','title');
    title.textContent=track.item.label+' · '+date(p.at)+' · '+nice(p.value)+' '+units[state.data.metric];
    mark.append(title);
@@ -214,13 +216,13 @@ function renderChart(){
  const legend=el('qcCompareLegend');legend.replaceChildren();
  for(const t of tracks){
   const label=document.createElement('span');label.className='qa-compare-legend';
-  const dot=document.createElement('i');dot.style.background=t.item.color;label.append(dot,document.createTextNode(t.item.label));legend.append(label);
+  const dot=document.createElement('i');dot.style.background=t.item.plotColor;label.append(dot,document.createTextNode(t.item.label));legend.append(label);
  }
  el('qcCompareChartCaption').textContent='Time-binned median measurements; gaps are not connected. '+
  (mode==='centered'?'Each curve is shifted by its own median, preserving differences in variation.':
  mode==='zscore'?'Each curve is expressed in its own standard deviations from its mean (relative shape only).':
  'Actual recorded units are shown. Different sensor datums may place curves far apart.')+
- ' No interpolation.';
+ ' No interpolation. '+(state.results.length>6?'Chart shows the six highest-ranked series; the table includes all '+state.results.length+'.':'');
 }
 function buildPairSelectors(){
  const selectA=el('qcComparePairA'),selectB=el('qcComparePairB');
@@ -294,6 +296,10 @@ el('qaqcComparePanel').addEventListener('toggle',async()=>{
 el('qcCompareMetric').addEventListener('change',()=>{renderPicker(true);state.data=null;});
 el('qcCompareRun').addEventListener('click',runComparison);
 el('qcCompareSelectDefaults').addEventListener('click',()=>renderPicker(true));
+el('qcCompareSelectAll').addEventListener('click',()=>{
+ state.selected=group().slice(0,16).map(key);
+ renderPicker(false);runComparison();
+});
 el('qcCompareRank').addEventListener('change',()=>{if(state.data)renderAll();});
 el('qcCompareScale').addEventListener('change',()=>{if(state.data)renderChart();});
 el('qcCompareInterval').addEventListener('change',()=>{if(state.data)renderAll();});
