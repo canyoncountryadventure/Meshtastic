@@ -76,7 +76,7 @@ async function runComparison(){
   const data=await api(null,{action:'compare',series:picked,hours:Number(el('qcCompareWindow').value)});
   state.data=data;
   state.results=(data.series||[]).map((item,i)=>{
-    const stats=measureSeries(item.points||[],{...settings(),start:data.start,end:data.end});
+    const stats=measureSeries(item.points||[],{...settings(),metric:data.metric,start:data.start,end:data.end});
     return {...item,stats,color:COLORS[i],label:(item.station_name||'Unknown')+' · '+String(item.series_key).split('|')[0]};
   });
   renderAll();
@@ -87,7 +87,7 @@ function renderAll(){
  if(!state.data)return;
  const {metric}=state.data,order=el('qcCompareRank').value;
  state.results=state.results.map((r,i)=>({
-   ...r,stats:measureSeries(r.points||[],{...settings(),start:state.data.start,end:state.data.end})
+   ...r,stats:measureSeries(r.points||[],{...settings(),metric:state.data.metric,start:state.data.start,end:state.data.end})
  }));
  const ranked=rankSensors(state.results,order);
  const sufficient=ranked.filter(x=>x.stats.bins.length>=6);
@@ -131,7 +131,7 @@ function headRow(headers){
 function renderTable(ranked){
  const table=el('qcCompareTable');table.replaceChildren();
  const thead=document.createElement('thead');
- thead.append(headRow(['Station / sensor','Readings','Mean','Raw SD','Robust MAD','Range','Detrended SD','Median step','Bin coverage','Long gaps']));
+ thead.append(headRow(['Station / sensor','Readings','Mean','Sample SD','Robust MAD','Range','Detrended SD','Noise / SD','Median step','CV % (flow)','Bin coverage','Long gaps']));
  table.append(thead);
  const tbody=document.createElement('tbody');
  const unit=units[state.data.metric];
@@ -143,7 +143,7 @@ function renderTable(ranked){
   const sub=document.createElement('small');sub.textContent=' ('+s.coveredBins+'/'+s.totalBins+' bins'+(item.truncated?', truncated':'')+')';name.append(sub);
   tr.append(name);
   const values=[s.usedCount,nice(s.mean),nice(s.sd),nice(s.mad),nice(s.range),
-     s.residualCount>=5?nice(s.noiseSd):'insufficient',nice(s.medianAbsStep),pc(s.coverage),String(s.gaps)];
+     s.residualCount>=5?nice(s.noiseSd):'insufficient',s.noiseFraction===null?'—':pc(s.noiseFraction),nice(s.medianAbsStep),s.cvPercent===null?'—':nice(s.cvPercent),pc(s.coverage),String(s.gaps)];
   for(let i=0;i<values.length;i++){const td=document.createElement('td');td.textContent=String(values[i]);tr.append(td);}
   tbody.append(tr);
  }
@@ -151,7 +151,7 @@ function renderTable(ranked){
  const top=ranked.filter(x=>Number.isFinite(x.stats.noiseSd)&&x.stats.coveredBins>=6);
  const line=el('qcCompareRankNote');
  line.textContent=(top.length?'Highest detrended SD in this selection: '+rankSensors(top,'noiseSd')[0].label+' ('+nice(rankSensors(top,'noiseSd')[0].stats.noiseSd)+' '+unit+'). ':'')+
-  'Ranked by '+({noiseSd:'detrended SD',sd:'raw SD',mad:'robust MAD',range:'raw range',firstDiffSd:'successive-step SD',coverage:'bin coverage'}[el('qcCompareRank').value]||'metric')+
+  'Ranked by '+({noiseSd:'detrended SD',sd:'raw SD',mad:'robust MAD',range:'raw range',firstDiffSd:'successive-step SD',noiseFraction:'normalized high-frequency scatter',coverage:'bin coverage'}[el('qcCompareRank').value]||'metric')+
   '. “Long gaps” means gaps beyond the greater of 90 min, three sample intervals, or three chart bins.';
 }
 function normalize(item,point,mode){
@@ -239,11 +239,12 @@ function comparePair(){
  const B=state.results.find(x=>key(x)===el('qcComparePairB').value);
  const box=el('qcComparePairResult');box.replaceChildren();
  if(!A||!B||A===B){box.textContent='Select two distinct sensor series.';return;}
- const stats=alignSeries(A.stats.bins,B.stats.bins),metric=state.data.metric,unit=units[metric];
+ const stats=alignSeries(A.stats.bins,B.stats.bins,{maxLagMinutes:settings().stepMinutes/2}),metric=state.data.metric,unit=units[metric];
  if(stats.n<4){box.textContent='Only '+stats.n+' synchronized bins. At least four overlapping bins are required to calculate agreement. Try a wider period or larger bin size.';return;}
  const sameStation=Number(A.node_num)===Number(B.node_num);
  const fields=[
    ['Overlapping intervals',String(stats.n)],
+   ['Maximum time lag',nice(settings().stepMinutes/2)+' min'],
    ['Pearson correlation (r)',nice(stats.correlation)],
    ['Median A − B offset',nice(stats.medianOffset)+' '+unit],
    ['Offset-corrected RMSE',nice(stats.adjustedRmse)+' '+unit],
@@ -268,19 +269,19 @@ function csvDownload(name,rows){
 }
 function exportSummary(){
  if(!state.data)return;
- const columns=['station','node_id','sensor','metric','raw_n','used_n','mean','median','min','max','raw_sd','robust_mad','iqr','range','regular_sd',
- 'detrended_sd','detrended_rms','detrend_window_count','median_abs_step','first_difference_sd','time_bin_coverage_pct','long_gaps','longest_gap_min','rejected_readings','truncated'];
+ const columns=['station','node_id','sensor','metric','raw_n','used_n','mean','median','min','max','sample_sd','robust_mad','iqr','range','regular_sd','cv_percent',
+ 'detrended_sd','detrended_rms','noise_to_sd_ratio','detrend_window_count','median_abs_step','first_difference_sd','time_bin_coverage_pct','long_gaps','longest_gap_min','rejected_readings','truncated'];
  const rows=[columns];
  for(const item of state.results){const s=item.stats;
- rows.push([item.station_name,item.node_num,item.series_key,state.data.metric,s.rawCount,s.usedCount,s.mean,s.median,s.min,s.max,s.sd,s.mad,s.iqr,s.range,s.regular.sd,
- s.noiseSd,s.noiseRms,s.residualCount,s.medianAbsStep,s.firstDiffSd,s.coverage*100,s.gaps,s.longestGapMinutes,s.rejectedCount,item.truncated]);}
+ rows.push([item.station_name,item.node_num,item.series_key,state.data.metric,s.rawCount,s.usedCount,s.mean,s.median,s.min,s.max,s.sd,s.mad,s.iqr,s.range,s.regular.sd,s.cvPercent,
+ s.noiseSd,s.noiseRms,s.noiseFraction,s.residualCount,s.medianAbsStep,s.firstDiffSd,s.coverage*100,s.gaps,s.longestGapMinutes,s.rejectedCount,item.truncated]);}
  csvDownload('watershed-sensor-statistics-'+state.data.metric+'-'+state.data.hours+'h.csv',rows);
 }
 function exportBinned(){
  if(!state.data)return;
- const rows=[['station','node_id','series','metric','bin_center_mountain_time','bin_center_utc','value','original_readings_in_bin','manual_rejections_excluded']];
+ const rows=[['station','node_id','series','metric','bin_center_mountain_time','bin_center_utc','median_observation_utc','value','original_readings_in_bin','manual_rejections_excluded']];
  for(const item of state.results)for(const p of item.stats.bins)rows.push([
-  item.station_name,item.node_num,item.series_key,state.data.metric,date(p.at),new Date(p.at).toISOString(),
+  item.station_name,item.node_num,item.series_key,state.data.metric,date(p.at),new Date(p.at).toISOString(),new Date(p.observedAt).toISOString(),
   p.value,p.n,settings().excludeRejected]);
  csvDownload('watershed-matched-sensor-time-series-'+state.data.metric+'-'+state.data.hours+'h.csv',rows);
 }
