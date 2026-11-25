@@ -89,11 +89,11 @@
 <div class="qa-btns qa-compare-buttons"><button id="qcCompareRun" type="button">Compare selected sensors</button><button id="qcCompareSelectDefaults" type="button">Reset to Pack + Mill Creek</button></div>
 <details class="qa-advanced"><summary>Comparison settings · expand</summary>
 <div class="qa-compare-controls">
-<label>Rank by<select id="qcCompareRank"><option value="noiseSd" selected>Detrended SD (high-frequency scatter)</option><option value="sd">Raw standard deviation</option><option value="mad">Robust median absolute deviation</option><option value="range">Observed range</option><option value="firstDiffSd">Difference SD (jagged changes)</option><option value="coverage">Time-bin completeness</option></select></label>
+<label>Rank by<select id="qcCompareRank"><option value="noiseSd" selected>Detrended SD (high-frequency scatter)</option><option value="noiseFraction">Normalized noise / total SD</option><option value="sd">Raw standard deviation</option><option value="mad">Robust median absolute deviation</option><option value="range">Observed range</option><option value="firstDiffSd">Difference SD (jagged changes)</option><option value="coverage">Time-bin completeness</option></select></label>
 <label>Chart vertical scale<select id="qcCompareScale"><option value="centered" selected>Median-centered (variation)</option><option value="raw">Raw recorded values</option><option value="zscore">Standardized (z-score)</option></select></label>
 <label class="qa-compare-checkline"><input type="checkbox" id="qcCompareExcludeRejected"> Exclude manually rejected readings from analysis</label>
 </div>
-<p class="qa-caption">Use a common time interval for fair comparison. Bins use the median of actual readings, never invented interpolated measurements. Manual review decisions remain in the database either way.</p>
+<p class="qa-caption">Use a common interval for fair comparison. Each bin is the median of its observed measurements. No interpolation. “Noise / SD” is detrended scatter divided by overall time-binned SD and is suppressed when total spread is too small. Coefficient of variation (CV) is shown only for discharge. Manual review decisions remain unchanged.</p>
 </details>
 <div id="qcCompareStatus" class="qa-status" role="status" aria-live="polite">Expand to load the available stations.</div>
 <div id="qcCompareSummary" class="qa-stats"></div>
