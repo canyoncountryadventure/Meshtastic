@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/admin",
+      "destination": "/notifications.html"
+    },
+    {
       "source": "/watershed",
       "destination": "/index.html"
     },
