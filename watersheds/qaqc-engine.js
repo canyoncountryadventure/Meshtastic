@@ -5,6 +5,7 @@ const median = values => {
   return a.length ? (a[Math.floor((a.length-1)/2)] + a[Math.floor(a.length/2)])/2 : null;
 };
 const deviation = values => { const m=median(values); return m===null ? 0 : 1.4826*(median(values.map(v=>Math.abs(v-m)))||0); };
+const standardDeviation = values => { const a=values.filter(Number.isFinite),mean=a.reduce((s,v)=>s+v,0)/Math.max(1,a.length); return a.length>1?Math.sqrt(a.reduce((s,v)=>s+(v-mean)**2,0)/(a.length-1)):0; };
 export const DEFAULT_CHECKS=Object.freeze({spike:true,step:true,gap:true,flatline:false,peer:true});
 export function analyzeSeries(raw, peerRaw=[], options={}) {
   const p=raw.filter(x=>finite(x.value)!==null&&Number.isFinite(Date.parse(x.observed_at)))
@@ -28,7 +29,9 @@ export function analyzeSeries(raw, peerRaw=[], options={}) {
     const current=p[i],prev=p[i-1],next=p[i+1];
     const neighbors=p.slice(Math.max(0,i-4),i).concat(p.slice(i+1,i+5));
     const local=neighbors.map(x=>x.value), baseline=median(local);
-    const spread=deviation(local);
+    const spread=deviation(local),sd=standardDeviation(local);
+    const sdZ=baseline===null?0:Math.abs(current.value-baseline)/Math.max(sd,absFloor*0.15);
+    const robustZ=baseline===null?0:Math.abs(current.value-baseline)/Math.max(spread,absFloor*0.15);
     const relative=isFlow&&baseline!==null?0.13*Math.max(0,Math.abs(baseline)):0;
     const noise=Math.max(absFloor, relative, spread*sigma*sensitivity);
     if(check.spike&&prev&&next&&baseline!==null&&neighbors.length>=4){
@@ -36,7 +39,7 @@ export function analyzeSeries(raw, peerRaw=[], options={}) {
       if(span>0&&span<=Math.max(150,(expected||15)*5)&&Math.abs(current.value-baseline)>noise&&
         agree<Math.max(noise*0.8,absFloor*2)&&
         Math.sign(current.value-prev.value)!==Math.sign(next.value-current.value)){
-         add(current,'spike','Isolated departure from neighboring measurements (rolling median/MAD)',3);
+         add(current,'spike','Isolated departure (rolling SD z='+sdZ.toFixed(1)+', robust MAD z='+robustZ.toFixed(1)+'); confirm with adjacent sensors',3);
       }
     }
     if(check.step&&prev){
