@@ -76,9 +76,12 @@ export function measureSeries(points,settings){
  const gapThreshold=Math.max(settings.stepMinutes*3,expected?expected*3:0,90);
  const gaps=rawMinutes.filter(m=>m>gapThreshold);
  const reliableNoise=noise.residualCount>=5; // Never rank a sensor on 1-2 residuals.
+ const minSpread=settings.metric==='temperature_f'?0.2:settings.metric==='discharge_cfs'?0.1:0.01;
+ const noiseFraction=reliableNoise&&regular.sd>minSpread?noise.noiseSd/regular.sd:null;
+ const cv=settings.metric==='discharge_cfs'&&raw.mean>0.00001&&raw.sd!==null?100*raw.sd/raw.mean:null;
  return {...raw,raw,regular,...noise,
    noiseSd:reliableNoise?noise.noiseSd:null,noiseRms:reliableNoise?noise.noiseRms:null,
-   totalBins,coveredBins:bins.length,coverage,rawCount:all.length,usedCount:effective.length,
+   noiseFraction,cvPercent:cv,totalBins,coveredBins:bins.length,coverage,rawCount:all.length,usedCount:effective.length,
    rejectedCount:all.filter(p=>p.review==='rejected').length,
    gaps:gaps.length,longestGapMinutes:gaps.length?Math.max(...gaps):null,typicalRawMinutes:expected,
    firstObserved:effective.length?new Date(effective[0].at).toISOString():null,
