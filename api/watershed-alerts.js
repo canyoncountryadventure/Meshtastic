@@ -1,6 +1,7 @@
 import privateStationLogin from '../lib/private-station-login.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSql as sourceSql } from './db.js';
+import { neon } from '@neondatabase/serverless';
 import { watershedSql as getSql } from '../lib/watershed-store.js';
 import { validateRule, normalizeEmails, STATIONS, PARAMETERS, displayRule, storedRule } from '../lib/watershed-alert-values.js';
 import { readingValue } from '../lib/alert-values.js';
@@ -10,6 +11,15 @@ import { readOwnerBatteryHistory, BATTERY_HISTORY_DAYS, readOwnerBatteryWindow, 
 
 function equal(a,b) { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && timingSafeEqual(x,y); }
 const ownerKey=()=>process.env.WATERSHED_OWNER_PASSWORD || process.env.WATERSHED_ALERTS_ADMIN_KEY || process.env.ALERTS_ADMIN_KEY;
+// Email configuration lives in MeshtasticDB/neondb, not the watershed telemetry database.
+// Use its dedicated connection instead of the unrelated and replaceable DATABASE_URL.
+const configSql=()=>neon(process.env.WATERSHED_ALERT_CONFIG_DATABASE_URL||process.env.DATABASE_URL,
+  {fetchOptions:{signal:AbortSignal.timeout(8000)}});
+async function readEmailSettings(){
+ try{return await configSql()`SELECT sender,updated_at FROM alert_email_config WHERE id=1`}
+ catch(error){console.error('Email configuration lookup failed',error.name,error.code||null);return []}
+}
+
 function signature(value) { return createHmac('sha256',ownerKey()).update('watershed:' + value).digest('hex'); }
 function authenticated(req) {
   const prefix='watershed_alerts_session=';
@@ -71,7 +81,7 @@ export default async function handler(req,res) {
       const [rules,history,config,control]=await Promise.all([
         sql`SELECT * FROM alert_rules ORDER BY id`,
         sql`SELECT id,rule_id,recipient,subject,status,attempts,error,created_at,sent_at FROM alert_deliveries ORDER BY id DESC LIMIT 50`,
-        sourceSql()`SELECT sender,updated_at FROM alert_email_config WHERE id=1`,
+        readEmailSettings(),
         sql`SELECT water_enabled,hobo_enabled,authorized_admin_node,version,updated_at,applied_water_enabled,applied_hobo_enabled,applied_version,applied_at FROM cc01_gateway_control WHERE id=1`,
       ]);
       return res.status(200).json({ok:true,rules:rules.map(displayRule),temperature_unit:'F',history,email:{configured:!!config[0],sender:config[0]?.sender || ''},stations:STATIONS,parameters:PARAMETERS,gateway_control:control[0]||null});
@@ -107,7 +117,7 @@ export default async function handler(req,res) {
     } else if (body.action==='station_update') {
       const rows=await sql`SELECT id,node_num,station_name,parameter,recipients FROM alert_rules WHERE id=${body.id}`;
       const rule=rows[0]; if (!rule || !rule.recipients.length) throw new Error('Save at least one recipient first');
-      const config=await sourceSql()`SELECT id FROM alert_email_config WHERE id=1`;
+      const config=await configSql()`SELECT id FROM alert_email_config WHERE id=1`;
       if (!config.length) throw new Error('Connect the email service first');
       const observations=await sql`SELECT o.source_id AS id,o.node_num,o.observed_at,o.telemetry_type,o.temperature_c,o.metrics,o.radio,s.rating_curve
         FROM creek_observations o JOIN creek_stations s USING(node_num)
@@ -126,19 +136,19 @@ export default async function handler(req,res) {
       await sql`INSERT INTO alert_deliveries(rule_id,reading_id,recipient,subject,body)
         SELECT ${rule.id},${reading.id},email,${subject},${bodyText}
         FROM jsonb_array_elements_text(${JSON.stringify(rule.recipients)}::jsonb) email`;
-      const result=await dispatchEmails(sql,20,{config:await emailConfig(sourceSql()),idempotencyPrefix:'watershed-manual-update'});
+      const result=await dispatchEmails(sql,20,{config:await emailConfig(configSql()),idempotencyPrefix:'watershed-manual-update'});
       return res.status(200).json({ok:true,value:measured,unit,...result});
     } else if (body.action==='test') {
       const rows=await sql`SELECT id,station_name,recipients FROM alert_rules WHERE id=${body.id}`;
       const rule=rows[0]; if (!rule || !rule.recipients.length) throw new Error('Save at least one recipient first');
-      const config=await sourceSql()`SELECT id FROM alert_email_config WHERE id=1`;
+      const config=await configSql()`SELECT id FROM alert_email_config WHERE id=1`;
       if (!config.length) throw new Error('Connect the email service first');
       const recent=await sql`SELECT id FROM alert_deliveries WHERE rule_id=${rule.id} AND reading_id IS NULL AND created_at>NOW()-INTERVAL '1 minute' LIMIT 1`;
       if (recent.length) throw new Error('Wait one minute before another test');
       await sql`INSERT INTO alert_deliveries(rule_id,recipient,subject,body)
         SELECT ${rule.id},email,${`Moab Watersheds test: ${rule.station_name}`},'Your Moab Watersheds email notifications are connected. This is a test, not a threshold event.'
         FROM jsonb_array_elements_text(${JSON.stringify(rule.recipients)}::jsonb) email`;
-      const result=await dispatchEmails(sql,2,{config:await emailConfig(sourceSql()),idempotencyPrefix:'watershed-alert'});
+      const result=await dispatchEmails(sql,2,{config:await emailConfig(configSql()),idempotencyPrefix:'watershed-alert'});
       return res.status(200).json({ok:true,...result});
     } else throw new Error('Unknown action');
     return res.status(200).json({ok:true});
