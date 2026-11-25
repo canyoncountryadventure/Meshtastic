@@ -202,7 +202,9 @@ function renderChart(){
    const title=document.createElementNS('http://www.w3.org/2000/svg','title');
    title.textContent=track.item.label;poly.append(title);
   }
-  for(const p of track.points){
+  const markerStep=Math.max(1,Math.ceil(track.points.length/120));
+  for(let index=0;index<track.points.length;index+=markerStep){
+   const p=track.points[index];
    const mark=svgEl(svg,'circle',{cx:x(p.at).toFixed(1),cy:y(p.scaled).toFixed(1),r:2.3,fill:track.item.plotColor});
    const title=document.createElementNS('http://www.w3.org/2000/svg','title');
    title.textContent=track.item.label+' · '+date(p.at)+' · '+nice(p.value)+' '+units[state.data.metric];
