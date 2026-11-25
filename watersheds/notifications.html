@@ -60,6 +60,16 @@
 <div class="qa-btns qa-plot-toggles"><label><input id="qaqcSmooth" type="checkbox" checked> Overlay rolling median (5 samples)</label><label><input id="qaqcClean" type="checkbox"> Preview manually rejected values excluded</label></div>
 <div class="qa-plot-wrap"><svg id="qaqcPlot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 285" aria-label="Raw time series and flagged observations" role="img"></svg></div>
 <p id="qaqcPlotCaption" class="qa-caption" aria-live="polite">Select a station and analyze.</p>
+<details id="qaqcInspectPanel" class="qa-disclosure"><summary>Inspect or manually review any raw observation · click the chart</summary>
+<div id="qaqcInspectInfo" class="qa-status">Click a point in the graph to inspect its exact timestamp and value.</div>
+<input id="qaqcInspectId" type="hidden">
+<label>Review evidence / field note<input id="qaqcInspectNote" type="text" maxlength="1000" placeholder="Reason for a decision (required to reject a value)" style="display:block;width:100%;padding:9px;border:1px solid #b8c8d0;border-radius:5px"></label>
+<div class="qa-actions">
+<button type="button" data-qa-decision="accepted">Accept observation</button>
+<button type="button" data-qa-decision="needs_review">Mark for review</button>
+<button type="button" data-qa-decision="rejected">Reject observation</button>
+<button type="button" data-qa-decision="clear">Clear manual decision</button>
+</div></details>
 <div class="qa-btns"><button id="qaqcCsv" type="button">Export annotated CSV</button></div>
 <details class="qa-disclosure" open><summary>Candidate errors and review decisions</summary><div id="qaqcIssues">Open the analyzer to see flags.</div></details>
 <details class="qa-disclosure"><summary>Manual decision audit log</summary><button id="qaqcReloadAudit" type="button">Refresh review history</button><div id="qaqcAudit">No review history loaded.</div></details>
