@@ -110,6 +110,44 @@ export default async function handler(req,res){
      readonly_raw:true,auto_flags_advisory:true});
   }
   const body=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
+  // Cross-station and cross-instrument comparison; one measurement class per run.
+  // Read-only, except that prior manual decisions are displayed as annotations.
+  if (body.action==='compare') {
+    const requested=body.series, hours=Number(body.hours);
+    if(!Array.isArray(requested)||requested.length<2||requested.length>6)
+      return res.status(400).json({error:'Select between two and six sensor series'});
+    if(!WINDOWS.includes(hours))return res.status(400).json({error:'Choose a supported analysis window'});
+    const selected=requested.map(x=>{
+      const node=Number(x.node_num),parsed=parseSeries(x.series_key);
+      return {node,parsed};
+    });
+    if(selected.some(x=>!Number.isSafeInteger(x.node)||x.node<1||!x.parsed))
+      return res.status(400).json({error:'Invalid comparison station or parameter'});
+    if(new Set(selected.map(x=>x.node+'|'+x.parsed.key)).size!==selected.length)
+      return res.status(400).json({error:'Duplicate sensor selected'});
+    if(new Set(selected.map(x=>x.parsed.metric)).size!==1)
+      return res.status(400).json({error:'Compare the same parameter across sensors (stage, discharge, or temperature)'});
+    const end=new Date(),start=new Date(end.getTime()-hours*3600000);
+    const items=await Promise.all(selected.map(async({node,parsed})=>{
+      const [stations,rows]=await Promise.all([
+        sql`SELECT node_num,station_name,rating_curve FROM creek_stations WHERE node_num=${node} AND enabled=true`,
+        sql`SELECT o.source_id AS id,o.node_num,o.telemetry_type,o.observed_at,o.received_at,o.temperature_c,o.metrics,
+            r.decision AS review
+            FROM creek_observations o
+            LEFT JOIN qaqc_reviews r ON r.observation_id=o.source_id AND r.series_key=${parsed.key}
+            WHERE o.node_num=${node} AND o.telemetry_type=${parsed.type}
+            AND o.observed_at BETWEEN ${start.toISOString()}::timestamptz AND ${end.toISOString()}::timestamptz
+            ORDER BY o.observed_at DESC,o.source_id DESC LIMIT 5500`
+      ]);
+      if(!stations.length)return {node_num:node,series_key:parsed.key,error:'Station unavailable',points:[]};
+      const curve=stations[0].rating_curve;
+      return {node_num:node,station_name:stations[0].station_name,series_key:parsed.key,
+        points:rows.map(r=>{const point=asPoint(r,parsed.metric,curve);return point?{id:point.id,value:point.value,observed_at:point.observed_at,review:r.review||null}:null;})
+          .filter(Boolean).reverse(),truncated:rows.length>=5500};
+    }));
+    return res.status(200).json({ok:true,hours,metric:selected[0].parsed.metric,start:start.toISOString(),end:end.toISOString(),
+      series:items,reviewDecisionsDoNotAlterRaw:true});
+  }
   const node=Number(body.node_num),parsed=parseSeries(body.series_key);
   if(!Number.isSafeInteger(node)||node<1||!parsed)return res.status(400).json({error:'Invalid station or measurement series'});
   const station=await sql`SELECT node_num FROM creek_stations WHERE node_num=${node} AND enabled=true`;
@@ -141,7 +179,7 @@ export default async function handler(req,res){
         ON CONFLICT(observation_id,series_key) DO UPDATE SET decision=excluded.decision,note=excluded.note,updated_at=NOW()`;
     }
     await sql`INSERT INTO qaqc_audit(observation_id,node_num,series_key,previous_decision,new_decision,note)
-      VALUES(${id},${node},${parsed.key},${before[0]?.decision||null},${decision},${note}`;
+      VALUES(${id},${node},${parsed.key},${before[0]?.decision||null},${decision},${note})`;
     return res.status(200).json({ok:true,reviewed:true});
   }
   return res.status(400).json({error:'Unknown QA operation'});
