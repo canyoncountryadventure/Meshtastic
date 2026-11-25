@@ -23,6 +23,7 @@ function readValue(row,metric,curve){
  const stage=number(m.water_level_ft)??number(m.stage_ft);
  if(metric==='stage_ft')return stage;
  if(metric==='discharge_cfs'){
+   if(m.stage_calibrated===false)return null; // Never rate an uncalibrated ultrasonic measurement.
    const rated=number(m.discharge_cfs);
    if(rated!==null)return rated;
    return curve?.active===true?calculateDischarge(stage,curve):null;
