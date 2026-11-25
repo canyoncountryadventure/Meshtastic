@@ -45,6 +45,8 @@
   const authenticated=!!state;
   $('publicRequestView').hidden=authenticated;$('publicSettings').hidden=!authenticated;
   if(!authenticated)return;
+  const subscriptionPanel=document.querySelector('.public-subscriptions');
+  if(subscriptionPanel)subscriptionPanel.open=true;
   $('publicWho').textContent='Signed in as '+state.email+'. Only rules for this email are visible below.';
   $('publicRules').replaceChildren();
   if(!state.rules.length)$('publicRules').append(el('p','No alerts yet. Add your first notification rule.'));
@@ -85,6 +87,7 @@
  async function start(){
   const hash=window.location.hash||'';
   if(hash.startsWith('#verify=')){
+   const panel=document.querySelector('.public-subscriptions');if(panel)panel.open=true;
    const token=decodeURIComponent(hash.slice('#verify='.length));
    window.history.replaceState(null,'',window.location.pathname+window.location.search);
    try{await api({action:'verify',token});tell('Your email is verified. Add a notification below.');}
