@@ -11,7 +11,8 @@ export default async function handler(req,res){
    method:req.method,headers:{'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},
    ...(req.method==='POST'?{body:typeof req.body==='string'?req.body:JSON.stringify(req.body||{})}:{}),signal:AbortSignal.timeout(22000),redirect:'error',cache:'no-store',
   });
-  const setCookie=response.headers.get('set-cookie');if(setCookie)res.setHeader('Set-Cookie',setCookie);
+  const setCookie=response.headers.get('set-cookie');
+  if(setCookie)res.setHeader('Set-Cookie',setCookie.replace(/Path=\/api\/watershed-alerts(?=;|$)/i,'Path=/'));
   const data=await response.json();return res.status(response.status).json(data);
  }catch{return res.status(503).json({error:'Email notifications are temporarily unavailable'});}
 }
