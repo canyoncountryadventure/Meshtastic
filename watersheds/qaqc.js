@@ -63,13 +63,14 @@ function render(){
  if(!state.data)return;
  const data=state.data;
  state.results=analyzeSeries(data.points,data.peer,{...settings(),metric:data.series_key.split('|')[1]});
- const {points,flags,expectedMinutes}=state.results;
+ const {points,flags,expectedMinutes,noiseRms}=state.results;
+ const unit=metricUnit(data.series_key),precision=unit==='ft'?3:1;
  const review=new Map(data.reviews.map(r=>[Number(r.observation_id),r]));
  const rejected=data.reviews.filter(r=>r.decision==='rejected').length;
  const relevant=flags.filter(f=>!review.has(f.id)||review.get(f.id).decision==='needs_review');
  const gap=flags.filter(f=>f.types.includes('gap')).length;
  $('qaqcStats').replaceChildren();
- for(const [title,value] of [['Observed',String(points.length)],['Needs review',String(relevant.length)],['Gaps',String(gap)],['Rejected',String(rejected)],['Typical interval',expectedMinutes===null?'—':Math.round(expectedMinutes)+' min']]){
+ for(const [title,value] of [['Observed',String(points.length)],['Needs review',String(relevant.length)],['Gaps',String(gap)],['Rejected',String(rejected)],['Typical interval',expectedMinutes===null?'—':Math.round(expectedMinutes)+' min'],['5-point noise RMS',noiseRms===null?'—':noiseRms.toFixed(precision)+' '+unit]]){
    const el=document.createElement('div');el.className='qa-stat';
    const label=document.createElement('small');label.textContent=title;
    const strong=document.createElement('strong');strong.textContent=value;el.append(label,strong);$('qaqcStats').append(el);
