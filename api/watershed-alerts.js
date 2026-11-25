@@ -36,6 +36,8 @@ export default async function handler(req,res) {
     return res.status(200).json({ok:true});
   }
   if (!authenticated(req)) return res.status(401).json({error:'Sign in to manage alerts'});
+  if (req.method==='GET' && new URL(req.url||'/', 'http://localhost').searchParams.get('auth_probe')==='1')
+    return res.status(200).json({ok:true,authenticated:true});
   if (body.action==='logout' && req.method==='POST') {
     res.setHeader('Set-Cookie','watershed_alerts_session=; HttpOnly; Secure; SameSite=Strict; Path=/api/watershed-alerts; Max-Age=0');
     return res.status(200).json({ok:true});
