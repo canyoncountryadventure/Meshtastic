@@ -79,7 +79,11 @@ export function analyzeSeries(raw, peerRaw=[], options={}) {
       }
     }
   }
+  // RMS residual from a centered five-observation median quantifies high-frequency jitter.
+  // Descriptive only: an actual streamflow pulse must not be deleted as noise.
+  const residuals=p.map((point,i)=>point.value-(median(p.slice(Math.max(0,i-2),Math.min(p.length,i+3)).map(v=>v.value))??point.value));
+  const noiseRms=residuals.length?Math.sqrt(residuals.reduce((sum,v)=>sum+v*v,0)/residuals.length):null;
   const flagged=[...flags.values()].sort((a,b)=>b.score-a.score||Date.parse(b.observed_at)-Date.parse(a.observed_at));
-  return {points:p,flags:flagged,expectedMinutes:expected,flaggedCount:flagged.length,coverage:p.length,
+  return {points:p,flags:flagged,expectedMinutes:expected,noiseRms,flaggedCount:flagged.length,coverage:p.length,
     lastObserved:p.length?p[p.length-1].observed_at:null};
 }
