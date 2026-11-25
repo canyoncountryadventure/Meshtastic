@@ -34,10 +34,10 @@ export function makeBins(points,{stepMinutes=60,start,end,excludeRejected=false}
    effective.push({at,value,id:item.id,review:item.review||null});
    const k=Math.floor((at-startMs)/ms);
    if(!buckets.has(k))buckets.set(k,[]);
-   buckets.get(k).push(value);
+   buckets.get(k).push({value,at});
  }
  effective.sort((a,b)=>a.at-b.at||Number(a.id)-Number(b.id));
- const bins=[...buckets].sort((a,b)=>a[0]-b[0]).map(([k,values])=>({index:k,at:startMs+(k+0.5)*ms,value:median(values),n:values.length}));
+ const bins=[...buckets].sort((a,b)=>a[0]-b[0]).map(([k,values])=>({index:k,at:startMs+(k+0.5)*ms,observedAt:median(values.map(v=>v.at)),value:median(values.map(v=>v.value)),n:values.length}));
  const total=Math.ceil((endMs-startMs)/ms);
  return {effective,bins,totalBins:total,coverage:total>0?bins.length/total:null,intervalMinutes:stepMinutes};
 }
@@ -88,11 +88,16 @@ export function measureSeries(points,settings){
    lastObserved:effective.length?new Date(effective[effective.length-1].at).toISOString():null,
    dataSufficient:bins.length>=6,bins};
 }
-export function alignSeries(a,b){
+export function alignSeries(a,b,{maxLagMinutes=30}={}){
  // Only truly coincident time bins are compared. No interpolation or fabricated values.
- const indexB=new Map((b||[]).map(v=>[v.index,v.value]));
- const pairs=(a||[]).filter(x=>indexB.has(x.index))
-   .map(x=>({index:x.index,x:x.value,y:indexB.get(x.index),difference:x.value-indexB.get(x.index)}));
+ const indexB=new Map((b||[]).map(v=>[v.index,v]));
+ const pairs=(a||[]).filter(x=>{
+   const other=indexB.get(x.index);
+   return other&&Number.isFinite(x.observedAt)&&Number.isFinite(other.observedAt)&&
+     Math.abs(x.observedAt-other.observedAt)<=maxLagMinutes*60000;
+ }).map(x=>({index:x.index,x:x.value,y:indexB.get(x.index).value,
+   difference:x.value-indexB.get(x.index).value,
+   timeLagMinutes:Math.abs(x.observedAt-indexB.get(x.index).observedAt)/60000}));
  if(pairs.length<4)return {n:pairs.length,correlation:null,bias:null,adjustedRmse:null,spreadSd:null,
     driftPerDay:null,medianOffset:null,matched:pairs};
  const xs=pairs.map(p=>p.x),ys=pairs.map(p=>p.y),dif=pairs.map(p=>p.difference);
