@@ -96,6 +96,15 @@ function drawPlot(points,flags,reviews){
    make('text',{x:4,y:pos+4,fill:'#5f7180','font-size':13},val.toFixed(Math.abs(hi-lo)<1?3:1));
  }
  make('polyline',{points:points.map(p=>x(p).toFixed(1)+','+y(p).toFixed(1)).join(' '),fill:'none',stroke:'#31658a','stroke-width':2,'stroke-linecap':'round','stroke-linejoin':'round'});
+ if($('qaqcSmooth').checked&&points.length>2){
+   const med=a=>{const s=a.map(v=>v.value).sort((a,b)=>a-b);return s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2;};
+   const trend=points.map((p,i)=>({...p,value:med(points.slice(Math.max(0,i-2),Math.min(points.length,i+3)))}));
+   make('polyline',{points:trend.map(p=>x(p).toFixed(1)+','+y(p).toFixed(1)).join(' '),fill:'none',stroke:'#158473','stroke-width':2,'stroke-dasharray':'6 4'});
+ }
+ if($('qaqcClean').checked){
+   const clean=points.filter(p=>reviews.get(p.id)?.decision!=='rejected');
+   if(clean.length>1)make('polyline',{points:clean.map(p=>x(p).toFixed(1)+','+y(p).toFixed(1)).join(' '),fill:'none',stroke:'#348953','stroke-width':2.5});
+ }
  const lookup=new Map(points.map(p=>[p.id,p])),seen=new Set();
  for(const f of flags){
    const p=lookup.get(f.id);if(!p)continue;seen.add(p.id);
@@ -112,7 +121,7 @@ function drawPlot(points,flags,reviews){
  }
  make('text',{x:L,y:height-7,fill:'#5f7180','font-size':12},fmtDate(points[0].observed_at));
  make('text',{x:width-R,y:height-7,'text-anchor':'end',fill:'#5f7180','font-size':12},fmtDate(points[points.length-1].observed_at));
- $('qaqcPlotCaption').textContent='Blue = reported values. Amber = automated flag; red = manually rejected; green = accepted. Click a flag for its review record.';
+ $('qaqcPlotCaption').textContent='Blue = raw values; dashed teal = 5-sample median; solid green = rejected-excluded preview (if enabled). Amber = screening flag, red = rejected. Raw and public data remain unchanged.';
 }
 function renderIssues(flags,reviews){
  const root=$('qaqcIssues');root.replaceChildren();
@@ -188,6 +197,8 @@ $('qaqcSaveSettings').addEventListener('click',async()=>{if(!state.data)return;
  try{await api(null,{action:'save_settings',...selected(),...settings()});setStatus('QA settings saved for this station and measurement series.');}
  catch(error){setStatus(error.message,true);}
 });
+$('qaqcSmooth').addEventListener('change',render);
+$('qaqcClean').addEventListener('change',render);
 $('qaqcCsv').addEventListener('click',downloadCsv);
 $('qaqcReloadAudit').addEventListener('click',async()=>{if(!state.data)return;
  try{const d=await api({op:'audit',node:state.data.node_num,series:state.data.series_key});state.data.history=d.history;renderAudit(d.history);}
