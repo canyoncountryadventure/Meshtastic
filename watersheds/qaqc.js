@@ -80,6 +80,15 @@ function render(){
  renderAudit(data.history||[]);
  $('qaqcCaveat').textContent='Automated flags are screening results, not verified errors. Manual rejection does not delete raw data or silently alter public charts, ratings, or emails.';
 }
+function selectObservation(point){
+ if(!point)return;
+ $('qaqcInspectPanel').open=true;
+ $('qaqcInspectId').value=String(point.id);
+ const existing=(state.data?.reviews||[]).find(r=>Number(r.observation_id)===point.id);
+ $('qaqcInspectNote').value=existing?.note||'';
+ $('qaqcInspectInfo').textContent=fmtDate(point.observed_at)+' · '+point.value+' '+metricUnit(state.data.series_key)+
+  ' · observation #'+point.id+' · current decision: '+(existing?.decision||'none')+'.';
+}
 function drawPlot(points,flags,reviews){
  const svg=$('qaqcPlot');svg.replaceChildren();
  const ns='http://www.w3.org/2000/svg',width=1000,height=285,L=52,R=18,T=23,B=37;
@@ -87,6 +96,16 @@ function drawPlot(points,flags,reviews){
  let lo=Math.min(...points.map(p=>p.value)),hi=Math.max(...points.map(p=>p.value));
  if(lo===hi){lo-=1;hi+=1;}else{const d=(hi-lo)*0.08;lo-=d;hi+=d;}
  const minT=Date.parse(points[0].observed_at),maxT=Date.parse(points[points.length-1].observed_at);
+ svg.onclick=event=>{
+   const bounds=svg.getBoundingClientRect();
+   const at=Number.isFinite(event.clientX)?(event.clientX-bounds.left)/bounds.width:0;
+   const horizontal=(Math.max(0,Math.min(1,at))*1000-52)/(1000-52-18);
+   const target=Date.parse(points[0].observed_at)+Math.max(0,Math.min(1,horizontal))*(Date.parse(points[points.length-1].observed_at)-Date.parse(points[0].observed_at));
+   let best=points[0];
+   for(const p of points)if(Math.abs(Date.parse(p.observed_at)-target)<Math.abs(Date.parse(best.observed_at)-target))best=p;
+   selectObservation(best);
+ };
+
  const x=p=>L+(maxT===minT?0.5:(Date.parse(p.observed_at)-minT)/(maxT-minT))*(width-L-R);
  const y=p=>T+(hi-p.value)/(hi-lo)*(height-T-B);
  const make=(tag,attrs,text)=>{const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs||{}))el.setAttribute(k,String(v));if(text!==undefined)el.textContent=text;svg.append(el);return el;};
@@ -199,6 +218,17 @@ $('qaqcSaveSettings').addEventListener('click',async()=>{if(!state.data)return;
 });
 $('qaqcSmooth').addEventListener('change',render);
 $('qaqcClean').addEventListener('change',render);
+
+for(const button of document.querySelectorAll('[data-qa-decision]'))button.addEventListener('click',async()=>{
+ const observation_id=Number($('qaqcInspectId').value),decision=button.getAttribute('data-qa-decision'),note=$('qaqcInspectNote').value.trim();
+ if(!state.data||!Number.isSafeInteger(observation_id)||observation_id<=0){setStatus('Select a raw observation on the graph first.',true);return;}
+ if(decision==='rejected'&&note.length<6){$('qaqcInspectNote').focus();setStatus('Explain why the observation is rejected.',true);return;}
+ button.disabled=true;
+ try{await api(null,{action:'review',...selected(),observation_id,decision,note});await loadSeries();
+ const point=state.results?.points.find(p=>p.id===observation_id);if(point)selectObservation(point);
+ setStatus('Decision saved with its audit entry. Original data preserved.');}
+ catch(error){setStatus(error.message,true);}finally{button.disabled=false;}
+});
 $('qaqcCsv').addEventListener('click',downloadCsv);
 $('qaqcReloadAudit').addEventListener('click',async()=>{if(!state.data)return;
  try{const d=await api({op:'audit',node:state.data.node_num,series:state.data.series_key});state.data.history=d.history;renderAudit(d.history);}
