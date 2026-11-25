@@ -19,7 +19,19 @@ const batteryStations=[
 ];
 const batteryState={hours:168,rows:[],enabled:new Set(),loading:false};
 const message=t=>$('message').textContent=t;
-async function api(body){const r=await fetch('/api/watershed-alerts',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const d=await r.json();if(!r.ok){if(r.status===401){$('settings').hidden=true;$('loginPanel').hidden=false;$('logout').hidden=true;}throw new Error(d.error||'Request failed');}return d;}
+async function api(body){
+ const r=await fetch('/api/watershed-alerts',body?{
+  method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+  credentials:'same-origin',cache:'no-store',body:JSON.stringify(body)
+ }:{credentials:'same-origin',cache:'no-store'});
+ const d=await r.json().catch(()=>({error:'The administration server returned invalid JSON (HTTP '+r.status+')'}));
+ if(!r.ok){
+  if(r.status===401){$('settings').hidden=true;$('loginPanel').hidden=false;$('logout').hidden=true;}
+  const err=new Error(d.error||'Administration request failed (HTTP '+r.status+')');
+  err.status=r.status;throw err;
+ }
+ return d;
+}
 async function run(fn){try{await fn();}catch(e){message(e.message);}}
 const batteryValue=r=>{if(r?.telemetry_type!=='device')return null;const value=Number(r?.metrics?.battery_level??r?.metrics?.battery_percent??r?.metrics?.battery_pct);return Number.isFinite(value)&&value>=0&&value<=100?value:null;};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -97,8 +109,32 @@ $('manualUpdateForm').onsubmit=e=>{e.preventDefault();run(async()=>{
  if(!confirm('Send the latest '+label(rule.parameter,rule.node_num)+' for '+rule.station_name+' to '+rule.recipients.join(', ')+'?'))return;
  const result=await api({action:'station_update',id:rule.id});await load();message(result.sent+' station update email(s) sent.');
 });};
-$('loginForm').onsubmit=e=>{e.preventDefault();run(async()=>{await api({action:'login',password:$('password').value});$('password').value='';await load();message('Signed in.');});};
+$('loginForm').onsubmit=e=>{
+ e.preventDefault();
+ const button=$('loginForm').querySelector('button[type=submit]');
+ if(button)button.disabled=true;
+ message('Checking owner credentials…');
+ run(async()=>{
+  try{
+   await api({action:'login',password:$('password').value});
+   $('password').value='';
+   try{
+    await load();
+    message('Signed in. Private stations and QA/QC use this same session.');
+   }catch(err){
+    // Authentication succeeded, but the follow-up session/data fetch failed.
+    message('Password accepted, but administration could not load: '+err.message);
+   }
+  }finally{if(button)button.disabled=false;}
+ });
+};
 $('logout').onclick=()=>run(async()=>{await api({action:'logout'});$('settings').hidden=true;$('loginPanel').hidden=false;$('logout').hidden=true;data=null;recipients=[];message('Signed out.');});
 $('ruleForm').onsubmit=e=>{e.preventDefault();run(async()=>{if($('newEmail').value){addEmail();if($('newEmail').value)throw new Error('Fix the recipient address before saving.');}await api({action:'save_rule',id:$('ruleId').value||undefined,node_num:Number($('station').value),parameter:$('parameter').value,direction:$('direction').value,threshold:Number($('threshold').value),reset_value:$('parameter').value==='offline_hours'?0:Number($('reset').value),enabled:$('enabled').checked,recipients});$('editorPanel').hidden=true;await load();message('Notification rule saved.');});};
-run(load);
+run(async()=>{
+ try{await load();}
+ catch(error){
+  if(error.status===401){message('Owner password required. Use the existing administration password below.');return;}
+  throw error;
+ }
+});
 })();
